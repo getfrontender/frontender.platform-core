@@ -1,0 +1,671 @@
+<?php
+
+namespace Frontender\Core;
+
+use Frontender\Core\Config\Config;
+use Frontender\Core\Language\Language;
+use Frontender\Core\Page\DefaultPage;
+use Frontender\Core\Translate\Translate;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Finder\Finder;
+use Slim\Http\Request;
+use Slim\Http\Response;
+
+class App {
+	private $appInstance = null;
+	private $configInstance = null;
+
+	public function getConfig() {
+		if($this->configInstance === null) {
+			$this->configInstance = new Config();
+		}
+
+		return $this->configInstance;
+	}
+
+	public function getApp() {
+		if($this->appInstance === null) {
+			$config = $this->getConfig();
+			$this->appInstance = new \Slim\App($config->toArray());
+		}
+
+		return $this->appInstance;
+	}
+
+	public function getContainer() {
+		$app = $this->getApp();
+		return $app->getContainer();
+	}
+
+	private function _appendDebug() {
+		$config = $this->getConfig();
+		$container = $this->getContainer();
+
+		if(!$config->debug) {
+			$container['notFoundHandler'] = $container['errorHandler'] = function ($container) {
+				return function (Request $request, Response $response, $exception) use ($container) {
+					$previous = $exception->getPrevious();
+					$error = [
+						'code' => $exception->getCode() ? $exception->getCode() : 404,
+						'message' => $exception->getMessage() ? $exception->getMessage() : 'Page not found'
+					];
+
+					if ($previous) {
+						$error['code'] = $previous->getCode();
+						$error['message'] = $previous->getResponse()->getReasonPhrase();
+					}
+
+					$parts = array_values(array_filter(explode('/', $request->getUri()->getPath())));
+					$locale = $parts[0] ?? 'en';
+					$page = '404';
+
+					$container->language->set($locale);
+					$data = json_decode(file_get_contents(ROOT_PATH . '/templates/pages/' . $page . '.json'));
+
+					if($data->containers && count($data->containers) > 1) {
+						$data->containers[1]->template_config = $error;
+					}
+
+					$page = $container->page;
+					$page->setParameters(['locale' => $locale, 'debug' => $container->settings['debug'], 'query' => $request->getQueryParams()]);
+					$page->setData($data);
+					$page->setRequest($request);
+
+					return $response->withStatus($error['code'])->write($page->render());
+				};
+			};
+		}
+	}
+
+	private function _appendMiddleware() {
+		$app = $this->getApp();
+		$container = $this->getContainer();
+
+		$app->add(new Prototype\Middleware\Routable($container));
+		$app->add(new Prototype\Middleware\Page($container));
+		$app->add(new Prototype\Middleware\Maintenance($container));
+		$app->add(new Prototype\Middleware\Sitable($container));
+	}
+
+	private function _appendContainerData() {
+		$container = $this->getContainer();
+
+		$container['language'] = function() {
+			return new Language();
+		};
+
+		$container['page'] = function ($container) {
+			return new DefaultPage($container);
+		};
+
+		$container['translate'] = function($container) {
+			return new Translate($container);
+		};
+	}
+
+	public function start() {
+		$this->_appendDebug();
+		$this->_appendMiddleware();
+		$this->_appendContainerData();
+
+		$app = $this->getApp();
+
+		$app->group('/api', function() {
+			$this->get('/containers', function(Request $request, Response $response) {
+				$finder = new Finder();
+				$finder
+					->ignoreUnreadableDirs()
+					->files()
+					->in(ROOT_PATH . '/templates/blueprints/')
+					->name('*.json')
+					->sortByName();
+				$files = [];
+
+				foreach ($finder as $file) {
+					$content = [
+//                'fe-id' => rand(),
+						'blueprint' => true
+					];
+
+					try {
+						$content = @array_merge($content, \json_decode($file->getContents(), true));
+					} catch(\Exception $e) {}
+
+					if($content)
+					{
+						$files[] = $content;
+					}
+				}
+
+				return $response
+					->withJson(['containers' => $files])
+					->withHeader('Access-Control-Allow-Origin', '*')
+					->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+					->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');;
+			});
+
+			$this->get('/containers/{id}', function(Request $request, Response $response) {
+				$id = $request->getAttribute('id');
+				$path = openssl_decrypt(hex2bin($id), 'blowfish', '');
+				$fs = new Filesystem();
+				if ($fs->exists(ROOT_PATH .  '/templates/containers/' . $path)) {
+					$content = [
+						'id' => $id
+					];
+					$content = array_merge($content, \json_decode(file_get_contents(ROOT_PATH .  '/templates/containers/' . $path), true));
+					$response = $response->withJson(['container' => $content]);
+				} else {
+//            $response->withHeader($name, $value);
+				}
+				return $response
+					->withHeader('Access-Control-Allow-Origin', '*')
+					->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+					->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');;
+			});
+
+			$this->get('/pages', function(Request $request, Response $response) {
+				$pages = new Finder();
+				$pages->ignoreUnreadableDirs()->files()->in([ROOT_PATH . '/templates/unpublished', ROOT_PATH . '/templates/pages'])->sortByName();
+
+				$files = [];
+
+				foreach ($pages as $file) {
+					try {
+						$content = [
+							// Suppress empty IV error for openssl_encrypt.
+							'route'   => str_replace('.json', '', $file->getRelativePathname()),
+							'publish' => basename(dirname($file->getPathName())) !== 'unpublished'
+						];
+
+						$content               = @array_merge($content, \json_decode($file->getContents(), true) ?: []);
+						$content['containers'] = array_key_exists('containers', $content) ? $content['containers'] : [];
+					} catch(\Exception $e) {}
+
+					$files[] = $content;
+				}
+
+				return $response
+					->withJson(['pages' => $files])
+					->withHeader('Access-Control-Allow-Origin', '*')
+					->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+					->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+			});
+
+			$this->put('/pages/{id}', function(Request $request, Response $response) {
+				$query = $request->getParsedBody();
+				$id = $request->getAttribute('id');
+				$page = $query['page'];
+				$before = $query['before'];
+
+				$basepath = decrypt($id);
+
+				// The new route is set in the ID.
+				// However it will also be posted as plain-text.
+				$source = ($before['publish'] ? 'pages' : 'unpublished') . '/' . $before['route'] . '.json';
+				$target = ($page['publish'] ? 'pages' : 'unpublished') . '/' . $page['route'] . '.json';
+				$route = $page['route'];
+
+				unset($page['route']);
+				unset($page['publish']);
+				$data = json_encode($page);
+
+				// If we have an ID in the file, add it to the routes.
+				// Get the model and the id.
+				$model = array_reduce(['template_config', 'model', 'controls', 'name', 'value'], function($model, $index) {
+					if(!$model || !array_key_exists($index, $model)) {
+						return false;
+					}
+
+					return $model[$index];
+				}, json_decode($data, true));
+				$id = array_reduce(['template_config', 'model', 'controls', 'id', 'value'], function($model, $index) {
+					if(!$model || !array_key_exists($index, $model)) {
+						return false;
+					}
+
+					return $model[$index];
+				}, json_decode($data, true));
+
+				if($model && $id) {
+					$routes_path = ROOT_PATH . '/routes.json';
+					$routes = json_decode(file_get_contents($routes_path), true);
+
+					if(!array_key_exists($model, $routes)) {
+						$routes[$model] = [];
+					}
+
+					$routes[$model][$id] = $route;
+
+					file_put_contents($routes_path, json_encode($routes));
+				}
+
+				@unlink(ROOT_PATH .  '/templates/' . $source);
+				@mkdir(dirname(ROOT_PATH .  '/templates/' . $target), 0777, true);
+				file_put_contents(ROOT_PATH .  '/templates/' . $target, $data);
+
+
+
+				$query['page']['id'] = $id;
+				return $response
+					->withJson([
+						'page' => $query['page']
+					])
+					->withHeader('Access-Control-Allow-Origin', '*')
+					->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+					->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+			});
+
+			$this->delete('/pages/{id}', function(Request $request, Response $response) {
+				$query = $request->getParsedBody();
+				$id = $request->getAttribute('id');
+				$page = $query['page'];
+
+				$basepath = decrypt($id);
+				@unlink(ROOT_PATH .  '/templates/' . ($page['publish'] ? 'pages' : 'unpublished') . '/' . $basepath);
+
+				$model = array_reduce(['template_config', 'model', 'controls', 'name', 'value'], function($model, $index) {
+					if(!$model || !array_key_exists($index, $model)) {
+						return false;
+					}
+
+					return $model[$index];
+				}, $page);
+				$id = array_reduce(['template_config', 'model', 'controls', 'id', 'value'], function($model, $index) {
+					if(!$model || !array_key_exists($index, $model)) {
+						return false;
+					}
+
+					return $model[$index];
+				}, $page);
+
+				if($model && $id) {
+					$routes_path = ROOT_PATH . '/routes.json';
+					$routes = json_decode(file_get_contents($routes_path), true);
+
+					if(array_key_exists($model, $routes) && array_key_exists($id, $routes[$model])) {
+						unset($routes[$model][$id]);
+					}
+
+					file_put_contents($routes_path, json_encode($routes));
+				}
+
+				return $response
+					->withJson([
+						'page' => $query['page']
+					])
+					->withHeader('Access-Control-Allow-Origin', '*')
+					->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+					->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+			});
+
+			$this->options('/pages/{id}', function(Request $request, Response $response) {
+				return $response
+					->withHeader('Access-Control-Allow-Origin', '*')
+					->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+					->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+			});
+
+			$this->get('/pages/{id}', function(Request $request, Response $response) {
+				$id = $request->getAttribute('id');
+				$path = decrypt($id) . '.json';
+				$fs = new Filesystem();
+
+				if ($fs->exists(ROOT_PATH .  '/templates/' . $path)) {
+					$content = \json_decode(file_get_contents(ROOT_PATH .  '/templates/' . $path), true);
+					$content['route'] = str_replace([dirname($path) . '/', '.json'], '', $path);
+					$content['publish'] = basename(dirname($path)) !== 'unpublished';
+
+					$response = $response->withJson(['page' => $content]);
+				} else {
+//            $response->withHeader($name, $value);
+				}
+				return $response
+					->withHeader('Access-Control-Allow-Origin', '*')
+					->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+					->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');;
+			});
+
+			$this->get('/containers/{id}/render', function(Request $request, Response $response) {
+				$id = $request->getAttribute('id');
+
+				if(strpos($id, '^')) {
+					$parts = explode('^', $id);
+				} else {
+					$parts = [null, $id];
+				}
+
+				$path = openssl_decrypt(hex2bin($parts[1]), 'blowfish', '');
+				$data = (object) [
+					'template' => 'layouts/global.html.twig',
+					'template_config' => [],
+					'containers' => [\json_decode(file_get_contents(ROOT_PATH .  '/templates/' . $path))]
+				];
+
+				$this->language->set('nl');
+
+				$page = $this->page;
+				$page->setParameters(['locale' => 'nl', 'debug' => false]);
+				$page->setData($data);
+				$page->setRequest($request);
+				$response->getBody()->write($page->render());
+				return $response;
+			});
+
+			$this->post('/render', function(Request $request, Response $response) {
+				$query = $request->getParsedBody();
+
+				$data = (object) [
+					'template' => 'layouts/global.html.twig',
+					'template_config' => [],
+					'containers' => [\json_decode($query['data'])]
+				];
+
+				$this->language->set('nl');
+
+				$page = $this->page;
+				$page->setParameters(['locale' => 'nl', 'debug' => false]);
+				$page->setData($data);
+				$page->setRequest($request);
+				$response->getBody()->write($page->render());
+				return $response;
+			});
+
+			$this->get('/render', function(Request $request, Response $response) {
+				$response->getBody()->write('<div style="height: 65px;"><div style="font:.8em/1 arial; color: rgba(38,50,56,.76);text-align:center;padding-top:1em;">Fetching layout</div><style type="text/css">width:100%;@-webkit-keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}@-webkit-keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}@-moz-keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}@-ms-keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}@-moz-keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}@-webkit-keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}@-o-keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}@keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}width:100%;@-webkit-keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}@-webkit-keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}@-moz-keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}@-ms-keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}@-moz-keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}@-webkit-keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}@-o-keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}@keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}.uil-flickr-css{background:none;position:relative;width:200px;}.uil-flickr-css>div{width:100px;height:100px;border-radius:50px;position:absolute;top:50px}.uil-flickr-css>div:nth-of-type(1){left:0;background:#263238;z-index:5;-ms-animation:uil-flickr-anim1 1s linear infinite;-moz-animation:uil-flickr-anim1 1s linear infinite;-webkit-animation:uil-flickr-anim1 1s linear infinite;-o-animation:uil-flickr-anim1 1s linear infinite;animation:uil-flickr-anim1 1s linear infinite}.uil-flickr-css>div:nth-of-type(2){left:100px;background:#00897b;-ms-animation:uil-flickr-anim2 1s linear infinite;-moz-animation:uil-flickr-anim2 1s linear infinite;-webkit-animation:uil-flickr-anim2 1s linear infinite;-o-animation:uil-flickr-anim2 1s linear infinite;animation:uil-flickr-anim2 1s linear infinite}</style><div class="uil-flickr-css" style="transform: scale(0.2);margin: 0 auto;"><div></div><div></div></div></div>');
+				return $response;
+			});
+
+			$this->post('/page/render', function(Request $request, Response $response) {
+				$query = $request->getParsedBody();
+
+				$data = \json_decode($query['data']);
+				$this->language->set('nl');
+
+				$page = $this->page;
+				$page->setParameters(['locale' => 'nl', 'debug' => false]);
+				$page->setData($data);
+				$page->setRequest($request);
+				$response->getBody()->write($page->render());
+				return $response;
+			});
+
+			$this->post('/container/render', function(Request $request, Response $response) {
+				$query = $request->getParsedBody();
+
+				$data = \json_decode($query['data']);
+				$data = (object) [
+					'template' => 'layouts/global.html.twig',
+					'template_config' => [],
+					'containers' => [$data]
+				];
+
+				$this->language->set('nl');
+
+				$page = $this->page;
+				$page->setParameters(['locale' => 'nl', 'debug' => false]);
+				$page->setData($data);
+				$page->setRequest($request);
+				$response->getBody()->write($page->render());
+				return $response;
+			});
+
+			$this->get('/page/render', function(Request $request, Response $response) {
+				$response->getBody()->write('<div><div style="height: 65px;"><div style="font:.8em/1 arial; color: rgba(38,50,56,.76);text-align:center;padding-top:1em;">Fetching layout</div><style type="text/css">width:100%;@-webkit-keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}@-webkit-keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}@-moz-keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}@-ms-keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}@-moz-keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}@-webkit-keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}@-o-keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}@keyframes uil-flickr-anim1{0%{left:0}50%{left:100px}100%{left:0}}width:100%;@-webkit-keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}@-webkit-keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}@-moz-keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}@-ms-keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}@-moz-keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}@-webkit-keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}@-o-keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}@keyframes uil-flickr-anim2{0%{left:100px;z-index:1}49%{z-index:1}50%{left:0;z-index:10}100%{left:100px;z-index:10}}.uil-flickr-css{background:none;position:relative;width:200px;}.uil-flickr-css>div{width:100px;height:100px;border-radius:50px;position:absolute;top:50px}.uil-flickr-css>div:nth-of-type(1){left:0;background:#263238;z-index:5;-ms-animation:uil-flickr-anim1 1s linear infinite;-moz-animation:uil-flickr-anim1 1s linear infinite;-webkit-animation:uil-flickr-anim1 1s linear infinite;-o-animation:uil-flickr-anim1 1s linear infinite;animation:uil-flickr-anim1 1s linear infinite}.uil-flickr-css>div:nth-of-type(2){left:100px;background:#00897b;-ms-animation:uil-flickr-anim2 1s linear infinite;-moz-animation:uil-flickr-anim2 1s linear infinite;-webkit-animation:uil-flickr-anim2 1s linear infinite;-o-animation:uil-flickr-anim2 1s linear infinite;animation:uil-flickr-anim2 1s linear infinite}</style><div class="uil-flickr-css" style="transform: scale(0.2);margin: 0 auto;"><div></div><div></div></div></div></div>');
+				return $response;
+			});
+
+			/******** Sites ********/
+			$this->get('/site/{domain}', function(Request $request, Response $response) {
+				// Loop through all the files and check the content.
+				$finder = new Finder();
+				$sites = $finder->ignoreUnreadableDirs()->in(ROOT_PATH . '/sites')->files()->name('*.json');
+				$host = $request->getAttribute('domain');
+				$found = null;
+
+				foreach($sites as $site) {
+					$site = json_decode($site->getContents(), true);
+
+					$domain = $site['domain'];
+					$languages = array_values($site['languages']);
+
+					if($domain === $host || in_array($host, $languages)) {
+						$found = $site;
+					}
+				}
+
+				if($found) {
+					return $response
+						->withJson(['site' => $found])
+						->withHeader('Access-Control-Allow-Origin', '*')
+						->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+						->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+				}
+
+				return $response
+					->withStatus(404)
+					->write('Site not found')
+					->withHeader('Access-Control-Allow-Origin', '*')
+					->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+					->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');;
+			});
+
+			$this->options('/site/{domain}', function(Request $request, Response $response) {
+				return $response
+					->withHeader('Access-Control-Allow-Origin', '*')
+					->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+					->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+			});
+
+			$this->put('/site/{domain}', function(Request $request, Response $response) {
+				file_put_contents(ROOT_PATH . '/sites/' . $request->getAttribute('domain') . '.json', json_encode($request->getParsedBody()));
+
+				return $response->withStatus(205);
+			});
+
+			$this->delete('/site/{domain}', function(Request $request, Response $response) {
+				// The frontender knows the main domain.
+
+				@unlink(ROOT_PATH . '/sites/' . $request->getAttribute('domain') . '.json');
+
+				return $response->withStatus(204);
+			});
+		});
+
+		$app->get('/', function (Request $request, Response $response) {
+			return $response->withRedirect('/en/');
+		});
+
+		$app->get('/{locale}/', function (Request $request, Response $response) {
+			$locale = $request->getAttribute('locale');
+
+			$this->language->set($locale);
+
+			$data = json_decode(file_get_contents(ROOT_PATH . '/templates/pages/home.json'));
+
+			$page = $this->page;
+			$page->setParameters(['locale' => $locale, 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
+			$page->setData($data);
+			$page->setRequest($request);
+
+			$response->getBody()->write($page->render());
+
+			return $response;
+		})->setName('home');
+
+		$app->get('/{locale}/partial', function (Request $request, Response $response) {
+			$query = $request->getQueryParams();
+			$query['language'] = $request->getAttribute('locale');
+
+			$this->language->set($query['language']);
+
+			$data = (object) [
+				'template' => $query['layout'],
+				'template_config' => (object) [
+					'model' => (object) [
+						'name' => $query['model'],
+						'params' => (object) $query
+					]
+				]
+			];
+
+			$clone = json_decode(json_encode($data));
+			$data->template_config->container = $clone;
+
+			$page = $this->page;
+			$page->setParameters(['locale' => $query['language'], 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
+			$page->setData($data);
+			$page->setRequest($request);
+
+			$response->getBody()->write($page->render());
+
+			return $response;
+		})->setName('partial');
+
+		$app->get('/{locale}/{page}/{slug:.*}' . $config->id_separator . '{id:.*?$}', function (Request $request, Response $response) {
+			$attributes = $request->getAttributes();
+
+			$slug = rtrim($attributes['slug'], '-');
+			$id = $attributes['id'];
+
+			$this->language->set($attributes['locale']);
+
+			$data = json_decode(file_get_contents(ROOT_PATH . '/templates/pages/' . $attributes['page'] . '.json'));
+
+			$page = $this->page;
+			$page->setName($attributes['page']);
+			$page->setParameters(['locale' => $attributes['locale'], 'id' => $attributes['id'], 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
+			$page->setData($data);
+			$page->setRequest($request);
+
+			$page->parseData();
+
+			// Somehow we always have data????? Huh????
+			if($page->data->data) {
+				$data = $page->data->data;
+
+				// I have to do this because of something stupid in the iterator.
+				$models = ['article', 'case', 'section', 'company', 'person', 'quote'];
+				$keys = array_keys($data);
+
+				$model = array_intersect($models, $keys);
+				if(count($model)) {
+					$model = array_shift($model);
+				}
+
+				if(is_string($model)) {
+					$helper = new \Prototype\Template\Filter\Escaping($this);
+					$router = new \Prototype\Template\Helper\Router($this);
+
+					$new_slug = $helper->slugify($data[$model]->title);
+
+					if($slug !== $new_slug) {
+						// Redirect if the slug isn't equal.
+						$attributes['slug'] = $new_slug;
+
+						return $response->withStatus(302)->withHeader('Location', $router->route('details', $attributes));
+					}
+				}
+			}
+
+			$response->getBody()->write($page->render());
+
+			return $response;
+		})->setName('details');
+
+		/**
+		 * Specialized method to send a contact email in the most simple way.
+		 */
+		$app->post('/{locale}/contact', function (Request $request, Response $response) {
+			$headers = $request->getHeaders();
+			$query = $request->getParsedBody();
+
+			$name = $query['name'];
+			$message = $query['message'];
+			$contact = $query['contact'];
+
+			if(!$query['emoji'] && !$query['age']) {
+				// We have a config here.
+				$mailer = new PHPMailer();
+				$mailer->isSMTP();
+				$mailer->Host = $this->settings['smtp_host'];
+				$mailer->SMTPAuth = true;
+				$mailer->Username = $this->settings['smtp_user'];
+				$mailer->Password = $this->settings['smtp_pass'];
+				$mailer->SMTPSecure = $this->settings['smtp_secure'];
+				$mailer->Port = $this->settings['smtp_port'];
+
+				$mailer->setFrom('noreply@brickson.nl');
+				$mailer->addAddress($this->settings['smtp_to']);
+				$mailer->isHTML(true);
+
+				$mailer->Subject = 'Bericht van ' . $name;
+				$mailer->Body = <<<EOD
+--------------------------------------------------------------------<br \>
+Onderstaand bericht is via brickson.nl verstuurd:<br \>
+--------------------------------------------------------------------<br \>
+$message<br \>
+--------------------------------------------------------------------<br \>
+Contactpersoon: $name<br \>
+--------------------------------------------------------------------<br \>
+Contactgegevens: $contact<br \>
+--------------------------------------------------------------------<br \>
+Dit is een geautomatiseerd bericht waarop niet kan worden geantwoord.<br \>
+EOD;
+
+				if(!$mailer->send()) {
+					echo '<pre>';
+					print_r($mailer->ErrorInfo);
+					echo '</pre>';
+					die();
+				}
+			}
+
+			return $response->withStatus(200);
+		})->setName('contact');
+
+		$app->get('/{locale}/{page:.*}', function (Request $request, Response $response) {
+			$locale = $request->getAttribute('locale');
+			$page = $request->getAttribute('page');
+
+			$this->language->set($locale);
+
+			$data = json_decode(file_get_contents(ROOT_PATH . '/templates/pages/' . $page. '.json'));
+
+			$page = $this->page;
+			$page->setParameters(['locale' => $locale, 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
+			$page->setData($data);
+			$page->setRequest($request);
+			$response->getBody()->write($page->render());
+
+			return $response;
+		})->setName('list');
+
+		// Run app
+		$app->run();
+
+		function encrypt($data) {
+			$encryptionMethod = "AES-256-CBC";
+			$secret = "My32charPasswordAndInitVectorStr";  //must be 32 char length
+			$iv = substr($secret, 0, 16);
+
+			return openssl_encrypt($data, $encryptionMethod, $secret,0,$iv);
+		}
+
+		function decrypt($data) {
+			$encryptionMethod = "AES-256-CBC";
+			$secret = "My32charPasswordAndInitVectorStr";  //must be 32 char length
+			$iv = substr($secret, 0, 16);
+
+			return openssl_decrypt(hex_to_base64($data), $encryptionMethod, $secret,0,$iv);
+		}
+
+		function hex_to_base64($hex){
+			$return = '';
+			foreach(str_split($hex, 2) as $pair){
+				$return .= chr(hexdec($pair));
+			}
+			return base64_encode($return);
+		}
+
+	}
+}
