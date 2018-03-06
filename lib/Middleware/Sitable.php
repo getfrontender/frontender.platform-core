@@ -24,6 +24,7 @@ class Sitable
     {
         $this->_container = $container;
     }
+
     public function __invoke(Request $request, Response $response, $next)
     {
         $route = $request->getAttribute('route');
@@ -90,8 +91,13 @@ class Sitable
             }
 
             if ($language) {
+	            $uri = $request->getUri();
+	            $path = $uri->getPath();
+
+	            // prepend the path.
+	            $uri = $uri->withPath('/' . $language . $path);
 	            $this->_container['domain'] = $domain;
-	            $uri = $request->getUri()->__toString() . $language;
+
 	            $uri = \Slim\Http\Uri::createFromString($uri);
 	            $request = $request->withUri($uri);
             }

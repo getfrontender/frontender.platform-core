@@ -81,10 +81,10 @@ class App {
 		$app = $this->getApp();
 		$container = $this->getContainer();
 
-		$app->add(new Prototype\Middleware\Routable($container));
-		$app->add(new Prototype\Middleware\Page($container));
-		$app->add(new Prototype\Middleware\Maintenance($container));
-		$app->add(new Prototype\Middleware\Sitable($container));
+		$app->add(new Middleware\Routable($container));
+		$app->add(new Middleware\Page($container));
+		$app->add(new Middleware\Maintenance($container));
+		$app->add(new Middleware\Sitable($container));
 	}
 
 	private function _appendContainerData() {
@@ -109,6 +109,7 @@ class App {
 		$this->_appendContainerData();
 
 		$app = $this->getApp();
+		$config = $this->getConfig();
 
 		$app->group('/api', function() {
 			$this->get('/containers', function(Request $request, Response $response) {
@@ -116,23 +117,21 @@ class App {
 				$finder
 					->ignoreUnreadableDirs()
 					->files()
-					->in(ROOT_PATH . '/templates/blueprints/')
+					->in($this->settings['project']['path'] . '/blueprints/containers')
 					->name('*.json')
 					->sortByName();
 				$files = [];
 
 				foreach ($finder as $file) {
-					$content = [
-//                'fe-id' => rand(),
-						'blueprint' => true
-					];
-
 					try {
-						$content = @array_merge($content, \json_decode($file->getContents(), true));
+						$content = \json_decode($file->getContents(), true);
 					} catch(\Exception $e) {}
 
 					if($content)
 					{
+						$parts = explode('/', $file->getRelativePath());
+						$content['blueprint_type'] = array_shift($parts);
+
 						$files[] = $content;
 					}
 				}
@@ -148,11 +147,11 @@ class App {
 				$id = $request->getAttribute('id');
 				$path = openssl_decrypt(hex2bin($id), 'blowfish', '');
 				$fs = new Filesystem();
-				if ($fs->exists(ROOT_PATH .  '/templates/containers/' . $path)) {
+				if ($fs->exists($this->settings['project']['path'] .  '/blueprints/containers/' . $path)) {
 					$content = [
 						'id' => $id
 					];
-					$content = array_merge($content, \json_decode(file_get_contents(ROOT_PATH .  '/templates/containers/' . $path), true));
+					$content = array_merge($content, \json_decode(file_get_contents($this->settings['project']['path'] .  '/blueprints/containers/' . $path), true));
 					$response = $response->withJson(['container' => $content]);
 				} else {
 //            $response->withHeader($name, $value);
@@ -164,31 +163,42 @@ class App {
 			});
 
 			$this->get('/pages', function(Request $request, Response $response) {
+				$directories = [
+					$this->settings['project']['path'] . '/pages/unpublished',
+					$this->settings['project']['path'] . '/pages/published'
+				];
+				$directories = array_filter( $directories, function ( $dir ) {
+					return is_dir( $dir ) && file_exists( $dir );
+				} );
+
+
 				$pages = new Finder();
-				$pages->ignoreUnreadableDirs()->files()->in([ROOT_PATH . '/templates/unpublished', ROOT_PATH . '/templates/pages'])->sortByName();
+				$pages->ignoreUnreadableDirs()->files()->in( $directories )->sortByName();
 
 				$files = [];
 
-				foreach ($pages as $file) {
+				foreach ( $pages as $file ) {
 					try {
 						$content = [
 							// Suppress empty IV error for openssl_encrypt.
-							'route'   => str_replace('.json', '', $file->getRelativePathname()),
-							'publish' => basename(dirname($file->getPathName())) !== 'unpublished'
+							'route'     => str_replace( '.json', '', $file->getRelativePathname() ),
+							'publish'   => basename( dirname( $file->getPathName() ) ) !== 'unpublished',
+							'thumbnail' => file_exists( $this->settings['project']['path'] . '/thumbnails/' . str_replace( '.json', '', $file->getRelativePathname() ) . '.png' )
 						];
 
-						$content               = @array_merge($content, \json_decode($file->getContents(), true) ?: []);
-						$content['containers'] = array_key_exists('containers', $content) ? $content['containers'] : [];
-					} catch(\Exception $e) {}
+						$content               = @array_merge( $content, \json_decode( $file->getContents(), true ) ?: [] );
+						$content['containers'] = array_key_exists( 'containers', $content ) ? $content['containers'] : [];
+					} catch ( \Exception $e ) {
+					}
 
 					$files[] = $content;
 				}
 
 				return $response
-					->withJson(['pages' => $files])
-					->withHeader('Access-Control-Allow-Origin', '*')
-					->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-					->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+					->withJson( [ 'pages' => $files ] )
+					->withHeader( 'Access-Control-Allow-Origin', '*' )
+					->withHeader( 'Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization' )
+					->withHeader( 'Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS' );
 			});
 
 			$this->put('/pages/{id}', function(Request $request, Response $response) {
@@ -201,8 +211,8 @@ class App {
 
 				// The new route is set in the ID.
 				// However it will also be posted as plain-text.
-				$source = ($before['publish'] ? 'pages' : 'unpublished') . '/' . $before['route'] . '.json';
-				$target = ($page['publish'] ? 'pages' : 'unpublished') . '/' . $page['route'] . '.json';
+				$source = 'pages/' . ($before['publish'] ? 'published' : 'unpublished') . '/' . $before['route'] . '.json';
+				$target = 'pages/' . ($page['publish'] ? 'published' : 'unpublished') . '/' . $page['route'] . '.json';
 				$route = $page['route'];
 
 				unset($page['route']);
@@ -226,24 +236,26 @@ class App {
 					return $model[$index];
 				}, json_decode($data, true));
 
-				if($model && $id) {
-					$routes_path = ROOT_PATH . '/routes.json';
+				if($model && $id && strpos($id, '{') === false) {
+					$routes_path = $this->settings['project']['path'] . '/routes.json';
 					$routes = json_decode(file_get_contents($routes_path), true);
 
 					if(!array_key_exists($model, $routes)) {
 						$routes[$model] = [];
 					}
 
-					$routes[$model][$id] = $route;
+					$routes[$model][$id] = [
+						'path' => str_replace('//', '/', '/' . $route),
+						'publish_at' => time(),
+						'modified_at' => time()
+					];
 
 					file_put_contents($routes_path, json_encode($routes));
 				}
 
-				@unlink(ROOT_PATH .  '/templates/' . $source);
-				@mkdir(dirname(ROOT_PATH .  '/templates/' . $target), 0777, true);
-				file_put_contents(ROOT_PATH .  '/templates/' . $target, $data);
-
-
+				@unlink($this->settings['project']['path'] . '/' . $source);
+				@mkdir(dirname($this->settings['project']['path'] . '/' . $target), 0777, true);
+				file_put_contents($this->settings['project']['path'] . '/' . $target, $data);
 
 				$query['page']['id'] = $id;
 				return $response
@@ -261,7 +273,7 @@ class App {
 				$page = $query['page'];
 
 				$basepath = decrypt($id);
-				@unlink(ROOT_PATH .  '/templates/' . ($page['publish'] ? 'pages' : 'unpublished') . '/' . $basepath);
+				@unlink($this->settings['project']['path'] . '/pages/' . ($page['publish'] ? 'published' : 'unpublished') . '/' . $basepath);
 
 				$model = array_reduce(['template_config', 'model', 'controls', 'name', 'value'], function($model, $index) {
 					if(!$model || !array_key_exists($index, $model)) {
@@ -279,7 +291,7 @@ class App {
 				}, $page);
 
 				if($model && $id) {
-					$routes_path = ROOT_PATH . '/routes.json';
+					$routes_path = $this->settings['project']['path'] . '/routes.json';
 					$routes = json_decode(file_get_contents($routes_path), true);
 
 					if(array_key_exists($model, $routes) && array_key_exists($id, $routes[$model])) {
@@ -310,9 +322,14 @@ class App {
 				$path = decrypt($id) . '.json';
 				$fs = new Filesystem();
 
-				if ($fs->exists(ROOT_PATH .  '/templates/' . $path)) {
-					$content = \json_decode(file_get_contents(ROOT_PATH .  '/templates/' . $path), true);
-					$content['route'] = str_replace([dirname($path) . '/', '.json'], '', $path);
+				$parts = explode('/', $path);
+				array_shift($parts);
+				array_shift($parts);
+				$route = implode('/', $parts);
+
+				if ($fs->exists($this->settings['project']['path'] . '/' . $path)) {
+					$content = \json_decode(file_get_contents($this->settings['project']['path'] . '/' . $path), true);
+					$content['route'] = str_replace('.json', '', $route);
 					$content['publish'] = basename(dirname($path)) !== 'unpublished';
 
 					$response = $response->withJson(['page' => $content]);
@@ -338,17 +355,78 @@ class App {
 				$data = (object) [
 					'template' => 'layouts/global.html.twig',
 					'template_config' => [],
-					'containers' => [\json_decode(file_get_contents(ROOT_PATH .  '/templates/' . $path))]
+					'containers' => [\json_decode(file_get_contents(ROOT_PATH .  '/project/templates/' . $path))]
 				];
 
-				$this->language->set('nl');
+				$this->language->set('en');
 
 				$page = $this->page;
-				$page->setParameters(['locale' => 'nl', 'debug' => false]);
+				$page->setParameters(['locale' => 'en', 'debug' => false]);
 				$page->setData($data);
 				$page->setRequest($request);
 				$response->getBody()->write($page->render());
 				return $response;
+			});
+
+			$this->get('/blueprints', function(Request $request, Response $response) {
+				$finder = new Finder();
+				$finder
+					->ignoreUnreadableDirs()
+					->files()
+					->in([$this->settings['project']['path'] . '/blueprints', $this->settings['core']['path'] . '/blueprints'])
+					->name('*.json')
+					->sortByName();
+				$files = [];
+
+
+				foreach ($finder as $file) {
+					try {
+						$content = \json_decode($file->getContents(), true);
+					} catch(\Exception $e) {}
+
+					if($content)
+					{
+						$isCore = strpos($file->getPath(), $this->settings['core']['path']) === 0;
+						$parts = explode('/', $file->getRelativePath());
+
+						$content['kind'] = array_shift($parts);
+						$content['identifier'] = ($isCore ? 'core' : 'project') . '/' . $file->getRelativePath() . '/' . $file->getBasename('.'.$file->getExtension());
+						$files[] = $content;
+					}
+				}
+
+				return $response
+					->withJson(['blueprints' => $files])
+					->withHeader('Access-Control-Allow-Origin', '*')
+					->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+					->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+			});
+
+			$this->get('/layouts', function(Request $request, Response $response) {
+				$finder = new Finder();
+				$finder
+					->ignoreUnreadableDirs()
+					->files()
+					->in($this->settings['template']['path'] . '/layouts')
+					->name('*.html.twig')
+					->sortByName();
+				$files = [];
+
+
+				foreach ($finder as $file) {
+					$files[] = [
+						'label' => [
+							'en' => $file->getBasename('.html.twig')
+						],
+						'value' => 'layouts/' . $file->getFilename()
+					];
+				}
+
+				return $response
+					->withJson(['layouts' => $files])
+					->withHeader('Access-Control-Allow-Origin', '*')
+					->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+					->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 			});
 
 			$this->post('/render', function(Request $request, Response $response) {
@@ -360,10 +438,10 @@ class App {
 					'containers' => [\json_decode($query['data'])]
 				];
 
-				$this->language->set('nl');
+				$this->language->set('en');
 
 				$page = $this->page;
-				$page->setParameters(['locale' => 'nl', 'debug' => false]);
+				$page->setParameters(['locale' => 'en', 'debug' => false]);
 				$page->setData($data);
 				$page->setRequest($request);
 				$response->getBody()->write($page->render());
@@ -379,10 +457,10 @@ class App {
 				$query = $request->getParsedBody();
 
 				$data = \json_decode($query['data']);
-				$this->language->set('nl');
+				$this->language->set($query['language']);
 
 				$page = $this->page;
-				$page->setParameters(['locale' => 'nl', 'debug' => false]);
+				$page->setParameters(['locale' => $query['language'], 'debug' => false, 'query' => $query]);
 				$page->setData($data);
 				$page->setRequest($request);
 				$response->getBody()->write($page->render());
@@ -399,10 +477,10 @@ class App {
 					'containers' => [$data]
 				];
 
-				$this->language->set('nl');
+				$this->language->set($query['language']);
 
 				$page = $this->page;
-				$page->setParameters(['locale' => 'nl', 'debug' => false]);
+				$page->setParameters(['locale' => $query['language'], 'debug' => false, 'query' => $query]);
 				$page->setData($data);
 				$page->setRequest($request);
 				$response->getBody()->write($page->render());
@@ -418,7 +496,7 @@ class App {
 			$this->get('/site/{domain}', function(Request $request, Response $response) {
 				// Loop through all the files and check the content.
 				$finder = new Finder();
-				$sites = $finder->ignoreUnreadableDirs()->in(ROOT_PATH . '/sites')->files()->name('*.json');
+				$sites = $finder->ignoreUnreadableDirs()->in(ROOT_PATH . '/project/sites')->files()->name('*.json');
 				$host = $request->getAttribute('domain');
 				$found = null;
 
@@ -426,9 +504,9 @@ class App {
 					$site = json_decode($site->getContents(), true);
 
 					$domain = $site['domain'];
-					$languages = array_values($site['languages']);
+					$languages = array_key_exists('languages', $site) ? array_values( $site['languages'] ) : [];
 
-					if($domain === $host || in_array($host, $languages)) {
+					if ( $domain === $host || in_array( $host, $languages ) ) {
 						$found = $site;
 					}
 				}
@@ -457,17 +535,150 @@ class App {
 			});
 
 			$this->put('/site/{domain}', function(Request $request, Response $response) {
-				file_put_contents(ROOT_PATH . '/sites/' . $request->getAttribute('domain') . '.json', json_encode($request->getParsedBody()));
+				file_put_contents(ROOT_PATH . '/project/sites/' . $request->getAttribute('domain') . '.json', json_encode($request->getParsedBody()));
 
-				return $response->withStatus(205);
+				return $response
+					->withJson([
+						'page' => json_encode($request->getParsedBody())
+					])
+					->withHeader('Access-Control-Allow-Origin', '*')
+					->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+					->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 			});
 
 			$this->delete('/site/{domain}', function(Request $request, Response $response) {
 				// The frontender knows the main domain.
 
-				@unlink(ROOT_PATH . '/sites/' . $request->getAttribute('domain') . '.json');
+				@unlink(ROOT_PATH . '/project/sites/' . $request->getAttribute('domain') . '.json');
 
 				return $response->withStatus(204);
+			});
+
+			$this->post('/model/definition', function(Request $request, Response $response) {
+				// I have post data.
+				// Then we will also check if the items are available.
+				$data = $request->getParsedBody();
+
+				if(array_key_exists('name', $data)) {
+					$path = $this->settings['project']['path'] . '/../lib/Model/' . str_replace('\\', '/', $data['name']) . '.json';
+
+					if(file_exists($path)) {
+						return $response
+							->withJson(json_decode(file_get_contents($path)))
+							->withHeader('Access-Control-Allow-Origin', '*')
+							->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+							->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+					}
+				}
+
+				return $response->withStatus(404);
+			});
+
+			$this->get('/model/content', function(Request $request, Response $response) {
+				$data = $request->getQueryParams();
+				$name = $data['name'];
+				$json = json_decode(file_get_contents($this->settings['project']['path'] . '/../lib/Model/' . str_replace('\\', '/', $data['name']) . '.json'), true);
+
+				unset($data['name']);
+
+				$class =  '\\Prototype\\Model\\' . $name;
+				$class = new $class($this);
+				$class->setState($data);
+				$result = $class->fetch();
+				$items = [];
+
+				if(array_key_exists('entries', $result) && $result['entries'] && count($result['entries'])) {
+					$items = array_map(function($item) use ($json) {
+						if(!array_key_exists('map', $json)) {
+							return $item;
+						}
+
+						$map = $json['map'];
+
+						foreach($map as $target => $path) {
+							$item->{$target} = array_reduce(explode('.', $path), function($carry, $key) {
+								if(is_object($carry) && $carry->{$key}) {
+									return $carry->{$key};
+								} else if(is_array($carry) && array_key_exists($key, $carry) && $carry[$key]) {
+									return $carry[$key];
+								}
+
+								return false;
+							}, $item);
+
+							if(is_object($item) && !$item->{$target}) {
+								$item->{$target} = '';
+							} else if(is_array($item) && !$item[$target]) {
+								$item[$target] = '';
+							}
+						}
+
+						return $item;
+					}, $result['entries']);
+				}
+
+				return $response
+					->withJson([
+						'items' => $items,
+						'state' => $result['model']->getState()->getValues(),
+						'total' => count($result['entries'])
+					])
+					->withHeader('Access-Control-Allow-Origin', '*')
+					->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+					->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+			});
+
+			$this->post('/thumbnail/{thumbnail}', function(Request $request, Response $response) {
+				// We will save everything in the project folder.
+				// So also the thumbnails.
+				// Pre-generated or not.
+
+				// Check if the directory exists.
+				$thumbnail_dir = $this->settings['project']['path'] . '/thumbnails';
+				if(!is_dir($thumbnail_dir)) {
+					mkdir($thumbnail_dir, 0744, true);
+				}
+
+				$filename = decrypt($request->getAttribute('thumbnail'));
+				$filename = str_replace('.json', '.png', $filename);
+				$body = $request->getParsedBody();
+				$thumbnail = $body['screenshot'];
+
+				$basename = dirname($thumbnail_dir . '/' . $filename);
+				if(!is_dir($basename)) {
+					mkdir($basename, 0744, true);
+				}
+
+				$parts = explode(',', $thumbnail);
+				array_shift($parts);
+
+				file_put_contents($thumbnail_dir . '/' . $filename, base64_decode(implode(',', $parts)));
+
+				return $response->withStatus(204);
+			});
+
+			$this->get('/thumbnail/{thumbnail}', function(Request $request, Response $response) {
+				$thumbnail_dir = $this->settings['project']['path'] . '/thumbnails';
+				$path = $thumbnail_dir . '/' . str_replace('.json', '', decrypt($request->getAttribute('thumbnail'))) . '.png';
+
+				if(!is_dir($thumbnail_dir) || !file_exists($path)) {
+					return $response->withStatus(404);
+				}
+
+				$finfo = finfo_open(FILEINFO_MIME_TYPE);
+				$type = finfo_file($finfo, $path);
+				finfo_close($finfo);
+
+				$fh = fopen($path, 'rb');
+				$stream = new \Slim\Http\Stream($fh);
+
+
+				return $response->withHeader('Content-Type', $type)
+				                ->withHeader('Access-Control-Allow-Origin', '*')
+				                ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+				                ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+				                ->withHeader('bla', 'bla')
+				                ->withBody($stream);
 			});
 		});
 
@@ -480,7 +691,7 @@ class App {
 
 			$this->language->set($locale);
 
-			$data = json_decode(file_get_contents(ROOT_PATH . '/templates/pages/home.json'));
+			$data = json_decode(file_get_contents($this->settings['project']['path'] . '/pages/published/home.json'));
 
 			$page = $this->page;
 			$page->setParameters(['locale' => $locale, 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
@@ -498,16 +709,67 @@ class App {
 
 			$this->language->set($query['language']);
 
-			$data = (object) [
+			// I know that the states will be in need of parsing.
+			// This needs to be done here.
+
+			$states = [];
+			$config = [];
+
+			if(array_key_exists('config', $query) && $query['config']) {
+				$conf = json_decode($query['config']);
+
+				if($conf) {
+					foreach ( $conf as $key => $values ) {
+						$config[ $key ] = [
+							'controls' => []
+						];
+
+						foreach ( $values as $name => $value ) {
+							$config[ $key ]['controls'][ $name ] = [
+								'value' => $value
+							];
+						}
+					}
+				}
+			}
+
+			foreach($query as $key => $value) {
+				$copy = $value;
+
+				try {
+					$value = json_decode($copy, true);
+					if(!$value) {
+						$value = $copy;
+					}
+				} catch(Error $e) {
+					// NOOP
+				} catch(Exception $e) {
+					// NOOP
+				}
+
+				$states[$key] = [
+					'value' => $value
+				];
+			}
+
+			if(array_key_exists('model', $query) && $query['model']) {
+				$states['name'] = [
+					'value' => $query['model']
+				];
+			}
+
+			$data = [
 				'template' => $query['layout'],
-				'template_config' => (object) [
-					'model' => (object) [
-						'name' => $query['model'],
-						'params' => (object) $query
+				'template_config' => [
+					'model' => [
+						'controls' => $states
 					]
 				]
 			];
 
+			$data['template_config'] = array_merge($data['template_config'], $config);
+
+			$data = json_decode(json_encode($data));
 			$clone = json_decode(json_encode($data));
 			$data->template_config->container = $clone;
 
@@ -521,15 +783,12 @@ class App {
 			return $response;
 		})->setName('partial');
 
-		$app->get('/{locale}/{page}/{slug:.*}' . $config->id_separator . '{id:.*?$}', function (Request $request, Response $response) {
+		$app->get('/{locale}/{page:.*}/{slug:.*}' . $config->id_separator . '{id}', function (Request $request, Response $response) {
 			$attributes = $request->getAttributes();
-
-			$slug = rtrim($attributes['slug'], '-');
-			$id = $attributes['id'];
 
 			$this->language->set($attributes['locale']);
 
-			$data = json_decode(file_get_contents(ROOT_PATH . '/templates/pages/' . $attributes['page'] . '.json'));
+			$data = json_decode(file_get_contents($this->settings['project']['path'] . '/pages/published/' . $attributes['page'] . '.json'));
 
 			$page = $this->page;
 			$page->setName($attributes['page']);
@@ -539,89 +798,10 @@ class App {
 
 			$page->parseData();
 
-			// Somehow we always have data????? Huh????
-			if($page->data->data) {
-				$data = $page->data->data;
-
-				// I have to do this because of something stupid in the iterator.
-				$models = ['article', 'case', 'section', 'company', 'person', 'quote'];
-				$keys = array_keys($data);
-
-				$model = array_intersect($models, $keys);
-				if(count($model)) {
-					$model = array_shift($model);
-				}
-
-				if(is_string($model)) {
-					$helper = new \Prototype\Template\Filter\Escaping($this);
-					$router = new \Prototype\Template\Helper\Router($this);
-
-					$new_slug = $helper->slugify($data[$model]->title);
-
-					if($slug !== $new_slug) {
-						// Redirect if the slug isn't equal.
-						$attributes['slug'] = $new_slug;
-
-						return $response->withStatus(302)->withHeader('Location', $router->route('details', $attributes));
-					}
-				}
-			}
-
 			$response->getBody()->write($page->render());
 
 			return $response;
 		})->setName('details');
-
-		/**
-		 * Specialized method to send a contact email in the most simple way.
-		 */
-		$app->post('/{locale}/contact', function (Request $request, Response $response) {
-			$headers = $request->getHeaders();
-			$query = $request->getParsedBody();
-
-			$name = $query['name'];
-			$message = $query['message'];
-			$contact = $query['contact'];
-
-			if(!$query['emoji'] && !$query['age']) {
-				// We have a config here.
-				$mailer = new PHPMailer();
-				$mailer->isSMTP();
-				$mailer->Host = $this->settings['smtp_host'];
-				$mailer->SMTPAuth = true;
-				$mailer->Username = $this->settings['smtp_user'];
-				$mailer->Password = $this->settings['smtp_pass'];
-				$mailer->SMTPSecure = $this->settings['smtp_secure'];
-				$mailer->Port = $this->settings['smtp_port'];
-
-				$mailer->setFrom('noreply@brickson.nl');
-				$mailer->addAddress($this->settings['smtp_to']);
-				$mailer->isHTML(true);
-
-				$mailer->Subject = 'Bericht van ' . $name;
-				$mailer->Body = <<<EOD
---------------------------------------------------------------------<br \>
-Onderstaand bericht is via brickson.nl verstuurd:<br \>
---------------------------------------------------------------------<br \>
-$message<br \>
---------------------------------------------------------------------<br \>
-Contactpersoon: $name<br \>
---------------------------------------------------------------------<br \>
-Contactgegevens: $contact<br \>
---------------------------------------------------------------------<br \>
-Dit is een geautomatiseerd bericht waarop niet kan worden geantwoord.<br \>
-EOD;
-
-				if(!$mailer->send()) {
-					echo '<pre>';
-					print_r($mailer->ErrorInfo);
-					echo '</pre>';
-					die();
-				}
-			}
-
-			return $response->withStatus(200);
-		})->setName('contact');
 
 		$app->get('/{locale}/{page:.*}', function (Request $request, Response $response) {
 			$locale = $request->getAttribute('locale');
@@ -629,7 +809,7 @@ EOD;
 
 			$this->language->set($locale);
 
-			$data = json_decode(file_get_contents(ROOT_PATH . '/templates/pages/' . $page. '.json'));
+			$data = json_decode(file_get_contents($this->settings['project']['path'] . '/pages/published/' . $page. '.json'));
 
 			$page = $this->page;
 			$page->setParameters(['locale' => $locale, 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
@@ -640,7 +820,7 @@ EOD;
 			return $response;
 		})->setName('list');
 
-		// Run app
+// Run app
 		$app->run();
 
 		function encrypt($data) {
@@ -666,6 +846,5 @@ EOD;
 			}
 			return base64_encode($return);
 		}
-
 	}
 }

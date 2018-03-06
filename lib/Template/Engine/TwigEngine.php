@@ -42,7 +42,6 @@ class TwigEngine extends Object implements EngineInterface
 
         // Add custom extension for the engine.
 	    // Auto bind all helpers
-	    // Get all the helper files.
 	    $finder = new Finder();
 	    $finder
 		    ->ignoreUnreadableDirs()
@@ -52,16 +51,21 @@ class TwigEngine extends Object implements EngineInterface
 		    ->sortByName();
 
 	    foreach($finder as $file) {
-	    	echo '<pre>';
-	    	    print_r($file);
-	    	echo '</pre>';
-	    	die();
-
-		    $this->engine->addExtension( new Helper\HashedPath( $container ) );
+		    $class = 'Prototype\\Template\\Filter\\' . $file->getBasename('.' . $file->getExtension());
+		    $this->engine->addExtension( new $class( $container ) );
 	    }
 
-        // Auto bind all filters
-        $this->engine->addExtension(new Filter\Date($container));
+	    $finder = new Finder();
+	    $finder
+		    ->ignoreUnreadableDirs()
+		    ->files()
+		    ->in(ROOT_PATH . '/lib/Template/Helper/')
+		    ->name('*.php')
+		    ->sortByName();
+	    foreach($finder as $file) {
+		    $class = 'Prototype\\Template\\Helper\\' . $file->getBasename('.' . $file->getExtension());
+		    $this->engine->addExtension( new $class( $container ) );
+	    }
     }
 
     public function loadFile($template)

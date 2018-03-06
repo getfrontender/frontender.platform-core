@@ -23,6 +23,10 @@ class Page
      */
     public function __invoke(Request $request, Response $response, $next)
     {
+	    if($this->_container->has('domain')) {
+		    return $next($request, $response);
+	    }
+
     	$route = $request->getAttribute('route');
     	$page = $route->getArgument('page');
 	    $patterns = array_map(function($group) {

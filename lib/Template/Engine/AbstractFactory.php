@@ -7,7 +7,7 @@
 
 namespace Frontender\Core\Template\Engine;
 
-use Prototype\Object\Object;
+use Frontender\Core\Object\Object;
 
 use Slim\Container;
 

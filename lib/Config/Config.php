@@ -14,21 +14,21 @@ class Config
         $env = new \Dotenv\Dotenv(ROOT_PATH);
 
         if (getenv('ENV') === false) {
-            $env->load();
+            $env->overload();
         }
 
-        $this->scr_token = getenv('SCR_TOKEN');
-        $this->customer_key = getenv('CUSTOMER_KEY');
-        $this->customer_secret = getenv('CUSTOMER_SECRET');
-        $this->token = getenv('TOKEN');
-        $this->token_secret = getenv('TOKEN_SECRET');
+        $keys = array_diff(array_keys($_ENV), array_keys(getenv()));
+
+        foreach($keys as $key) {
+        	$this->{strtolower($key)} = $_ENV[$key];
+        }
 
         /**
          * Load application configuration
          */
         $files = [
             '/environment.php',
-            '/environments/' . getenv('ENV') . '.php'
+            '/environments/' . $this->env . '.php'
         ];
 
         foreach ($files as $file) {

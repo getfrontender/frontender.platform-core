@@ -7,10 +7,10 @@
 
 namespace Frontender\Core\Template;
 
-use Prototype\Object\Object;
-use Prototype\Template\Locator\DefaultFactory as DefaultLocatorFactory;
-use Prototype\Template\Engine\DefaultFactory as DefaultEngineFactory;
-use Prototype\Template\Engine\EngineInterface;
+use Frontender\Core\Object\Object;
+use Frontender\Core\Template\Locator\DefaultFactory as DefaultLocatorFactory;
+use Frontender\Core\Template\Engine\DefaultFactory as DefaultEngineFactory;
+use Frontender\Core\Template\Engine\EngineInterface;
 
 abstract class AbstractTemplate extends Object
 {
