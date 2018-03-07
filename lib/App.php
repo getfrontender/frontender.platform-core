@@ -103,7 +103,7 @@ class App {
 		};
 	}
 
-	public function start() {
+	public function init() {
 		$this->_appendDebug();
 		$this->_appendMiddleware();
 		$this->_appendContainerData();
@@ -682,6 +682,38 @@ class App {
 			});
 		});
 
+		function encrypt($data) {
+			$encryptionMethod = "AES-256-CBC";
+			$secret = "My32charPasswordAndInitVectorStr";  //must be 32 char length
+			$iv = substr($secret, 0, 16);
+
+			return openssl_encrypt($data, $encryptionMethod, $secret,0,$iv);
+		}
+
+		function decrypt($data) {
+			$encryptionMethod = "AES-256-CBC";
+			$secret = "My32charPasswordAndInitVectorStr";  //must be 32 char length
+			$iv = substr($secret, 0, 16);
+
+			return openssl_decrypt(hex_to_base64($data), $encryptionMethod, $secret,0,$iv);
+		}
+
+		function hex_to_base64($hex){
+			$return = '';
+			foreach(str_split($hex, 2) as $pair){
+				$return .= chr(hexdec($pair));
+			}
+			return base64_encode($return);
+		}
+
+		return $this;
+	}
+
+	public function start(  ) {
+		$app = $this->getApp();
+		$config = $this->getConfig();
+		$container = $this->getContainer();
+
 		$app->get('/', function (Request $request, Response $response) {
 			return $response->withRedirect('/en/');
 		});
@@ -820,31 +852,8 @@ class App {
 			return $response;
 		})->setName('list');
 
-// Run app
 		$app->run();
 
-		function encrypt($data) {
-			$encryptionMethod = "AES-256-CBC";
-			$secret = "My32charPasswordAndInitVectorStr";  //must be 32 char length
-			$iv = substr($secret, 0, 16);
-
-			return openssl_encrypt($data, $encryptionMethod, $secret,0,$iv);
-		}
-
-		function decrypt($data) {
-			$encryptionMethod = "AES-256-CBC";
-			$secret = "My32charPasswordAndInitVectorStr";  //must be 32 char length
-			$iv = substr($secret, 0, 16);
-
-			return openssl_decrypt(hex_to_base64($data), $encryptionMethod, $secret,0,$iv);
-		}
-
-		function hex_to_base64($hex){
-			$return = '';
-			foreach(str_split($hex, 2) as $pair){
-				$return .= chr(hexdec($pair));
-			}
-			return base64_encode($return);
-		}
+		return $this;
 	}
 }
