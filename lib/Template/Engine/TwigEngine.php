@@ -9,6 +9,18 @@ namespace Frontender\Core\Template\Engine;
 
 use Frontender\Core\Object\Object;
 
+use Frontender\Core\Template\Filter\Date;
+use Frontender\Core\Template\Filter\Escaping;
+use Frontender\Core\Template\Filter\Filter;
+use Frontender\Core\Template\Filter\Humanize;
+use Frontender\Core\Template\Filter\Markdown;
+use Frontender\Core\Template\Filter\Number;
+use Frontender\Core\Template\Filter\Pagination;
+use Frontender\Core\Template\Filter\Text;
+use Frontender\Core\Template\Filter\Translate;
+use Frontender\Core\Template\Helper\HashedPath;
+use Frontender\Core\Template\Helper\Router;
+use Frontender\Core\Template\Helper\Url;
 use Slim\Container;
 use Slim\Views\Twig;
 use Slim\Views\TwigExtension;
@@ -55,6 +67,17 @@ class TwigEngine extends Object implements EngineInterface
 		    $this->engine->addExtension( new $class( $container ) );
 	    }
 
+	    // Register the core filters
+	    $this->engine->addExtension( new Date( $container ) );
+	    $this->engine->addExtension( new Escaping() );
+	    $this->engine->addExtension( new Filter() );
+	    $this->engine->addExtension( new Humanize( $container ) );
+	    $this->engine->addExtension( new Markdown() );
+	    $this->engine->addExtension( new Number( $container ) );
+	    $this->engine->addExtension( new Pagination() );
+	    $this->engine->addExtension( new Text() );
+	    $this->engine->addExtension( new Translate( $container ) );
+
 	    $finder = new Finder();
 	    $finder
 		    ->ignoreUnreadableDirs()
@@ -66,6 +89,11 @@ class TwigEngine extends Object implements EngineInterface
 		    $class = 'Prototype\\Template\\Helper\\' . $file->getBasename('.' . $file->getExtension());
 		    $this->engine->addExtension( new $class( $container ) );
 	    }
+
+	    // Register the core helpers
+	    $this->engine->addExtension(new Router($container));
+	    $this->engine->addExtension(new HashedPath($container));
+	    $this->engine->addExtension(new Url($container));
     }
 
     public function loadFile($template)

@@ -9,7 +9,7 @@
 
 namespace Frontender\Core\Middleware;
 
-use Prototype\Template\Helper\Router;
+use Frontender\Core\Template\Helper\Router;
 
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
