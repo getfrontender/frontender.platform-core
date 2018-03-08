@@ -17,9 +17,7 @@ class Config
             $env->overload();
         }
 
-        $keys = array_diff(array_keys($_ENV), array_keys(getenv()));
-
-        foreach($keys as $key) {
+        foreach(array_keys($_ENV) as $key) {
         	$this->{strtolower($key)} = $_ENV[$key];
         }
 
