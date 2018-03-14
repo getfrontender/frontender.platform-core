@@ -163,6 +163,8 @@ class App {
 			});
 
 			$this->get('/pages', function(Request $request, Response $response) {
+//				authenticate('viewer', $request, $response);
+
 				$directories = [
 					$this->settings['project']['path'] . '/pages/unpublished',
 					$this->settings['project']['path'] . '/pages/published'
@@ -682,6 +684,13 @@ class App {
 			});
 
 			$this->group('/authenticate', function() {
+				$this->options('/{username}', function(Request $request, Response $response) {
+					return $response
+						->withHeader('Access-Control-Allow-Origin', '*')
+						->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+						->withHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+				});
+
 				$this->post('/{username}', function(Request $request, Response $response) {
 					// Check if the directory exists
 					$path = $this->settings['project']['path'] . '/users/' . $request->getAttribute('username') . '.json';
@@ -701,7 +710,10 @@ class App {
 
 					unset($user['password']);
 
-					return $response->withJson($user);
+					return $response->withJson($user)
+					                ->withHeader('Access-Control-Allow-Origin', '*')
+					                ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+					                ->withHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
 				});
 			});
 		});
@@ -728,6 +740,10 @@ class App {
 				$return .= chr(hexdec($pair));
 			}
 			return base64_encode($return);
+		}
+
+		function authenticate($role, $req, $res) {
+			die('Called');
 		}
 
 		return $this;
