@@ -680,6 +680,30 @@ class App {
 				                ->withHeader('bla', 'bla')
 				                ->withBody($stream);
 			});
+
+			$this->group('/authenticate', function() {
+				$this->post('/{username}', function(Request $request, Response $response) {
+					// Check if the directory exists
+					$path = $this->settings['project']['path'] . '/users/' . $request->getAttribute('username') . '.json';
+					$query = $request->getParsedBody();
+
+					if(!array_key_exists('password', $query) || !$request->getAttribute('username') || !is_dir(dirname($path)) || !file_exists($path)) {
+						return $response->withStatus(401);
+					}
+
+					$user = json_decode(file_get_contents($path), true);
+					$password = decrypt($query['password']);
+
+					// Verify the password
+					if(!password_verify($password, $user['password'])) {
+						return $response->withStatus(401);
+					}
+
+					unset($user['password']);
+
+					return $response->withJson($user);
+				});
+			});
 		});
 
 		function encrypt($data) {
