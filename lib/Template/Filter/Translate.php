@@ -35,31 +35,41 @@ class Translate extends \Twig_Extension
     /**
      * @param {String/ Array/ Object} $text The text to translate.
      */
-    public function translate($text)
+    public function translate($text, $translate = true, $locale = null)
     {
-        if(is_string($text))
-        {
-            if($this->_translator->hasTranslation($text)) {
-                return $this->_translator->translate($text);
-            }
-        }
-        else if(is_array($text) || is_object($text))
-        {
-            // We always want an array.
-            $text = (array) $text;
+	    if(is_string($text))
+	    {
+		    if($translate && $this->_translator->hasTranslation($text)) {
+			    return $this->_translator->translate($text, $locale);
+		    }
+	    }
+	    else if(is_array($text) || is_object($text))
+	    {
+		    // We always want an array.
+		    $text = (array) $text;
 
-            if(array_key_exists($this->_locale, $text) && !empty($text[$this->_locale])) {
-                return $text[$this->_locale];
-            } else if(array_key_exists('en', $text)) {
-                return $text['en'];
-            }
-        }
+		    if(array_key_exists($locale, $text) && !empty($text[$locale])) {
+			    return $text[$locale];
+		    }
 
-        // No translation found
-        if($this->_debug) {
-            return '??' . $text . '??';
-        }
+		    if(array_key_exists($this->_locale, $text) && !empty($text[$this->_locale])) {
+			    return $text[$this->_locale];
+		    } else if(array_key_exists('en', $text)) {
+			    return $text['en'];
+		    } else {
+			    // Return the first language found.
+			    $languages = array_keys($text);
+			    $language = array_shift($languages);
 
-        return $text;
+			    return $text[$language];
+		    }
+	    }
+
+	    // No translation found
+	    if($this->_debug) {
+		    return '??' . $text . '??';
+	    }
+
+	    return $text;
     }
 }
