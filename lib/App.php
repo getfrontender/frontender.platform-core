@@ -592,6 +592,8 @@ class App {
 
 				if(array_key_exists($name, $result) && $result[$name] && count($result[$name])) {
 					$items = array_map(function($item) use ($json) {
+						$item = (object) $item;
+
 						if(!array_key_exists('map', $json)) {
 							return $item;
 						}
@@ -616,7 +618,7 @@ class App {
 							}
 						}
 
-						return $item;
+						return (array) $item;
 					}, $result[$name]);
 				}
 
