@@ -624,7 +624,7 @@ class App {
 					->withJson([
 						'items' => $items,
 						'state' => $result['model']->getState()->getValues(),
-						'total' => count($result['entries'])
+						'total' => $result[$name . '_total']
 					])
 					->withHeader('Access-Control-Allow-Origin', '*')
 					->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
