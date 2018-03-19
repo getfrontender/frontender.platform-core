@@ -60,7 +60,7 @@ class App {
 					$page = '404';
 
 					$container->language->set($locale);
-					$data = json_decode(file_get_contents(ROOT_PATH . '/templates/pages/' . $page . '.json'));
+					$data = json_decode(file_get_contents($container->settings['project']['path'] . '/pages/published/' . $page . '.json'));
 
 					if($data->containers && count($data->containers) > 1) {
 						$data->containers[1]->template_config = $error;
