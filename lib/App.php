@@ -60,6 +60,11 @@ class App {
 					$locale = $parts[0] ?? 'en';
 					$page = '404';
 
+					if(($route = $this->_tryRedirectNotFound($request->getUri())) !== false) {
+						// We will now redirect if it is found
+						return $response->withRedirect($route);
+					}
+
 					$container->language->set($locale);
 					$data = json_decode(file_get_contents($container->settings['project']['path'] . '/pages/published/' . $page . '.json'));
 
@@ -102,6 +107,36 @@ class App {
 		$container['translate'] = function($container) {
 			return new Translate($container);
 		};
+	}
+
+	private function _tryRedirectNotFound($url) {
+		// Check if the redirect file can be found.
+		$config  = $this->getConfig();
+		$project = $config->project;
+		$path    = $url->getPath();
+
+		if ( file_exists( $project['path'] . '/redirects.json' ) ) {
+			$redirects = json_decode( file_get_contents( $project['path'] . '/redirects.json' ), true );
+
+			if(array_key_exists('static', $redirects)) {
+				foreach($redirects['static'] as $source => $destination) {
+					if($source === $path) {
+						return $url->withPath($destination);
+					}
+				}
+			}
+
+			if(array_key_exists('dynamic', $redirects)) {
+				foreach($redirects['dynamic'] as $regex => $replace) {
+					if(preg_match($regex, $path) == true) {
+						$path = preg_replace($regex, $replace, $path);
+						return $url->withPath($path);
+					}
+				}
+			}
+		}
+
+		return false;
 	}
 
 	public function init() {
