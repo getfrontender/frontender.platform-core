@@ -81,6 +81,10 @@ class Page
 			$exists = file_exists($root . implode('/', $parts) . '/' . $layout . '.json');
 		} else {
 			while ( $exists == false && count( $parts ) >= 0 ) {
+				if(count($parts) === 0) {
+					return false;
+				}
+
 				$exists = file_exists( $root . implode( '/', $parts ) . '/' . $layout . '.json' );
 				if ( ! $exists ) {
 					array_pop( $parts );
