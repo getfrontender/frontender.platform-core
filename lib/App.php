@@ -121,6 +121,10 @@ class App {
 			if(array_key_exists('static', $redirects)) {
 				foreach($redirects['static'] as $source => $destination) {
 					if($source === $path) {
+						if(preg_match('/^http(s)/', $destination) == true) {
+							return $destination;
+						}
+
 						return $url->withPath($destination);
 					}
 				}
@@ -130,6 +134,10 @@ class App {
 				foreach($redirects['dynamic'] as $regex => $replace) {
 					if(preg_match($regex, $path) == true) {
 						$path = preg_replace($regex, $replace, $path);
+						if(preg_match('/^http(s)/', $path) == true) {
+							return $destination;
+						}
+
 						return $url->withPath($path);
 					}
 				}
