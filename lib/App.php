@@ -10,6 +10,7 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 use Slim\Http\Request;
 use Slim\Http\Response;
+use Doctrine\Common\Inflector\Inflector;
 
 class App {
 	private $appInstance = null;
@@ -587,8 +588,9 @@ class App {
 				$class = new $class($this);
 				$class->setState($data);
 				$result = $class->fetch();
+				$state = $class->getState();
 				$items = [];
-				$name = $class->getName();
+				$name = $state->isUnique() ? Inflector::singularize($class->getName()) : Inflector::pluralize($class->getName());
 
 				if(array_key_exists($name, $result) && $result[$name] && count($result[$name])) {
 					$items = array_map(function($item) use ($json) {
@@ -602,7 +604,7 @@ class App {
 
 						foreach($map as $target => $path) {
 							$item->{$target} = array_reduce(explode('.', $path), function($carry, $key) {
-								if(is_object($carry) && $carry->{$key}) {
+								if(is_object($carry) && property_exists($carry, $key)) {
 									return $carry->{$key};
 								} else if(is_array($carry) && array_key_exists($key, $carry) && $carry[$key]) {
 									return $carry[$key];

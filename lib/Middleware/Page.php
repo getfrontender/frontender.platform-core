@@ -34,6 +34,10 @@ class Page
 			if(count($parts) <= 0 || empty($parts)) {
 				$path = 'home';
 			} else {
+				if(count($parts) === 2) {
+					array_pop($parts);
+				}
+
 				$path = implode('/', $parts);
 			}
 
@@ -77,8 +81,6 @@ class Page
 			$exists = file_exists($root . implode('/', $parts) . '/' . $layout . '.json');
 		} else {
 			while ( $exists == false && count( $parts ) >= 0 ) {
-				error_log( count( $parts ) );
-
 				$exists = file_exists( $root . implode( '/', $parts ) . '/' . $layout . '.json' );
 				if ( ! $exists ) {
 					array_pop( $parts );
