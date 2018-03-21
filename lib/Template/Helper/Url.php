@@ -72,6 +72,6 @@ class Url extends \Twig_Extension
             $params['page'] .= !empty($query) ? '?' . $query : '';
         }
 
-        return $this->container['router']->pathFor($name, $params);
+        return str_replace('//', '/', $this->container['router']->pathFor($name, $params));
     }
 }
