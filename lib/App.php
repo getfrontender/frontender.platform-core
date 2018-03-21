@@ -257,8 +257,8 @@ class App {
 
 				// The new route is set in the ID.
 				// However it will also be posted as plain-text.
-				$source = 'pages/' . ($before['publish'] ? 'published' : 'unpublished') . '/' . $before['route'] . '.json';
-				$target = 'pages/' . ($page['publish'] ? 'published' : 'unpublished') . '/' . $page['route'] . '.json';
+				$source = 'pages/' . ($before['publish'] ? 'published' : 'unpublished') . '/' . strtolower($before['route']) . '.json';
+				$target = 'pages/' . ($page['publish'] ? 'published' : 'unpublished') . '/' . strtolower($page['route']) . '.json';
 				$route = $page['route'];
 
 				unset($page['route']);
