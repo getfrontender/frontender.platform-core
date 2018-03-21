@@ -25,6 +25,10 @@ class Pagination extends \Twig_Extension
         }
 
         $states = $model->getState()->getValues();
+        $states['limit'] = $states['limit'] == 0 ? 1 : $states['limit'];
+
+        error_log($model->getName());
+        error_log($states['limit']);
 
         $current = ($states['skip'] ?? 0) / $states['limit'];
         $current = $current > 0 ? $current : 0;
@@ -119,6 +123,11 @@ class Pagination extends \Twig_Extension
 
     protected function _getLastPage($current, $pages, $states, $total) {
         $pages = floor($total / $states['limit']);
+
+        error_log($total);
+        error_log(floor($total / $states['limit']));
+	    error_log($states['limit'] > 0 ? $pages : $pages - 1);
+
         $pages = $total % $states['limit'] > 0 ? $pages : $pages - 1;
 
         return [
