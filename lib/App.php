@@ -929,7 +929,7 @@ class App {
 
 			$this->language->set($locale);
 
-			$data = json_decode(file_get_contents($this->settings['project']['path'] . '/pages/published/' . $page. '.json'));
+			$data = json_decode(file_get_contents(str_replace('//', '/', $this->settings['project']['path'] . '/pages/published/' . $page. '.json')));
 
 			$page = $this->page;
 			$page->setParameters(['locale' => $locale, 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
