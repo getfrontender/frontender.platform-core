@@ -29,7 +29,7 @@ class Router extends \Twig_Extension
 
     public function route($params = [])
     {
-	    $params['locale'] = $this->container->language->language;
+	    $params['locale'] = $params['locale'] ?? $this->container->language->language;
 	    $params['slug'] = $params['slug'] ?? '';
 
 	    /**

@@ -10,14 +10,17 @@ namespace Frontender\Core\Template\Helper;
 use Slim\Container;
 use Slim\Http\Uri;
 use Doctrine\Common\Inflector\Inflector;
+use Frontender\Core\Template\Helper\Router;
 
 class Url extends \Twig_Extension
 {
     public $container;
+    public $router;
 
     public function __construct(Container $container)
     {
         $this->container = $container;
+        $this->router = new Router($container);
     }
 
     public function getFunctions()
@@ -68,10 +71,10 @@ class Url extends \Twig_Extension
 
         if(array_key_exists('id', $params) && $params['id']) {
             $params['id'] .= !empty($query) ? '?' . $query : '';
-        } else {
+        } else if(array_key_exists('page', $params)) {
             $params['page'] .= !empty($query) ? '?' . $query : '';
         }
 
-        return str_replace('//', '/', $this->container['router']->pathFor($name, $params));
+        return $this->router->route($params);
     }
 }
