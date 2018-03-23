@@ -915,7 +915,7 @@ class App {
 			$data->template_config->container = $clone;
 
 			$page = $this->page;
-			$page->setParameters(['locale' => $query['language'], 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
+			$page->setParameters(['page' => $request->getAttribute('page'), 'locale' => $query['language'], 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
 			$page->setData($data);
 			$page->setRequest($request);
 
@@ -933,7 +933,7 @@ class App {
 
 			$page = $this->page;
 			$page->setName($attributes['page']);
-			$page->setParameters(['locale' => $attributes['locale'], 'id' => $attributes['id'], 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
+			$page->setParameters(['page' => $request->getAttribute('page'), 'locale' => $attributes['locale'], 'id' => $attributes['id'], 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
 			$page->setData($data);
 			$page->setRequest($request);
 
@@ -953,7 +953,7 @@ class App {
 			$data = getFileJson(str_replace('//', '/', $this->settings['project']['path'] . '/pages/published/' . $page . '.json'));
 
 			$page = $this->page;
-			$page->setParameters(['locale' => $locale, 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
+			$page->setParameters(['page' => $request->getAttribute('page'), 'locale' => $locale, 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
 			$page->setData($data);
 			$page->setRequest($request);
 			$response->getBody()->write($page->render());
