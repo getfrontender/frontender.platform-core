@@ -59,12 +59,16 @@ class Page
 		$isAPI = in_array('/api', $patterns);
 
 		if($page && !$isAPI) {
-			$page = $this->_getPage($page);
-
-			$route->setArgument('page', $page);
-
-			if(!$page) {
-				throw new \Slim\Exception\NotFoundException($request, $response);
+			if(($result = $this->_getPage($page)) !== false) {
+				$route->setArgument('page', $result);
+			} else {
+				// Try another file.
+				$aliasses = json_decode(file_get_contents($this->_container->settings['project']['path'] . '/aliasses.json'), true);
+				if(array_key_exists($page, $aliasses)) {
+					$route->setArgument('page', $aliasses[$page]);
+				} else {
+					throw new \Slim\Exception\NotFoundException( $request, $response );
+				}
 			}
 		}
 

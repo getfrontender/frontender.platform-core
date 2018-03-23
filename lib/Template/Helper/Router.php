@@ -56,7 +56,7 @@ class Router extends \Twig_Extension
 
 			    if ( $model ) {
 				    if ( array_key_exists( $model, $routes ) && array_key_exists( $params['id'], $routes[ $model ] ) ) {
-					    return ($this->container->has('domain') ? '' : '/' . $params['locale']) . $routes[ $model ][ $params['id'] ]['path'];
+					    return $this->_getAlias(($this->container->has('domain') ? '' : '/' . $params['locale']) . $routes[ $model ][ $params['id'] ]['path']);
 				    }
 			    }
 		    }
@@ -67,9 +67,21 @@ class Router extends \Twig_Extension
 		    $name = 'home';
 	    }
 
+	    // Check if the page is in the aliasses.
+	    if(array_key_exists('page', $params)) {
+		    $page = @json_decode(file_get_contents($this->container->settings['project']['path'] . '/pages/published/' . $params['page'] . '.json'));
+		    if(is_object($page) && property_exists($page, 'alias') && is_object($page->alias) && property_exists($page->alias, $params['locale'])) {
+		    	$params['page'] = $page->alias->{$params['locale']};
+		    }
+	    }
+
 	    $path = $this->container->router->pathFor($name, $params);
 	    $route = $this->container->has('domain') ? str_replace((array_key_exists('locale', $params) && !empty($params['locale']) ? '/' . $params['locale'] : ''), '', $path) : $path;
 
 	    return str_replace('//', '/', $route);
+    }
+
+    private function _getAlias($page) {
+
     }
 }

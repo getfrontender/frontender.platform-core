@@ -12,6 +12,10 @@ use Slim\Http\Request;
 use Slim\Http\Response;
 use Doctrine\Common\Inflector\Inflector;
 
+function getFileJson($file, $assoc = false) {
+	return json_decode(file_get_contents($file), $assoc);
+}
+
 class App {
 	private $appInstance = null;
 	private $configInstance = null;
@@ -65,7 +69,7 @@ class App {
 					}
 
 					$container->language->set($locale);
-					$data = json_decode(file_get_contents($container->settings['project']['path'] . '/pages/published/' . $page . '.json'));
+					$data = getFileJson($container->settings['project']['path'] . '/pages/published/' . $page . '.json');
 
 					if($data->containers && count($data->containers) > 1) {
 						$data->containers[1]->template_config = $error;
@@ -195,7 +199,7 @@ class App {
 					$content = [
 						'id' => $id
 					];
-					$content = array_merge($content, \json_decode(file_get_contents($this->settings['project']['path'] .  '/blueprints/containers/' . $path), true));
+					$content = array_merge($content, \getFileJson($this->settings['project']['path'] .  '/blueprints/containers/' . $path), true);
 					$response = $response->withJson(['container' => $content]);
 				} else {
 //            $response->withHeader($name, $value);
@@ -284,7 +288,7 @@ class App {
 
 				if($model && $id && strpos($id, '{') === false) {
 					$routes_path = $this->settings['project']['path'] . '/routes.json';
-					$routes = json_decode(file_get_contents($routes_path), true);
+					$routes = getFileJson($routes_path, true);
 
 					if(!array_key_exists($model, $routes)) {
 						$routes[$model] = [];
@@ -302,6 +306,23 @@ class App {
 				@unlink($this->settings['project']['path'] . '/' . $source);
 				@mkdir(dirname($this->settings['project']['path'] . '/' . $target), 0777, true);
 				file_put_contents($this->settings['project']['path'] . '/' . $target, $data);
+
+				// If aliasses are found, add the to the aliasses.json file.
+				// LIFO (Last In, First Out) style.
+				// Remove the aliasses that are present in the before.
+				$aliasses = getFileJson($this->settings['project']['path'] . '/aliasses.json', true);
+				if(array_key_exists('alias', $before)) {
+					foreach($before['alias'] as $language => $alias) {
+						unset($aliasses[$alias]);
+					}
+				}
+
+				if(array_key_exists('alias', $page)) {
+					foreach($page['alias'] as $language => $alias) {
+						$aliasses[$alias] = $route;
+					}
+				}
+				file_put_contents($this->settings['project']['path'] . '/aliasses.json', json_encode($aliasses));
 
 				$query['page']['id'] = $id;
 				return $response
@@ -338,7 +359,7 @@ class App {
 
 				if($model && $id) {
 					$routes_path = $this->settings['project']['path'] . '/routes.json';
-					$routes = json_decode(file_get_contents($routes_path), true);
+					$routes = getFileJson($routes_path, true);
 
 					if(array_key_exists($model, $routes) && array_key_exists($id, $routes[$model])) {
 						unset($routes[$model][$id]);
@@ -374,7 +395,7 @@ class App {
 				$route = implode('/', $parts);
 
 				if ($fs->exists($this->settings['project']['path'] . '/' . $path)) {
-					$content = \json_decode(file_get_contents($this->settings['project']['path'] . '/' . $path), true);
+					$content = getFileJson($this->settings['project']['path'] . '/' . $path, true);
 					$content['route'] = str_replace('.json', '', $route);
 					$content['publish'] = basename(dirname($path)) !== 'unpublished';
 
@@ -401,7 +422,7 @@ class App {
 				$data = (object) [
 					'template' => 'layouts/global.html.twig',
 					'template_config' => [],
-					'containers' => [\json_decode(file_get_contents(ROOT_PATH .  '/project/templates/' . $path))]
+					'containers' => [\getFileJson(ROOT_PATH .  '/project/templates/' . $path)]
 				];
 
 				$this->language->set('en');
@@ -610,7 +631,7 @@ class App {
 
 					if(file_exists($path)) {
 						return $response
-							->withJson(json_decode(file_get_contents($path)))
+							->withJson(getFileJson($path))
 							->withHeader('Access-Control-Allow-Origin', '*')
 							->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
 							->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -623,7 +644,7 @@ class App {
 			$this->get('/model/content', function(Request $request, Response $response) {
 				$data = $request->getQueryParams();
 				$name = $data['name'];
-				$json = json_decode(file_get_contents($this->settings['project']['path'] . '/../lib/Model/' . str_replace('\\', '/', $data['name']) . '.json'), true);
+				$json = getFileJson($this->settings['project']['path'] . '/../lib/Model/' . str_replace('\\', '/', $data['name']) . '.json', true);
 
 				unset($data['name']);
 
@@ -748,7 +769,7 @@ class App {
 						return $response->withStatus(401);
 					}
 
-					$user = json_decode(file_get_contents($path), true);
+					$user = getFileJson($path, true);
 					$password = decrypt($query['password']);
 
 					// Verify the password
@@ -811,7 +832,7 @@ class App {
 
 			$this->language->set($locale);
 
-			$data = json_decode(file_get_contents($this->settings['project']['path'] . '/pages/published/home.json'));
+			$data = getFileJson($this->settings['project']['path'] . '/pages/published/home.json');
 
 			$page = $this->page;
 			$page->setParameters(['locale' => $locale, 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
@@ -908,7 +929,7 @@ class App {
 
 			$this->language->set($attributes['locale']);
 
-			$data = json_decode(file_get_contents($this->settings['project']['path'] . '/pages/published/' . $attributes['page'] . '.json'));
+			$data = getFileJson($this->settings['project']['path'] . '/pages/published/' . $attributes['page'] . '.json');
 
 			$page = $this->page;
 			$page->setName($attributes['page']);
@@ -929,7 +950,7 @@ class App {
 
 			$this->language->set($locale);
 
-			$data = json_decode(file_get_contents(str_replace('//', '/', $this->settings['project']['path'] . '/pages/published/' . $page. '.json')));
+			$data = getFileJson(str_replace('//', '/', $this->settings['project']['path'] . '/pages/published/' . $page . '.json'));
 
 			$page = $this->page;
 			$page->setParameters(['locale' => $locale, 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
