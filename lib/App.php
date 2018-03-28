@@ -627,7 +627,7 @@ class App {
 				$data = $request->getParsedBody();
 
 				if(array_key_exists('name', $data)) {
-					$path = $this->settings['project']['path'] . '/../lib/Model/' . str_replace('\\', '/', $data['name']) . '.json';
+					$path = ROOT_PATH . '/lib/Model/' . str_replace('\\', '/', $data['name']) . '.json';
 
 					if(file_exists($path)) {
 						return $response
@@ -644,7 +644,7 @@ class App {
 			$this->get('/model/content', function(Request $request, Response $response) {
 				$data = $request->getQueryParams();
 				$name = $data['name'];
-				$json = getFileJson($this->settings['project']['path'] . '/../lib/Model/' . str_replace('\\', '/', $data['name']) . '.json', true);
+				$json = getFileJson(ROOT_PATH . '/lib/Model/' . str_replace('\\', '/', $data['name']) . '.json', true);
 
 				unset($data['name']);
 
