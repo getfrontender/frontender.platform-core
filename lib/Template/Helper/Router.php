@@ -58,9 +58,12 @@ class Router extends \Twig_Extension
 				    if ( array_key_exists( $model, $routes ) && array_key_exists( $params['id'], $routes[ $model ] ) ) {
 				    	// Check if we have an alias for the current language.
 					    // Load the new json.
-					    $json = json_decode(file_get_contents($this->container->settings['project']['path'] . '/pages/published/' . $routes[ $model ][ $params['id'] ]['path'] . '.json'));
-					    if($json && property_exists($json, 'alias') && property_exists($json->alias, $params['locale'])) {
-						    return ($this->container->has('domain') ? '' : '/' . $params['locale']) . '/' . $json->alias->{$params['locale']};
+					    $json_path = $this->container->settings['project']['path'] . '/pages/published/' . $routes[ $model ][ $params['id'] ]['path'] . '.json';
+					    if(file_exists($json_path)) {
+						    $json = json_decode( file_get_contents( $json_path ) );
+						    if ( $json && is_object( $json ) && property_exists( $json, 'alias' ) && is_object( $json->alias ) && property_exists( $json->alias, $params['locale'] ) ) {
+							    return ( $this->container->has( 'domain' ) ? '' : '/' . $params['locale'] ) . '/' . $json->alias->{$params['locale']};
+						    }
 					    }
 
 					    return ($this->container->has('domain') ? '' : '/' . $params['locale']) . $routes[ $model ][ $params['id'] ]['path'];
