@@ -59,7 +59,7 @@ class Router extends \Twig_Extension
 				    	// Check if we have an alias for the current language.
 					    // Load the new json.
 					    $json = json_decode(file_get_contents($this->container->settings['project']['path'] . '/pages/published/' . $routes[ $model ][ $params['id'] ]['path'] . '.json'));
-					    if(property_exists($json, 'alias') && property_exists($json->alias, $params['locale'])) {
+					    if($json && property_exists($json, 'alias') && property_exists($json->alias, $params['locale'])) {
 						    return ($this->container->has('domain') ? '' : '/' . $params['locale']) . '/' . $json->alias->{$params['locale']};
 					    }
 
