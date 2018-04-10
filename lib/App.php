@@ -49,16 +49,16 @@ class App {
 		if(!$config->debug) {
 			$container['notFoundHandler'] = $container['errorHandler'] = function ($container) {
 				return function (Request $request, Response $response, $exception) use ($container) {
-//					$previous = $exception->getPrevious();
-//					$error = [
-//						'code' => $exception->getCode() ? $exception->getCode() : 404,
-//						'message' => $exception->getMessage() ? $exception->getMessage() : 'Page not found'
-//					];
-//
-//					if ($previous) {
-//						$error['code'] = $previous->getCode();
-//						$error['message'] = $previous->getResponse()->getReasonPhrase();
-//					}
+					$previous = $exception->getPrevious();
+					$error = [
+						'code' => $exception->getCode() ? $exception->getCode() : 404,
+						'message' => $exception->getMessage() ? $exception->getMessage() : 'Page not found'
+					];
+
+					if ($previous) {
+						$error['code'] = $previous->getCode();
+						$error['message'] = $previous->getResponse()->getReasonPhrase();
+					}
 
 					$parts = array_values(array_filter(explode('/', $request->getUri()->getPath())));
 					$locale = $parts[0] ?? 'en';
