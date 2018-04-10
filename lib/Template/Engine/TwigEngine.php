@@ -40,7 +40,8 @@ class TwigEngine extends Object implements EngineInterface
             $container['settings']['template']['path'],
             [
                 'cache' => $container['settings']['caching'] ? $container['settings']['template']['cache']['path'] : false,
-                'debug' =>  $container['settings']['template']['debug']
+                'debug' =>  $container['settings']['template']['debug'],
+	            'auto_reload' => $container['settings']['template']['auto_reload'] ?? false
             ]
         ];
 
