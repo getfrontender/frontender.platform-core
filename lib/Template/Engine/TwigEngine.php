@@ -53,6 +53,17 @@ class TwigEngine extends Object implements EngineInterface
 
         $this->engine->addExtension(new TwigExtension($container['router'], $container['settings']['base_path']));
 
+	    // Register the core filters
+	    $this->engine->addExtension( new Date( $container ) );
+	    $this->engine->addExtension( new Escaping() );
+	    $this->engine->addExtension( new Filter() );
+	    $this->engine->addExtension( new Humanize( $container ) );
+	    $this->engine->addExtension( new Markdown() );
+	    $this->engine->addExtension( new Number( $container ) );
+	    $this->engine->addExtension( new Pagination() );
+	    $this->engine->addExtension( new Text() );
+	    $this->engine->addExtension( new Translate( $container ) );
+
         // Add custom extension for the engine.
 	    // Auto bind all helpers
 	    $finder = new Finder();
@@ -68,16 +79,10 @@ class TwigEngine extends Object implements EngineInterface
 		    $this->engine->addExtension( new $class( $container ) );
 	    }
 
-	    // Register the core filters
-	    $this->engine->addExtension( new Date( $container ) );
-	    $this->engine->addExtension( new Escaping() );
-	    $this->engine->addExtension( new Filter() );
-	    $this->engine->addExtension( new Humanize( $container ) );
-	    $this->engine->addExtension( new Markdown() );
-	    $this->engine->addExtension( new Number( $container ) );
-	    $this->engine->addExtension( new Pagination() );
-	    $this->engine->addExtension( new Text() );
-	    $this->engine->addExtension( new Translate( $container ) );
+	    // Register the core helpers
+	    $this->engine->addExtension(new Router($container));
+	    $this->engine->addExtension(new HashedPath($container));
+	    $this->engine->addExtension(new Url($container));
 
 	    $finder = new Finder();
 	    $finder
@@ -90,11 +95,6 @@ class TwigEngine extends Object implements EngineInterface
 		    $class = 'Prototype\\Template\\Helper\\' . $file->getBasename('.' . $file->getExtension());
 		    $this->engine->addExtension( new $class( $container ) );
 	    }
-
-	    // Register the core helpers
-	    $this->engine->addExtension(new Router($container));
-	    $this->engine->addExtension(new HashedPath($container));
-	    $this->engine->addExtension(new Url($container));
     }
 
     public function loadFile($template)
