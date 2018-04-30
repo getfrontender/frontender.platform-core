@@ -186,8 +186,17 @@ class DefaultPage extends Object
 
                             if ($model instanceof AbstractModel)
                             {
-                                $data = array_merge($data, $model->fetch());
+	                            $name = $model->getName();
 
+	                            if(strpos($name, 'Channel') !== false) {
+	                            	$name = strtolower(str_replace('Channel', '', $name));
+	                            }
+
+	                            if(property_exists($value->controls, 'id') && strpos($model->getName(), 'Channel') === false) {
+	                            	$name = Inflector::singularize($name);
+	                            }
+
+	                            $data[$name] = new Wrapper($model);
                                 $iterator->getSubIterator($iterator->getDepth())->offsetSet('model', $value);
                             }
                         } else {
@@ -300,4 +309,84 @@ class DefaultPage extends Object
 
         return $word;
     }
+}
+
+class Wrapper implements \ArrayAccess, \Iterator {
+	private $position = 0;
+	private $model;
+	private $data = null;
+
+	public function __construct($model) {
+		$this->model = $model;
+	}
+
+	public function offsetExists( $offset ) {
+		// TODO: Implement offsetExists() method.
+		return array_key_exists($offset, $this->fetch());
+	}
+
+	public function offsetGet( $offset ) {
+		$data =  $this->fetch();
+
+		return $data[$offset];
+	}
+
+	public function offsetSet( $offset, $value ) {
+		// TODO: Implement offsetSet() method.
+	}
+
+	public function offsetUnset( $offset ) {
+		// TODO: Implement offsetUnset() method.
+	}
+
+	public function setData($data) {
+		$this->data = $data;
+	}
+
+	public function next() {
+		++$this->position;
+	}
+
+	public function current() {
+		$item = $this->data[$this->position];
+		$wrapper = new Wrapper($this->model);
+		$wrapper->setData($item);
+
+		return $wrapper;
+	}
+
+	public function rewind() {
+		$this->position = 0;
+	}
+
+	public function key() {
+		return $this->position;
+	}
+
+	public function valid() {
+		$data = $this->fetch();
+
+		return isset($data[$this->position]);
+	}
+
+	private function fetch() {
+		if($this->data === null) {
+			$data = $this->model->fetch();
+
+			$name = $this->model->getName();
+			if(strpos($name, 'Channel') !== false) {
+				$name = strtolower(str_replace('Channel', '', $name));
+			}
+
+			if(array_key_exists('id', $this->model->getState()->getValues(true)) && strpos($this->model->getName(), 'Channel') === false) {
+				$name = Inflector::singularize($name);
+			}
+
+			error_log($name);
+
+			$this->data = $data[$name];
+		}
+
+		return $this->data;
+	}
 }
