@@ -1,41 +1,48 @@
 <?php
 
-namespace Frontender\Core\Wrapper;
+namespace Frontender\Core\Wrappers;
 
 abstract class Core implements \Iterator, \ArrayAccess {
+	private $position = 0;
+	protected $data = null;
+
+	public function setData( $data ) {
+		$this->data = $data;
+	}
+
 	public function offsetExists( $offset ) {
-		// TODO: Implement offsetExists() method.
+		return array_key_exists($offset, $this->data);
 	}
 
 	public function offsetGet( $offset ) {
-		// TODO: Implement offsetGet() method.
+		return $this->data[$offset];
 	}
 
 	public function offsetSet( $offset, $value ) {
-		// TODO: Implement offsetSet() method.
+		return false;
 	}
 
 	public function offsetUnset( $offset ) {
-		// TODO: Implement offsetUnset() method.
+		return false;
 	}
 
 	public function valid() {
-		// TODO: Implement valid() method.
+		return false;
 	}
 
 	public function current() {
-		// TODO: Implement current() method.
+		return false;
 	}
 
 	public function rewind() {
-		// TODO: Implement rewind() method.
+		$this->position = 0;
 	}
 
 	public function next() {
-		// TODO: Implement next() method.
+		++$this->position;
 	}
 
 	public function key() {
-		// TODO: Implement key() method.
+		return $this->position;
 	}
 }
