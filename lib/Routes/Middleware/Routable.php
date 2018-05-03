@@ -7,7 +7,7 @@
  * @link        http://www.dipity.eu
  */
 
-namespace Frontender\Core\Middleware;
+namespace Frontender\Core\Routes\Middleware;
 
 use Frontender\Core\Template\Helper\Router;
 

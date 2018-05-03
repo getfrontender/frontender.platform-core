@@ -1,6 +1,6 @@
 <?php
 
-namespace Frontender\Core\Middleware;
+namespace Frontender\Core\Routes\Middleware;
 
 use Slim\Http\Request;
 use Slim\Http\Response;

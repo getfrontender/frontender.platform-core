@@ -1,6 +1,6 @@
 <?php
 
-namespace Frontender\Core\Middleware;
+namespace Frontender\Core\Routes\Middleware;
 
 use Frontender\Core\Template\Helper\Router;
 use \Psr\Http\Message\ServerRequestInterface as Request;

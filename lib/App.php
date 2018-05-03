@@ -48,17 +48,22 @@ class App {
 
 		if(!$config->debug) {
 			$container['notFoundHandler'] = $container['errorHandler'] = function ($container) {
-				return function (Request $request, Response $response, $exception) use ($container) {
-					$previous = $exception->getPrevious();
-					$error = [
-						'code' => $exception->getCode() ? $exception->getCode() : 404,
-						'message' => $exception->getMessage() ? $exception->getMessage() : 'Page not found'
-					];
+				return function (Request $request, Response $response, $exception = null) use ($container) {
+//					$previous = $exception->getPrevious();
+//					$error = [
+//						'code' => $exception->getCode() ? $exception->getCode() : 404,
+//						'message' => $exception->getMessage() ? $exception->getMessage() : 'Page not found'
+//					];
+//
+//					if ($previous) {
+//						$error['code'] = $previous->getCode();
+//						$error['message'] = $previous->getResponse()->getReasonPhrase();
+//					}
 
-					if ($previous) {
-						$error['code'] = $previous->getCode();
-						$error['message'] = $previous->getResponse()->getReasonPhrase();
-					}
+					echo '<pre>';
+					    print_r($exception);
+					echo '</pre>';
+					die();
 
 					$parts = array_values(array_filter(explode('/', $request->getUri()->getPath())));
 					$locale = $parts[0] ?? 'en';
@@ -69,7 +74,7 @@ class App {
 					}
 
 					$container->language->set($locale);
-					$data = getFileJson($container->settings['project']['path'] . '/pages/published/' . $page . '.json');
+					$data = getFileJson($container->settings['project']['path'] . '/pages/published/' . $page . '.json', true);
 
 //					if($data->containers && count($data->containers) > 1) {
 //						$data->containers[1]->template_config = $error;
@@ -80,7 +85,7 @@ class App {
 					$page->setData($data);
 					$page->setRequest($request);
 
-					return $response->withStatus($error['code'])->write($page->render());
+					return $response->write($page->render());
 				};
 			};
 		}
@@ -90,10 +95,10 @@ class App {
 		$app = $this->getApp();
 		$container = $this->getContainer();
 
-		$app->add(new Middleware\Routable($container));
-		$app->add(new Middleware\Page($container));
-		$app->add(new Middleware\Maintenance($container));
-		$app->add(new Middleware\Sitable($container));
+//		$app->add(new Middleware\Routable($container));
+//		$app->add(new Middleware\Page($container));
+		$app->add(new Routes\Middleware\Maintenance($container));
+		$app->add(new Routes\Middleware\Sitable($container));
 	}
 
 	private function _appendContainerData() {
@@ -156,10 +161,14 @@ class App {
 		$this->_appendMiddleware();
 		$this->_appendContainerData();
 
-		$app = $this->getApp();
-		$config = $this->getConfig();
+		foreach(glob(__DIR__ . '/Routes/Api/*') as $file) {
+			$name = str_replace('.php', '', basename($file));
+			$class = 'Frontender\\Core\\Routes\\Api\\' . $name;
 
-		$app->group('/api', function() {
+			new $class($this);
+		}
+
+		/*$app->group('/api', function() {
 			$this->get('/containers', function(Request $request, Response $response) {
 				$finder = new Finder();
 				$finder
@@ -560,7 +569,7 @@ class App {
 			});
 
 			/******** Sites ********/
-			$this->get('/site/{domain}', function(Request $request, Response $response) {
+			/*$this->get('/site/{domain}', function(Request $request, Response $response) {
 				// Loop through all the files and check the content.
 				$finder = new Finder();
 				$sites = $finder->ignoreUnreadableDirs()->in(ROOT_PATH . '/project/sites')->files()->name('*.json');
@@ -815,153 +824,15 @@ class App {
 			die('Called');
 		}
 
+		return $this;*/
+
 		return $this;
 	}
 
 	public function start(  ) {
-		$app = $this->getApp();
-		$config = $this->getConfig();
-		$container = $this->getContainer();
+		new \Frontender\Core\Routes\App($this);
 
-		$app->get('/', function (Request $request, Response $response) {
-			return $response->withRedirect('/en/');
-		});
-
-		$app->get('/{locale}/', function (Request $request, Response $response) {
-			$locale = $request->getAttribute('locale');
-
-			$this->language->set($locale);
-
-			$data = getFileJson($this->settings['project']['path'] . '/pages/published/home.json');
-
-			$page = $this->page;
-			$page->setParameters(['locale' => $locale, 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
-			$page->setData($data);
-			$page->setRequest($request);
-
-			$response->getBody()->write($page->render());
-
-			return $response;
-		})->setName('home');
-
-		$app->get('/{locale}/partial', function (Request $request, Response $response) {
-			$query = $request->getQueryParams();
-			$query['language'] = $request->getAttribute('locale');
-
-			$this->language->set($query['language']);
-
-			// I know that the states will be in need of parsing.
-			// This needs to be done here.
-
-			$states = [];
-			$config = [];
-
-			if(array_key_exists('config', $query) && $query['config']) {
-				$conf = json_decode($query['config']);
-
-				if($conf) {
-					foreach ( $conf as $key => $values ) {
-						$config[ $key ] = [
-							'controls' => []
-						];
-
-						foreach ( $values as $name => $value ) {
-							$config[ $key ]['controls'][ $name ] = [
-								'value' => $value
-							];
-						}
-					}
-				}
-			}
-
-			foreach($query as $key => $value) {
-				$copy = $value;
-
-				try {
-					$value = json_decode($copy, true);
-					if(!$value) {
-						$value = $copy;
-					}
-				} catch(Error $e) {
-					// NOOP
-				} catch(Exception $e) {
-					// NOOP
-				}
-
-				$states[$key] = [
-					'value' => $value
-				];
-			}
-
-			if(array_key_exists('model', $query) && $query['model']) {
-				$states['name'] = [
-					'value' => $query['model']
-				];
-			}
-
-			$data = [
-				'template' => $query['layout'],
-				'template_config' => [
-					'model' => [
-						'controls' => $states
-					]
-				]
-			];
-
-			$data['template_config'] = array_merge($data['template_config'], $config);
-
-			$data = json_decode(json_encode($data));
-			$clone = json_decode(json_encode($data));
-			$data->template_config->container = $clone;
-
-			$page = $this->page;
-			$page->setParameters(['page' => $request->getAttribute('page'), 'locale' => $query['language'], 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
-			$page->setData($data);
-			$page->setRequest($request);
-
-			$response->getBody()->write($page->render());
-
-			return $response;
-		})->setName('partial');
-
-		$app->get('/{locale}/{page:.*}/{slug:.*}' . $config->id_separator . '{id}', function (Request $request, Response $response) {
-			$attributes = $request->getAttributes();
-
-			$this->language->set($attributes['locale']);
-
-			$data = getFileJson($this->settings['project']['path'] . '/pages/published/' . $attributes['page'] . '.json');
-
-			$page = $this->page;
-			$page->setName($attributes['page']);
-			$page->setParameters(['page' => $request->getAttribute('page'), 'locale' => $attributes['locale'], 'id' => $attributes['id'], 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
-			$page->setData($data);
-			$page->setRequest($request);
-
-			$page->parseData();
-
-			$response->getBody()->write($page->render());
-
-			return $response;
-		})->setName('details');
-
-		$app->get('/{locale}/{page:.*}', function (Request $request, Response $response) {
-			$locale = $request->getAttribute('locale');
-			$page = $request->getAttribute('page');
-
-			$this->language->set($locale);
-
-			$data = getFileJson(str_replace('//', '/', $this->settings['project']['path'] . '/pages/published/' . $page . '.json'));
-
-			$page = $this->page;
-			$page->setParameters(['page' => $request->getAttribute('page'), 'locale' => $locale, 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
-			$page->setData($data);
-			$page->setRequest($request);
-			$response->getBody()->write($page->render());
-
-			return $response;
-		})->setName('list');
-
-		$app->run();
+		$this->getApp()->run();
 
 		return $this;
 	}
