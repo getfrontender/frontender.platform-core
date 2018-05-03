@@ -5,7 +5,7 @@ namespace Frontender\Core\Routes\Helpers;
 class CoreRoute {
 	protected $app;
 	protected $config;
-	protected $group = '/';
+	protected $group = '';
 
 	public function __construct($app) {
 		$this->app = $app->getApp();
@@ -20,10 +20,6 @@ class CoreRoute {
 			$self->registerUpdateRoutes();
 			$self->registerDeleteRoutes();
 		});
-	}
-
-	public function getJson($file, $assoc = false) {
-		return json_decode(file_get_contents(str_replace('//', '/', $file)), $assoc);
 	}
 
 	protected function registerRoutes() {

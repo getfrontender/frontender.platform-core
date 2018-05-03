@@ -2,6 +2,7 @@
 
 namespace Frontender\Core\Routes;
 
+use Frontender\Core\DB\Adapter;
 use Frontender\Core\Routes\Helpers\CoreRoute;
 use Slim\Http\Request;
 use Slim\Http\Response;
@@ -36,7 +37,10 @@ class App extends CoreRoute {
 
 			$this->language->set($attributes['locale']);
 
-			$data = $this->getJson($this->settings['project']['path'] . '/pages/published/' . $attributes['page'] . '.json', true);
+			$result = Adapter::getInstance()->collection('pages.public')->findOne([
+				'definition.template_config.seo.route' => $attributes['page']
+			]);
+			$data = Adapter::getInstance()->toJSON($result);
 
 			$page = $this->page;
 			$page->setName($attributes['page']);
@@ -57,11 +61,15 @@ class App extends CoreRoute {
 
 			$this->language->set($locale);
 
-			$data = $this->getJson($this->settings['project']['path'] . '/pages/published/' . $page . '.json', true);
+
+			$result = Adapter::getInstance()->collection('pages.public')->findOne([
+				'definition.template_config.seo.route' => $page
+			]);
+			$data = Adapter::getInstance()->toJSON($result, true);
 
 			$page = $this->page;
 			$page->setParameters(['page' => $request->getAttribute('page'), 'locale' => $locale, 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
-			$page->setData($data);
+			$page->setData($data['definition']);
 			$page->setRequest($request);
 			$response->getBody()->write($page->render());
 
