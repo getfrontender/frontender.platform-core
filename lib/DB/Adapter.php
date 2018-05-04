@@ -19,11 +19,33 @@ class Adapter extends \MongoDB\Client {
 	public function toJSON( $docs, $assoc = false ) {
 		if ( is_array( $docs ) ) {
 			return array_map( function ( $document ) use ( $assoc ) {
-				return json_decode( toJSON( fromPHP( $document ) ), $assoc );
+				$document = json_decode( toJSON( fromPHP( $document ) ), $assoc );
+				$this->replaceObjectID($document, $assoc);
+
+				return $document;
 			}, $docs );
 		}
 
-		return json_decode( toJSON( fromPHP( $docs ) ), $assoc );
+		$document = json_decode( toJSON( fromPHP( $docs ) ), $assoc );
+		$this->replaceObjectID($document, $assoc);
+		return $document;
+	}
+
+	private function replaceObjectID(&$document, $isArray) {
+		// Check if we have an object or an array.
+		foreach($document as $key => &$value) {
+			if(!$isArray && is_object($value) && property_exists($value, '$oid')) {
+				$document->{$key} = $value->{'$oid'};
+			} else if(!$isArray && is_object($value)) {
+				$this->replaceObjectID($value, $isArray);
+			} else if($isArray && is_array($value) && array_key_exists('$oid', $value)) {
+				$document[$key] = $value['$oid'];
+			} else if($isArray && is_array($value)) {
+				$document[$key] = $this->replaceObjectID($value, $isArray);
+			}
+		}
+
+		return $document;
 	}
 
 	static public function getInstance() {

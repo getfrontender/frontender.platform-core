@@ -22,10 +22,6 @@ class CoreRoute {
 		});
 	}
 
-	protected function registerRoutes() {
-
-	}
-
 	protected function registerCreateRoutes() {
 
 	}

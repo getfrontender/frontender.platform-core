@@ -28,9 +28,12 @@ class Controls extends CoreRoute {
 		});
 
 		$this->app->get('/{id}', function(Request $request, Response $response) {
-			return $response->withJson(Adapter::getInstance()->collection('controls')->findOne([
+			$data = Adapter::getInstance()->collection('controls')->findOne([
 				'_id' => new ObjectId($request->getAttribute('id'))
-			]))
+			]);
+			$json = Adapter::getInstance()->toJSON($data);
+
+			return $response->withJson($json)
 			                ->withHeader('Access-Control-Allow-Origin', '*')
 			                ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
 			                ->withHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
