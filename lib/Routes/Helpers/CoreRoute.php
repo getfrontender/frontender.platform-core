@@ -2,12 +2,14 @@
 
 namespace Frontender\Core\Routes\Helpers;
 
+use Frontender\Core\App;
+
 class CoreRoute {
 	protected $app;
 	protected $config;
 	protected $group = '';
 
-	public function __construct($app) {
+	public function __construct(App $app) {
 		$this->app = $app->getApp();
 		$this->config = $app->getConfig();
 

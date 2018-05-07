@@ -17,6 +17,10 @@ class Adapter extends \MongoDB\Client {
 	}
 
 	public function toJSON( $docs, $assoc = false ) {
+		if(!$docs) {
+			return $docs;
+		}
+
 		if ( is_array( $docs ) ) {
 			return array_map( function ( $document ) use ( $assoc ) {
 				$document = json_decode( toJSON( fromPHP( $document ) ), $assoc );

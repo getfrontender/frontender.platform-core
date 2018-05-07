@@ -61,7 +61,7 @@ class App {
 //					}
 
 					echo '<pre>';
-					    print_r($exception);
+					    print_r($exception->getMessage());
 					echo '</pre>';
 					die();
 
@@ -99,6 +99,18 @@ class App {
 //		$app->add(new Middleware\Page($container));
 		$app->add(new Routes\Middleware\Maintenance($container));
 		$app->add(new Routes\Middleware\Sitable($container));
+
+		/**
+		 * This will add the cors headers on every request, still needs to be a little more strict though.
+		 */
+		$app->add(function(Request $req, Response $res, $next) {
+			$response = $next($req, $res);
+
+			return $response
+				->withHeader('Access-Control-Allow-Origin', '*')
+				->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+				->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+		});
 	}
 
 	private function _appendContainerData() {

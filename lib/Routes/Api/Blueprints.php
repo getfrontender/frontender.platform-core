@@ -17,13 +17,11 @@ class Blueprints extends CoreRoute {
 		parent::registerReadRoutes();
 
 		$this->app->get('', function(Request $request, Response $response) {
-			$data = Adapter::getInstance()->collection('blueprints')->find()->toArray();
-			$json = Adapter::getInstance()->toJSON($data);
+			$json = Adapter::getInstance()->toJSON(
+				\Frontender\Core\Controllers\Blueprints::browse()
+			);
 
-			return $response->withJson($json)
-				->withHeader('Access-Control-Allow-Origin', '*')
-				->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-				->withHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+			return $response->withJson($json);
 		});
 	}
 }
