@@ -11,8 +11,8 @@ class Core {
 		$this->adapter   = Adapter::getInstance();
 	}
 
-	public function actionBrowse() {
-		die('Called');
+	public function actionBrowse($filter = []) {
+
 	}
 
 	public function actionRead( $id ) {
@@ -35,6 +35,6 @@ class Core {
 		$class = get_called_class();
 		$instance = new $class;
 
-		return call_user_func([$instance, 'action' . ucfirst(strtolower($name))], $arguments);
+		return call_user_func_array([$instance, 'action' . ucfirst(strtolower($name))], $arguments);
 	}
 }
