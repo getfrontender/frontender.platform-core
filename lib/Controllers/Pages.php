@@ -35,6 +35,20 @@ class Pages extends Core {
 		return $data;
 	}
 
+	public function actionAdd($item, $collection = 'pages') {
+		return $this->adapter->collection($collection)->insertOne($item);
+	}
+
+	public function actionPublish($page) {
+		unset($page->_id);
+
+		return $this->adapter->collection('pages.public')->findOneAndReplace([
+			'revision.lot' => $page->revision->lot
+		], $page, [
+			'upsert' => true
+		]);
+	}
+
 	public function actionDelete($lot_id, $collection = 'public') {
 		$collection = 'pages' . ($collection ? '.' . $collection : '');
 

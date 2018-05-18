@@ -27,7 +27,7 @@ class Core {
 
 	}
 
-	public function actionDelete() {
+	public function actionDelete($lot_id, $collection = 'public') {
 
 	}
 
