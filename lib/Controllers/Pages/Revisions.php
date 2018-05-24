@@ -7,8 +7,10 @@ use MongoDB\Driver\Query;
 
 class Revisions extends Core {
 	public function actionAdd( $data ) {
+		unset($data['_id']);
+
 		$result = $this->adapter->collection('pages')->insertOne($data);
-		$data['_id'] = $result->getInsertedId();
+		$data['_id'] = $result->getInsertedId()->__toString();
 
 		return $data;
 	}
@@ -26,7 +28,7 @@ class Revisions extends Core {
 		return array_shift($revisions);
 	}
 
-	public function actionDelete($lot_id) {
+	public function actionDelete($lot_id, $collection = 'public') {
 		parent::actionDelete();
 
 		// When a revision is removed it will be moved.
