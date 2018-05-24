@@ -39,9 +39,22 @@ class Pages extends Core {
 		return $this->adapter->collection($collection)->insertOne($item);
 	}
 
+	public function actionSanitize($pageJson) {
+		$this->_sanitizeConfig($pageJson);
+
+		return $pageJson;
+	}
+
 	public function actionPublish($page) {
 		unset($page->_id);
 
+		$page->definition = json_decode(json_encode($page->definition), true);
+		$page->definition = $this->actionSanitize($page->definition);
+
+		/**
+		 * We will only have the values or a reference to the cached values here.
+		 */
+		
 		return $this->adapter->collection('pages.public')->findOneAndReplace([
 			'revision.lot' => $page->revision->lot
 		], $page, [
@@ -57,5 +70,43 @@ class Pages extends Core {
 		]);
 
 		return true;
+	}
+
+	private function _sanitizeConfig(&$container) {
+		// This method will check if there is template_config if so, it will sanitize it.
+		// This is because we will only need the values here.
+		if(!isset($container['template_config']) && isset($container['blueprint'])) {
+			// Get the blueprint from the DB.
+			$blueprint = $this->adapter->collection('blueprints')->findOne([
+				'_id' => new ObjectId($container['blueprint'])
+			]);
+			$blueprint = json_decode(json_encode($this->adapter->toJSON($blueprint)), true);
+			$container['template'] = $blueprint['definition']['template'];
+			$container['template_config'] = $blueprint['definition']['template_config'];
+		}
+
+		if(isset($container['template_config'])) {
+			$newConfig = [];
+
+			foreach($container['template_config'] as $key => $section) {
+				$newSection = [];
+
+				foreach($section['controls'] as $index => $control) {
+					if(isset($control['value'])) {
+						$newSection[ $index ] = $control['value'];
+					}
+				}
+
+				$newConfig[$key] = $newSection;
+			}
+
+			$container['template_config'] = $newConfig;
+		}
+
+		if(isset($container['containers'])) {
+			foreach($container['containers'] as &$subContainer) {
+				$this->_sanitizeConfig($subContainer);
+			}
+		}
 	}
 }

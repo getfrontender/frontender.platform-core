@@ -77,6 +77,36 @@ class Pages extends CoreRoute {
 			return $response->withJson( $json );
 		} );
 
+		$this->app->get( '/{page_id}/preview', function ( Request $request, Response $response) {
+			$json = Adapter::getInstance()->toJSON(
+				\Frontender\Core\Controllers\Pages::read( $request->getAttribute( 'page_id' ) )
+			);
+			$json = json_decode(json_encode($json), true);
+			$json = \Frontender\Core\Controllers\Pages::sanitize($json['definition']);
+
+//			echo '<pre>';
+//			    print_r($json);
+//			echo '</pre>';
+//			die();
+
+			try {
+				$page = $this->page;
+//			$page->setName($attributes['page']);
+//			$page->setParameters(['debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
+				$page->setData( $json );
+				$page->setRequest( $request );
+				$page->parseData();
+
+				$response->getBody()->write($page->render());
+			} catch (\Exception $e) {
+				die('Called');
+			} catch (\Error $e) {
+				die('Called2');
+			}
+
+			return $response;
+		});
+
 		$this->app->get( '/{lot_id}/public', function ( Request $request, Response $response ) {
 			$json = Adapter::getInstance()->toJSON(
 				Revisions::read( $request->getAttribute( 'lot_id' ), 'public' )
