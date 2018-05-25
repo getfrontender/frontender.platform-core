@@ -6,6 +6,7 @@ use Frontender\Core\Controllers\Pages\Revisions;
 use Frontender\Core\DB\Adapter;
 use Frontender\Core\Routes\Helpers\CoreRoute;
 use Frontender\Core\Routes\Traits\Authorizable;
+use MongoDB\BSON\ObjectId;
 use Slim\Http\Request;
 use Slim\Http\Response;
 
@@ -147,6 +148,19 @@ class Pages extends CoreRoute {
 			print_r( $data );
 			echo '</pre>';
 			die();
+		} );
+		
+		$this->app->post( '/{page_id}/revision', function ( Request $request, Response $response ) {
+			$body = $request->getParsedBody();
+			$body['_id'] = new ObjectId($body['_id']);
+
+			Adapter::getInstance()->collection('pages')->findOneAndReplace([
+				'_id' => $body['_id']
+			], $body);
+
+			$body['_id'] = $body['_id']->__toString();
+
+			return $response->withJson($body);
 		} );
 	}
 
