@@ -21,8 +21,13 @@ class Language
         return $this->language;
     }
 
-    public function set(string $language)
+    public function set(string $language = '')
     {
+    	if(strpos($language, '-') !== false) {
+    		$parts = explode('-', $language);
+    		$language = $parts[0];
+	    }
+    	
         $this->language = $language;
 
         return $this;

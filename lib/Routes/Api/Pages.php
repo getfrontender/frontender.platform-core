@@ -84,13 +84,9 @@ class Pages extends CoreRoute {
 			$json = json_decode(json_encode($json), true);
 			$json = \Frontender\Core\Controllers\Pages::sanitize($json['definition']);
 
-//			echo '<pre>';
-//			    print_r($json);
-//			echo '</pre>';
-//			die();
-
 			try {
 				$page = $this->page;
+				$this->language->set($request->getQueryParam('locale'));
 //			$page->setName($attributes['page']);
 //			$page->setParameters(['debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
 				$page->setData( $json );
@@ -142,12 +138,6 @@ class Pages extends CoreRoute {
 
 		$this->app->post( '/{lot_id}', function ( Request $request, Response $response ) {
 			$data = \Frontender\Core\Controllers\Pages::update( $request->getAttribute( 'lot_id' ), $request->getParsedBody() );
-
-			var_dump( $data );
-			echo '<pre>';
-			print_r( $data );
-			echo '</pre>';
-			die();
 		} );
 		
 		$this->app->post( '/{page_id}/revision', function ( Request $request, Response $response ) {

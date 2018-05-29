@@ -3,17 +3,45 @@
 namespace Frontender\Core\Controllers;
 
 use MongoDB\BSON\ObjectId;
+use MongoDB\Driver\Query;
 
 class Pages extends Core {
 	public function actionBrowse($filter = []) {
 		$collection = isset($filter['collection']) ? 'pages.' . $filter['collection'] : 'pages';
-		$findFilter = [];
+		$findFilter = new \stdClass();
 
 		if(isset($filter['lot'])) {
-			$findFilter['revision.lot'] = $filter['lot'];
+			$findFilter->{'revision.lot'} = $filter['lot'];
 		}
 
-		return $this->adapter->collection($collection)->find($findFilter)->toArray();
+		$revisions = $this->adapter->collection($collection)->aggregate([
+			[ '$sort' => [
+				'revision.date' => -1
+			]],
+			['$group' => [
+				'_id' => '$revision.lot',
+				'uuid' => [
+					'$first' => '$_id'
+				],
+				'revision' => [
+					'$first' => '$revision'
+				],
+				'definition' => [
+					'$first' => '$definition'
+				],
+				'amount' => [
+					'$sum' => 1
+				]
+			]],
+			[ '$match' => $findFilter]
+		])->toArray();
+
+		return array_map(function($revision) {
+			$revision['_id'] = $revision['uuid'];
+			unset($revision['uuid']);
+
+			return $revision;
+		}, $revisions);
 	}
 
 	public function actionRead( $id ) {
@@ -24,6 +52,8 @@ class Pages extends Core {
 	
 	public function actionEdit($id, $data) {
 		unset($data['_id']);
+
+		$data['revision']['hash'] = md5(json_encode($data['definition']));
 
 		$data = $this->adapter->collection('pages')->findOneAndReplace([
 			'revision.lot' => $id
@@ -36,6 +66,9 @@ class Pages extends Core {
 	}
 
 	public function actionAdd($item, $collection = 'pages') {
+		$item['revision']['hash'] = md5(json_encode($item['definition']));
+		$item['devision']['date'] = gmdate('Y-m-d\TH:i:s\Z');
+
 		return $this->adapter->collection($collection)->insertOne($item);
 	}
 
