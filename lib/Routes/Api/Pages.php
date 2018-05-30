@@ -152,6 +152,32 @@ class Pages extends CoreRoute {
 
 			return $response->withJson($body);
 		} );
+
+		$this->app->post( '/{page_id}/preview', function ( Request $request, Response $response) {
+			$body = $request->getParsedBody();
+			$json = json_decode($body['data'], true);
+			$json = \Frontender\Core\Controllers\Pages::sanitize($json['definition']);
+
+			try {
+				$page = $this->page;
+				$this->language->set($request->getQueryParam('locale'));
+//			$page->setName($attributes['page']);
+//			$page->setParameters(['debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
+				$page->setData( $json );
+				$page->setRequest( $request );
+				$page->parseData();
+
+				$response->getBody()->write($page->render());
+			} catch (\Exception $e) {
+				echo $e->getMessage();
+				die('Called');
+			} catch (\Error $e) {
+				echo $e->getMessage();
+				die('Called2');
+			}
+
+			return $response;
+		});
 	}
 
 	public function registerDeleteRoutes() {
