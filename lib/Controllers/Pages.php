@@ -28,9 +28,6 @@ class Pages extends Core {
 				],
 				'definition' => [
 					'$first' => '$definition'
-				],
-				'amount' => [
-					'$sum' => 1
 				]
 			]],
 			[ '$match' => $findFilter]

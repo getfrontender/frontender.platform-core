@@ -139,19 +139,6 @@ class Pages extends CoreRoute {
 		$this->app->post( '/{lot_id}', function ( Request $request, Response $response ) {
 			$data = \Frontender\Core\Controllers\Pages::update( $request->getAttribute( 'lot_id' ), $request->getParsedBody() );
 		} );
-		
-		$this->app->post( '/{page_id}/revision', function ( Request $request, Response $response ) {
-			$body = $request->getParsedBody();
-			$body['_id'] = new ObjectId($body['_id']);
-
-			Adapter::getInstance()->collection('pages')->findOneAndReplace([
-				'_id' => $body['_id']
-			], $body);
-
-			$body['_id'] = $body['_id']->__toString();
-
-			return $response->withJson($body);
-		} );
 
 		$this->app->post( '/{page_id}/preview', function ( Request $request, Response $response) {
 			$body = $request->getParsedBody();
