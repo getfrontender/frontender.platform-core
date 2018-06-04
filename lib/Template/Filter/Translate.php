@@ -15,6 +15,7 @@ class Translate extends \Twig_Extension
     protected $_container;
     protected $_translator;
     protected $_debug;
+    protected $_fallback;
 
     public function __construct(Container $container)
     {
@@ -22,6 +23,7 @@ class Translate extends \Twig_Extension
         $this->_locale = $container['language']->get();
         $this->_translator = $container['translate'];
         $this->_debug = $this->_container->settings->get('translation_debug');
+        $this->_fallback = $this->_container->settings->get('default_locale');
     }
 
     public function getFilters()
@@ -54,14 +56,8 @@ class Translate extends \Twig_Extension
 
 		    if(array_key_exists($this->_locale, $text) && !empty($text[$this->_locale])) {
 			    return $text[$this->_locale];
-		    } else if(array_key_exists('en', $text)) {
-			    return $text['en'];
-		    } else {
-			    // Return the first language found.
-			    $languages = array_keys($text);
-			    $language = array_shift($languages);
-
-			    return $text[$language];
+		    } else if(array_key_exists($this->_fallback, $text)) {
+			    return $text[$this->_fallback];
 		    }
 	    }
 

@@ -23,11 +23,6 @@ class Language
 
     public function set(string $language = '')
     {
-    	if(strpos($language, '-') !== false) {
-    		$parts = explode('-', $language);
-    		$language = $parts[0];
-	    }
-    	
         $this->language = $language;
 
         return $this;
