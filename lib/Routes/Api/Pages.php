@@ -43,6 +43,21 @@ class Pages extends CoreRoute {
 
 			return $response->withStatus(200);
 		} );
+
+		$this->app->put('', function ( Request $request, Response $response ) {
+			$result = Adapter::getInstance()->collection('pages')->insertOne($request->getParsedBody(), [
+				'upsert' => true,
+				'returnNewDocument' => true
+			]);
+
+			$page = Adapter::getInstance()->toJSON(
+				Adapter::getInstance()->collection('pages')->findOne([
+					'_id' => new ObjectId($result->getInsertedId()->__toString())
+				])
+			);
+
+			return $response->withJson( $page );
+		} );
 	}
 
 	protected function registerReadRoutes() {
@@ -116,6 +131,14 @@ class Pages extends CoreRoute {
 		$this->app->get( '/{lot_id}/revision', function ( Request $request, Response $response ) {
 			$json = Adapter::getInstance()->toJSON(
 				Revisions::read( $request->getAttribute( 'lot_id' ), $request->getQueryParam( 'revision', 'last' ) )
+			);
+
+			return $response->withJson( $json );
+		} );
+		
+		$this->app->get( '/{lot_id}/revisions', function ( Request $request, Response $response ) {
+			$json = Adapter::getInstance()->toJSON(
+				Revisions::read( $request->getAttribute( 'lot_id' ), 'all' )
 			);
 
 			return $response->withJson( $json );

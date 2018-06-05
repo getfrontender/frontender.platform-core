@@ -27,6 +27,10 @@ class Revisions extends Core {
 		]]);
 		$revisions = $this->adapter->getManager()->executeQuery($_ENV['MONGO_DB'] . '.' . $collection, $query)->toArray();
 
+		if($revision === 'all') {
+			return $revisions;
+		}
+		
 		return array_shift($revisions);
 	}
 
