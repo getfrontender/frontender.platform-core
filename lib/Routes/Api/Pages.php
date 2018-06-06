@@ -35,9 +35,8 @@ class Pages extends CoreRoute {
 
 		$this->app->put( '/{page_id}/public', function ( Request $request, Response $response ) {
 			$page = Adapter::getInstance()->toJSON(
-				\Frontender\Core\Controllers\Pages::browse( $request->getAttribute('page_id'))
+				\Frontender\Core\Controllers\Pages::read( $request->getAttribute('page_id') )
 			);
-			$page = array_shift($page);
 
 			\Frontender\Core\Controllers\Pages::publish($page);
 

@@ -80,7 +80,7 @@ class Pages extends Core {
 
 		$page->definition = json_decode(json_encode($page->definition), true);
 		$page->definition = $this->actionSanitize($page->definition);
-		
+
 		return $this->adapter->collection('pages.public')->findOneAndReplace([
 			'revision.lot' => $page->revision->lot
 		], $page, [
