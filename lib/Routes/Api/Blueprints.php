@@ -12,6 +12,16 @@ class Blueprints extends CoreRoute {
 	protected $group = '/api/blueprints';
 
 	use Authorizable;
+	
+	protected function registerCreateRoutes() {
+		parent::registerCreateRoutes();
+
+		$this->app->put( '', function ( Request $request, Response $response ) {
+			\Frontender\Core\Controllers\Blueprints::add($request->getParsedBody());
+
+			return $response->withStatus(200);
+		} );
+	}
 
 	protected function registerReadRoutes() {
 		parent::registerReadRoutes();
