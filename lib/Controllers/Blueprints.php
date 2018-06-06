@@ -9,6 +9,8 @@ class Blueprints extends Core {
 
 	public function actionAdd($data) {
 		unset($data['_id']);
+		
+		$data['revision']['hash'] = md5(json_encode($data['definition']));
 
 		return $this->adapter->collection('blueprints')->insertOne($data);
 	}
