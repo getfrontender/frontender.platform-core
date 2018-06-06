@@ -10,6 +10,7 @@ class Revisions extends Core {
 		unset($data['_id']);
 
 		$data['revision']['date'] = gmdate('Y-m-d\TH:i:s\Z');
+		$data['revision']['hash'] = md5(json_encode($data['definition']));
 
 		$result = $this->adapter->collection('pages')->insertOne($data);
 		$data['_id'] = $result->getInsertedId()->__toString();
@@ -36,7 +37,7 @@ class Revisions extends Core {
 	}
 
 	public function actionDelete($lot_id, $collection = 'public') {
-		parent::actionDelete();
+		parent::actionDelete($lot_id, $collection);
 
 		// When a revision is removed it will be moved.
 		$array = $this->adapter->collection('pages')->find([
