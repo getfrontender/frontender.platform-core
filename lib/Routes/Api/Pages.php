@@ -138,7 +138,7 @@ class Pages extends CoreRoute {
 		
 		$this->app->get( '/{lot_id}/revisions', function ( Request $request, Response $response ) {
 			$json = Adapter::getInstance()->toJSON(
-				Revisions::read( $request->getAttribute( 'lot_id' ), 'all' )
+				Revisions::read( $request->getAttribute( 'lot_id' ), 'all', -1 )
 			);
 
 			return $response->withJson( $json );
@@ -195,6 +195,12 @@ class Pages extends CoreRoute {
 
 		$this->app->delete( '/{lot_id}/public', function ( Request $request, Response $response ) {
 			\Frontender\Core\Controllers\Pages::delete( $request->getAttribute( 'lot_id' ), 'public' );
+
+			return $response->withStatus( 200 );
+		} );
+
+		$this->app->delete( '/{lot_id}', function ( Request $request, Response $response ) {
+			\Frontender\Core\Controllers\Pages::delete( $request->getAttribute( 'lot_id' ), '' );
 
 			return $response->withStatus( 200 );
 		} );

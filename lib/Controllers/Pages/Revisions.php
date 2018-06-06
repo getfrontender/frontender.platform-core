@@ -17,13 +17,14 @@ class Revisions extends Core {
 		return $data;
 	}
 
-	public function actionRead( $lot_id, $revision = 'last' ) {
+	public function actionRead( $lot_id, $revision = 'last', $sort = 1 ) {
 		$collection = 'pages' . ($revision === 'public' ? '.public' : '');
+		$sort = $revision === 'last' ? -1 : $sort;
 
 		$query = new Query([
 			'revision.lot' => $lot_id
 		], ['sort' => [
-			'revision.date' => $revision === 'last' ? -1 : 1
+			'revision.date' => $sort
 		]]);
 		$revisions = $this->adapter->getManager()->executeQuery($_ENV['MONGO_DB'] . '.' . $collection, $query)->toArray();
 
