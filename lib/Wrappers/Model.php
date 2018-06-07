@@ -21,12 +21,14 @@ class Model extends Core {
 	}
 
 	public function offsetExists( $offset ) {
-		return array_key_exists( $offset, $this->fetch() );
+		$data = $this->fetch();
+
+		return isset($data[$offset]);
 	}
 
 	public function offsetGet( $offset ) {
 		$data = $this->fetch();
-
+		
 		return $data[ $offset ];
 	}
 
@@ -46,18 +48,7 @@ class Model extends Core {
 
 	private function fetch() {
 		if ( $this->data === null ) {
-			$data = $this->model->fetch();
-
-			$name = $this->model->getName();
-			if ( strpos( $name, 'Channel' ) !== false ) {
-				$name = strtolower( str_replace( 'Channel', '', $name ) );
-			}
-
-			if ( array_key_exists( 'id', $this->model->getState()->getValues( true ) ) && strpos( $this->model->getName(), 'Channel' ) === false ) {
-				$name = Inflector::singularize( $name );
-			}
-
-			$this->data = $data[ $name ];
+			$this->data = $this->model->fetch();
 		}
 
 		return $this->data;

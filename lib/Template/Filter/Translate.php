@@ -59,6 +59,8 @@ class Translate extends \Twig_Extension
 		    } else if(array_key_exists($this->_fallback, $text)) {
 			    return $text[$this->_fallback];
 		    }
+
+		    return '';
 	    }
 
 	    // No translation found

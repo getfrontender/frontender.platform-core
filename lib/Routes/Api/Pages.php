@@ -113,7 +113,12 @@ class Pages extends CoreRoute {
 				die('Called');
 			} catch (\Error $e) {
 				echo $e->getMessage();
-				die('Called2');
+				echo '<pre>';
+				    print_r(array_map(function($trace) {
+				    	return $trace['file'] . '::' . $trace['line'];
+				    }, $e->getTrace()));
+				echo '</pre>';
+				die();
 			}
 
 			return $response;
