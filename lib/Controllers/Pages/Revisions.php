@@ -10,7 +10,7 @@ class Revisions extends Core {
 		unset($data['_id']);
 
 		$data['revision']['date'] = gmdate('Y-m-d\TH:i:s\Z');
-		$data['revision']['hash'] = md5(json_encode($data['definition']));
+		$data['revision']['hash'] = sha1(json_encode($data['definition']) . time());
 
 		$result = $this->adapter->collection('pages')->insertOne($data);
 		$data['_id'] = $result->getInsertedId()->__toString();
