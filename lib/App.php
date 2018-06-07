@@ -98,7 +98,7 @@ class App {
 //		$app->add(new Middleware\Routable($container));
 //		$app->add(new Middleware\Page($container));
 		$app->add(new Routes\Middleware\Maintenance($container));
-		$app->add(new Routes\Middleware\Sitable($container));
+//		$app->add(new Routes\Middleware\Sitable($container));
 
 		/**
 		 * This will add the cors headers on every request, still needs to be a little more strict though.
