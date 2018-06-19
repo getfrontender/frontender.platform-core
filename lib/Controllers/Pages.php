@@ -67,6 +67,7 @@ class Pages extends Core {
 	}
 
 	public function actionAdd( $item, $collection = 'pages' ) {
+		unset($item['_id']);
 		$item['revision']['hash'] = md5( json_encode( $item['definition'] ) );
 		$item['devision']['date'] = gmdate( 'Y-m-d\TH:i:s\Z' );
 
