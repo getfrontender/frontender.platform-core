@@ -3,7 +3,7 @@
 namespace Frontender\Core\Wrappers;
 
 abstract class Core implements \Iterator, \ArrayAccess {
-	private $position = 0;
+	protected $position = 0;
 	protected $data = null;
 
 	public function setData( $data ) {

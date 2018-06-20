@@ -93,54 +93,19 @@ class DefaultPage extends Object
         $this->_parsed = true;
     }
 
-    private function getId($iterator)
+    private function getId()
     {
-	    // The current iterator has no id, so we will check in the parent.
-	    $id = null;
-	    $depth = $iterator->getDepth();
-
-	    for($i = $depth; $i >= 0; $i--) {
-	    	$parent = $iterator->getSubIterator($i);
-
-		    if($parent->offsetExists('model')) {
-		    	$model = $parent->offsetGet('model');
-			    $temp = $model->controls->id->value;
-
-			    if($temp && !preg_match('/\{\s*(.*?)\s*\}/', $temp)) {
-				    $id = $temp;
-				    break;
-			    }
-		    }
-
-	    	if($parent->offsetExists('template_config')) {
-			    $config = $iterator->getSubIterator($i)->offsetGet('template_config');
-			    $temp = $config->model->controls->id->value;
-
-			    if($temp && !preg_match('/\{\s*(.*?)\s*\}/', $temp)) {
-			    	$id = $temp;
-			    	break;
-			    }
-		    }
-	    }
-
 	    // Check if we have a frontender request, if so return the post id, else return null;
-	    if(!$id && isset($_POST['fromFrontender']) && isset($_POST['frontenderID']) && $_POST['frontenderID']) {
-	    	// Check if an id is found
-	        return $_POST['frontenderID'];
-	    }
+	    $parameters = $this->getParameters();
+	    $id = $this->parameters['default']['id'] ?? null;
 
-	    if(!$id) {
-		    $parameters = $this->getParameters();
-		    $id = $this->parameters['default']['id'] ?? null;
+	    // Needed to get things from nested values.
+	    if ( strpos( $id, '.' ) !== false ) {
+		    $parts = explode( '.', $id );
+		    $id = array_reduce( $parts, function ( $carry, $item ) {
+			    return $carry[ $item ] ?? null;
+		    }, $parameters );
 
-		    // Needed to get things from nested values.
-		    if ( strpos( $id, '.' ) !== false ) {
-			    $parts = explode( '.', $id );
-			    $id = array_reduce( $parts, function ( $carry, $item ) {
-				    return $carry[ $item ] ?? null;
-			    }, $parameters );
-
-		    }
 	    }
 
 	    return $id;
@@ -181,6 +146,10 @@ class DefaultPage extends Object
 			if ( $key === 'template_config' ) {
 				foreach ( $values as $name => $value ) {
 					if ( $name === 'model' ) {
+						if(isset($value['id']) && strpos($value['id'], '{') !== false) {
+							$value['id'] = $this->getId();
+						}
+
 						$array[ $name ] = new Wrappers\Model( $value, $this->container );
 					} else {
 						$array[ $name ] = new Wrappers\Config( $value );
