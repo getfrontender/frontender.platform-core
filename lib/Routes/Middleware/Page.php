@@ -78,12 +78,13 @@ class Page {
 
 	private function _setRedirect(Request $request, Response $response, $redirect) {
 		if ( preg_match( '/http[s]?:\/\//', $redirect ) === 1 ) {
-			return $response->withRedirect( $redirect );
+			return $response->withRedirect( $redirect , 301);
 		}
 
 		return $response->withRedirect(
 			$request->getUri()
-			        ->withPath( $redirect )
+			        ->withPath( $redirect ),
+			301
 		);
 	}
 }

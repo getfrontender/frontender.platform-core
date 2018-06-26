@@ -6,6 +6,7 @@ use Frontender\Core\Config\Config;
 use Frontender\Core\Language\Language;
 use Frontender\Core\Page\DefaultPage;
 use Frontender\Core\Routes\Middleware\Page;
+use Frontender\Core\Routes\Middleware\Sitable;
 use Frontender\Core\Translate\Translate;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
@@ -99,7 +100,7 @@ class App {
 //		$app->add(new Middleware\Routable($container));
 		$app->add(new Page($container));
 		$app->add(new Routes\Middleware\Maintenance($container));
-//		$app->add(new Routes\Middleware\Sitable($container));
+		$app->add(new Sitable($container));
 
 		/**
 		 * This will add the cors headers on every request, still needs to be a little more strict though.

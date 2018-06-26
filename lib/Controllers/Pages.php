@@ -89,43 +89,50 @@ class Pages extends Core {
 		$result = $this->adapter->collection( 'pages.public' )->findOneAndReplace( [
 			'revision.lot' => $page->revision->lot
 		], $page, [
-			'upsert' => true,
+			'upsert'            => true,
 			'returnNewDocument' => true
 		] );
 
 		// If the template_config has a model name and id set then we can create a static reroute in the system.
 		// I will append the page_id to it so we can remove it when there is an update or when we remove the public page.
 		// This only has to happen here, because I don't care about all the other pages in the system.
-		
-		$modelName = array_reduce(['template_config', 'model', 'name'], function($carry, $key) {
-			if(!isset($carry[$key]) || !$carry) {
+
+		$modelName = array_reduce( [ 'template_config', 'model', 'name' ], function ( $carry, $key ) {
+			if ( ! isset( $carry[ $key ] ) || ! $carry ) {
 				return false;
 			}
 
-			return $carry[$key];
-		}, $page->definition);
-		$modelId = array_reduce(['template_config', 'model', 'id'], function($carry, $key) {
-			if(!isset($carry[$key]) || !$carry) {
+			return $carry[ $key ];
+		}, $page->definition );
+		$modelId   = array_reduce( [ 'template_config', 'model', 'id' ], function ( $carry, $key ) {
+			if ( ! isset( $carry[ $key ] ) || ! $carry ) {
 				return false;
 			}
 
-			return $carry[$key];
-		}, $page->definition);
+			return $carry[ $key ];
+		}, $page->definition );
 
-		if($modelName && $modelId && ($page->definition['route'] || $page->defintion['cononical'])) {
+		if ( $modelName && $modelId && ( $page->definition['route'] || $page->defintion['cononical'] ) ) {
 			// We prefer the cononical
 			$route = $page->definition['route'] ?? $page->definition['cononical'];
 
-			$this->adapter->collection('routes.static')->deleteMany([
-				'page_id' => $result->_id->__toString()
-			]);
+			$page_id = '';
+			try {
+				$page_id = $result->_id->__toString();
+			} catch ( \Error $e ) {
+				$page_id = $result->getInsertedId()->__toString();
+			}
+
+			$this->adapter->collection( 'routes.static' )->deleteMany( [
+				'page_id' => $page_id
+			] );
 
 			// TODO: Something to do with the domains has to come in here as well.
-			$this->adapter->collection('routes.static')->insertOne([
-				'source' => $modelName . '/' . $modelId,
+			$this->adapter->collection( 'routes.static' )->insertOne( [
+				'source'      => $modelName . '/' . $modelId,
 				'destination' => $route,
-				'page_id' => $result->_id->__toString()
-			]);
+				'page_id'     => $page_id
+			] );
 		}
 
 		return $result;

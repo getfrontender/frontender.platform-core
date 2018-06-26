@@ -38,11 +38,6 @@ class App extends CoreRoute {
 		$this->app->get('/{locale}/{page:.*}/{slug:.*}' . $this->config->id_separator . '{id}', function (Request $request, Response $response) {
 			$attributes = $request->getAttributes();
 
-			echo '<pre>';
-			    print_r(array_keys($attributes));
-			echo '</pre>';
-			die();
-
 			$this->language->set($attributes['locale']);
 
 			$result = Adapter::getInstance()->collection('pages.public')->findOne([

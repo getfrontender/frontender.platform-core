@@ -2,8 +2,11 @@
 
 namespace Frontender\Core\Routes\Middleware;
 
+use FastRoute\Dispatcher;
+use Frontender\Core\DB\Adapter;
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
+use Slim\Exception\NotFoundException;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 
@@ -25,84 +28,55 @@ class Sitable
         $this->_container = $container;
     }
 
-    public function __invoke(Request $request, Response $response, $next)
-    {
-        $route = $request->getAttribute('route');
-        $isAPI = false;
+    public function __invoke(Request $request, Response $response, $next) {
+	    if ( strpos( $request->getUri()->getPath(), '/api' ) === 0 ) {
+		    return $next( $request, $response );
+	    }
 
-        if($route) {
-            $patterns = array_map(function($group) {
-                return $group->getPattern();
-            }, $route->getGroups());
+	    $router   = $this->_container->get( 'router' );
+	    $settings = Adapter::getInstance()->collection( 'settings' )->find()->toArray();
+	    $setting  = array_shift( $settings );
+	    $setting  = Adapter::getInstance()->toJSON( $setting )->scopes;
 
-            $isAPI = in_array('/api', $patterns);
-        }
+	    // TODO: Check the scenarios here, there are a few to be honest.
+	    $domains = array_column( $setting, 'domain' );
 
-        // If the route is defined we mostly have an API, however we still have to check.
-        if(!$isAPI) {
-            $finder = new Finder();
-            $uri = $request->getUri();
-            $host = $uri->getHost();
-            $sites = $finder->ignoreUnreadableDirs()->in(ROOT_PATH . '/project/sites')->files()->name('*.json');
-            $language = null;
-            $isFound = false;
-            $domain = false;
+	    if ( ! in_array( $request->getUri()->getHost(), $domains ) ) {
+		    die( 'Domain not found!' );
+	    }
 
-            foreach ($sites as $site) {
-                // First check if there are multiple languages.
-                // Else use that one language.
-                $site = json_decode($site->getContents(), true);
+	    $index  = array_search( $request->getUri()->getHost(), $domains );
+	    $locale = $setting[ $index ]->locale;
 
-                if (count($site['languages']) > 1) {
-                    foreach ($site['languages'] as $lang) {
-                        if (isset($lang['domain']) && $lang['domain'] === $host) {
-                            $domain = $lang['domain'];
-                            $language = substr($lang['iso'], 0, 2);
-                            $isFound = true;
-                        }
-                    }
-                } else {
-                    $domain = $site['languages'][0]['domain'];
-                    $language = substr($site['languages'][0]['iso'], 0, 2);
-                    $isFound = true;
-                }
+	    $uri = $request->getUri();
+	    $uri = $uri->withPath(
+		    $locale . $uri->getPath()
+	    );
 
-                // Check if the domain is found, else continue.
-                if ($site['domain'] === $host) {
-                    $domain = $host;
-                    $isFound = true;
-                }
+	    // The following path comes directly from the App code from Slim framework.
+	    // This does what we need it to do and this will work for us.
+	    // Way better than internal redirects.
+	    $request   = $request->withUri( $uri );
+	    $routeInfo = $router->dispatch( $request );
 
-                if ($isFound) {
-                    break;
-                }
-            }
+	    if($routeInfo[0] !== Dispatcher::FOUND) {
+	    	throw new NotFoundException($request, $response);
+	    }
 
-            if (!$isFound) {
-                throw new \Slim\Exception\NotFoundException($request, $response);
-            }
+	    $routeArguments = [];
+	    foreach ( $routeInfo[2] as $k => $v ) {
+		    $routeArguments[ $k ] = urldecode( $v );
+	    }
 
-            // If the language is found, prepend it to the path, this must be prepended, else we might get conflicts.
-            // Also I have to check if the language isn't already set.
-            $environment = $this->_container->environment;
+	    $route = $router->lookupRoute( $routeInfo[1] );
+	    $route->prepare( $request, $routeArguments );
 
-            if($route && strlen($route->getArgument('locale')) === 2) {
-	            $this->_container['language']->set($route->getArgument('locale'));
-            }
+	    // add route to the request's attributes in case a middleware or handler needs access to the route
+	    $routeInfo['request'] = [ $request->getMethod(), (string) $request->getUri() ];
+	    $request              = $request->withAttribute( 'route', $route )
+	                                    ->withAttribute( 'routeInfo', $routeInfo );
 
-            if ($language) {
-	            $uri = $request->getUri();
-	            $path = $uri->getPath();
 
-	            // prepend the path.
-	            $uri = $uri->withPath('/' . $language . $path);
-	            $this->_container['domain'] = $domain;
-
-	            $uri = \Slim\Http\Uri::createFromString($uri);
-	            $request = $request->withUri($uri);
-            }
-        }
-
-        return $next($request, $response);
+	    return $next( $request, $response );
     }
 }
