@@ -37,9 +37,8 @@ class Sitable
 	    $settings = Adapter::getInstance()->collection( 'settings' )->find()->toArray();
 	    $setting  = array_shift( $settings );
 	    $setting  = Adapter::getInstance()->toJSON( $setting )->scopes;
-
-	    // TODO: Check the scenarios here, there are a few to be honest.
 	    $domains = array_column( $setting, 'domain' );
+	    $routeInfo = $request->getAttribute('routeInfo');
 
 	    if ( ! in_array( $request->getUri()->getHost(), $domains ) ) {
 		    die( 'Domain not found!' );
@@ -48,7 +47,19 @@ class Sitable
 	    $index  = array_search( $request->getUri()->getHost(), $domains );
 	    $locale = $setting[ $index ]->locale;
 
+	    // TODO: Check the scenarios here, there are a few to be honest.
 	    $uri = $request->getUri();
+
+	    // If the locale is found, and is also present in the path, we need to remove it from the path.
+	    // This will be done with a redirect.
+	    if(isset($routeInfo[2]) && strpos($uri->getPath(), $routeInfo[2]['locale']) <= 1) {
+	    	return $response->withRedirect(
+			    $uri->withPath(
+				    str_replace($locale . '/', '', $uri->getPath())
+			    )
+		    );
+	    }
+
 	    $uri = $uri->withPath(
 		    $locale . $uri->getPath()
 	    );
