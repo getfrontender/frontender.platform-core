@@ -47,12 +47,16 @@ class Adapters extends CoreRoute {
 			// We have an autoload for it.
 			$classname = '\\Prototype\\Model\\' . ucfirst(strtolower($request->getAttribute('model'))) . 'Model';
 			$model = new $classname($config);
-			$data = $model->fetch();
+			$model->setState($request->getQueryParams());
+			$items = $model->fetch();
+			$data = [];
 
-			if($data) {
-				return $response->withJson(array_map(function($entry) {
+			if($items) {
+				$data['items'] = array_map(function($entry) {
 					return $entry->toArray();
-				}, $data));
+				}, $items);
+				$data['states'] = $model->getState()->getValues();
+				$data['total'] = $model->getTotal();
 			}
 
 			return $response->withJson($data);

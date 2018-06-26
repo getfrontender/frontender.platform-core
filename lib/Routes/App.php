@@ -20,11 +20,14 @@ class App extends CoreRoute {
 
 			$this->language->set($locale);
 
-			$data = getFileJson($this->settings['project']['path'] . '/pages/published/home.json', true);
+			$result = Adapter::getInstance()->collection('pages.public')->findOne([
+				'definition.route.' . $locale => 'home'
+			]);
+			$data = Adapter::getInstance()->toJSON($result, true);
 
 			$page = $this->page;
 			$page->setParameters(['locale' => $locale, 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
-			$page->setData($data);
+			$page->setData($data['definition']);
 			$page->setRequest($request);
 
 			$response->getBody()->write($page->render());
@@ -35,10 +38,15 @@ class App extends CoreRoute {
 		$this->app->get('/{locale}/{page:.*}/{slug:.*}' . $this->config->id_separator . '{id}', function (Request $request, Response $response) {
 			$attributes = $request->getAttributes();
 
+			echo '<pre>';
+			    print_r(array_keys($attributes));
+			echo '</pre>';
+			die();
+
 			$this->language->set($attributes['locale']);
 
 			$result = Adapter::getInstance()->collection('pages.public')->findOne([
-				'definition.route' => $attributes['page']
+				'definition.route.' . $attributes['locale'] => $attributes['page']
 			]);
 			$data = Adapter::getInstance()->toJSON($result, true);
 
@@ -61,9 +69,8 @@ class App extends CoreRoute {
 
 			$this->language->set($locale);
 
-
 			$result = Adapter::getInstance()->collection('pages.public')->findOne([
-				'definition.template_config.seo.route' => '/' . $page
+				'definition.route.' . $locale => $page
 			]);
 			$data = Adapter::getInstance()->toJSON($result, true);
 
