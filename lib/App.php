@@ -5,6 +5,7 @@ namespace Frontender\Core;
 use Frontender\Core\Config\Config;
 use Frontender\Core\Language\Language;
 use Frontender\Core\Page\DefaultPage;
+use Frontender\Core\Routes\Middleware\Page;
 use Frontender\Core\Translate\Translate;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
@@ -96,7 +97,7 @@ class App {
 		$container = $this->getContainer();
 
 //		$app->add(new Middleware\Routable($container));
-//		$app->add(new Middleware\Page($container));
+		$app->add(new Page($container));
 		$app->add(new Routes\Middleware\Maintenance($container));
 //		$app->add(new Routes\Middleware\Sitable($container));
 

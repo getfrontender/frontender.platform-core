@@ -2,104 +2,88 @@
 
 namespace Frontender\Core\Routes\Middleware;
 
+use Frontender\Core\DB\Adapter;
 use Slim\Http\Request;
 use Slim\Http\Response;
 
-class Page
-{
+class Page {
 	protected $_container;
 
-	function __construct(\Slim\Container $container)
-	{
+	function __construct( \Slim\Container $container ) {
 		$this->_container = $container;
 	}
 
 	/**
-	 * If a page is found in the route, check if the file exists, if not,
-	 * When no route is found, it means that the page isn't there either so the check is skipped.
-	 * throw a NotFoundException so the request will go to the notFoundHandler.
+	 * This middleware will check the page JSON availability or unavailability.
 	 *
-	 * TODO: This is only fixed in context of Brickson!!!
+	 * If no page JSON is present, we will check for the redirects.
 	 */
-	public function __invoke(Request $request, Response $response, $next)
-	{
-		if($this->_container->has('domain')) {
-			// I can Assume the path to be the page.
-			// I have to strip the first part.
-			$parts = explode('/', $request->getUri()->getPath());
-			$parts = array_filter($parts);
-
-			array_shift($parts);
-
-			if(count($parts) <= 0 || empty($parts)) {
-				$path = 'home';
-			} else {
-				if(count($parts) === 2) {
-					array_pop($parts);
-				}
-
-				$path = implode('/', $parts);
-			}
-
-			$page = $this->_getPage($path);
-
-			if(!$page) {
-				throw new \Slim\Exception\NotFoundException($request, $response);
-			}
-
-			return $next($request, $response);
+	public function __invoke( Request $request, Response $response, $next ) {
+		// Exclude api calls
+		if ( strpos( $request->getUri()->getPath(), '/api' ) === 0 ) {
+			return $next( $request, $response );
 		}
 
-		$route = $request->getAttribute('route');
-		$page = $route->getArgument('page');
-		$patterns = array_map(function($group) {
-			return $group->getPattern();
-		}, $route->getGroups());
-
-		$isAPI = in_array('/api', $patterns);
-
-		if($page && !$isAPI) {
-			if(($result = $this->_getPage($page)) !== false) {
-				$route->setArgument('page', $result);
-			} else {
-				// Try another file.
-				$aliasses = json_decode(file_get_contents($this->_container->settings['project']['path'] . '/aliasses.json'), true);
-				if(array_key_exists($page, $aliasses)) {
-					$route->setArgument('page', $aliasses[$page]);
-				} else {
-					throw new \Slim\Exception\NotFoundException( $request, $response );
-				}
-			}
+		// Exclude homepage
+		if ( $request->getAttribute( 'route' )->getName() === 'home' ) {
+			return $next( $request, $response );
 		}
 
-		return $next($request, $response);
+		$adapter = Adapter::getInstance();
+		$info    = $request->getAttribute( 'routeInfo' )[2];
+
+		$page = $adapter->collection( 'pages.public' )->findOne( [
+			'definition.route.' . $info['locale'] => $info['page']
+		] );
+
+		if ( !$page ) {
+			return $this->_findRedirect( $request, $response, $adapter );
+		}
+
+		if($page->definition->cononical->{$info['locale']}) {
+			return $this->_setRedirect($request, $response, $page->definition->cononical->{$info['locale']});
+		}
+
+		// Check if there is a redirect/ if so we will follow that.
+		$redirect = $adapter->collection( 'routes.static' )->findOne( [
+			'source' => $page->definition->template_config->model->name . '/' . $info['id']
+		] );
+		$redirect = $redirect->destination->{$info['locale']};
+
+		if ( $redirect ) {
+			return $this->_setRedirect($request, $response, $info['locale'] . '/' . $redirect);
+		}
+
+		return $next( $request, $response );
 	}
 
-	private function _getPage($path) {
-		$root = $this->_container->settings['project']['path'] . '/pages/published/';
-		$parts = explode('/', $path);
-		$layout = array_pop($parts);
-		$exists = false;
+	private function _findRedirect(Request $request, Response $response, $adapter) {
+		$static = $adapter->collection('routes.static')->findOne([
+			'source' => $request->getUri()->getPath()
+		]);
 
-		if(count($parts) === 0) {
-			$exists = file_exists($root . implode('/', $parts) . '/' . $layout . '.json');
-		} else {
-			while ( $exists == false && count( $parts ) >= 0 ) {
-				if(count($parts) === 0) {
-					return false;
-				}
+		if($static) {
+			return $this->_setRedirect($request, $response, $static->destination);
+		}
 
-				$exists = file_exists( $root . implode( '/', $parts ) . '/' . $layout . '.json' );
-				if ( ! $exists ) {
-					array_pop( $parts );
-				}
+		$dynamic = $adapter->collection('routes.dynamic')->find()->toArray();
+		foreach($dynamic as $redirect) {
+			if(preg_match($redirect->source, $request->getUri()->getPath()) === 1) {
+				return $this->_setRedirect($request, $response, $redirect->destination);
 			}
 		}
 
-		if($exists) {
-			return implode('/', $parts) . '/' . $layout;
+		return $this->_setRedirect($request, $response, '/404');
+	}
+
+	private function _setRedirect(Request $request, Response $response, $redirect) {
+		if ( preg_match( '/http[s]?:\/\//', $redirect ) === 1 ) {
+			return $response->withRedirect( $redirect );
 		}
 
-		return false;
+		return $response->withRedirect(
+			$request->getUri()
+			        ->withPath( $redirect )
+		);
 	}
 }
