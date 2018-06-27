@@ -14,7 +14,7 @@ class Sites extends CoreRoute {
 	public function registerReadRoutes() {
 		parent::registerReadRoutes();
 
-		$this->app->get('/{site_id}/settings', function(Request $request, Response $response) {
+		$this->app->get('/settings', function(Request $request, Response $response) {
 			$settings = Adapter::getInstance()->collection('settings')->find()->toArray();
 			$setting = Adapter::getInstance()->toJSON(array_shift($settings));
 
@@ -25,13 +25,15 @@ class Sites extends CoreRoute {
 	public function registerUpdateRoutes() {
 		parent::registerUpdateRoutes();
 
-		$this->app->post('/{site_id}/settings', function(Request $request, Response $response) {
+		$this->app->post('/settings', function(Request $request, Response $response) {
 			$settings = Adapter::getInstance()->collection('settings')->find()->toArray();
 			$setting = array_shift($settings);
+			$data = $request->getParsedBody();
+			unset($data['_id']);
 
 			Adapter::getInstance()->collection('settings')->findOneAndReplace([
 				'_id' => $setting->_id
-			], $request->getParsedBody());
+			], $data);
 
 			return $response->withStatus(200);
 		});
