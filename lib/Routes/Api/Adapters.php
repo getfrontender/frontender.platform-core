@@ -35,7 +35,7 @@ class Adapters extends CoreRoute {
 
 				foreach($models as $model) {
 					$definition = json_decode($model->getContents(), true);
-					$definition['value'] = strtolower(str_replace('Model.php', '', $file->getFilename()));
+					$definition['value'] = strtolower(str_replace('Model.json', '', $model->getFilename()));
 
 					$adapter['models'][] = $definition;
 				}
