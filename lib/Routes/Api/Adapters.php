@@ -18,11 +18,38 @@ class Adapters extends CoreRoute {
 
 		$config = $this->app->getContainer();
 		$modelPath = dirname($config->settings['project']['path']) . '/lib/Model';
+
+		$this->app->get('', function (Request $request, Response $response) use ($modelPath) {
+			$finder = new Finder();
+			$files = $finder->directories()->exclude('State')->in($modelPath)->depth(0);
+			$adapters = [];
+
+			foreach($files as $file) {
+				// Lets get all the available models.
+				$modelFinder = new Finder();
+				$models = $modelFinder->files()->name('*.json')->in($file->getPathName());
+				$adapter = [
+					'name' => $file->getFileName(),
+					'models' => []
+				];
+
+				foreach($models as $model) {
+					$definition = json_decode($model->getContents(), true);
+					$definition['value'] = strtolower(str_replace('Model.php', '', $file->getFilename()));
+
+					$adapter['models'][] = $definition;
+				}
+
+				$adapters[] = $adapter;
+			}
+
+			return $response->withJson($adapters);
+		});
 		
-		$this->app->get('/models[/{adapter}]', function(Request $request, Response $response) use ($modelPath) {
+		$this->app->get('/models/{adapter}', function(Request $request, Response $response) use ($modelPath) {
 			// Get all the models and send them back.
 			$finder = new Finder();
-			$files = $finder->files()->name('*.php')->in($modelPath);
+			$files = $finder->files()->name('*.php')->in($modelPath . '/' . $request->getAttribute('adapter'));
 			$models = [];
 
 			foreach($files as $file) {
@@ -43,9 +70,9 @@ class Adapters extends CoreRoute {
 			return $response->withJson($models);
 		});
 
-		$this->app->get('/content/{model}[/{adapter}]', function (Request $request, Response $response) use ($config) {
+		$this->app->get('/content/{adapter}/{model}', function (Request $request, Response $response) use ($config) {
 			// We have an autoload for it.
-			$classname = '\\Prototype\\Model\\' . ucfirst(strtolower($request->getAttribute('model'))) . 'Model';
+			$classname = '\\Prototype\\Model\\' . $request->getAttribute('adapter') . '\\' . ucfirst(strtolower($request->getAttribute('model'))) . 'Model';
 			$model = new $classname($config);
 			$model->setState($request->getQueryParams());
 			$items = $model->fetch();

@@ -9,11 +9,13 @@ class Model extends Core {
 
 	public function __construct( $model, $container ) {
 		$name = $model['name'];
+		$adapter = $model['adapter'];
 		unset($model['name']);
+		unset($model['adapter']);
 
 		// The rest are states.
 		$model['language'] = $model['language'] ?? $container->language->get();
-		$model_class = 'Prototype\\Model\\' . ucfirst($name) . 'Model';
+		$model_class = 'Prototype\\Model\\' . $adapter . '\\' . ucfirst($name) . 'Model';
 		$instance = new $model_class($container);
 		$instance->setState($model);
 

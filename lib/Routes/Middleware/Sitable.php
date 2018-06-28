@@ -52,13 +52,19 @@ class Sitable
 
 	    // If the locale is found, and is also present in the path, we need to remove it from the path.
 	    // This will be done with a redirect.
-	    if(isset($routeInfo[2]) && strpos($uri->getPath(), $routeInfo[2]['locale']) <= 1) {
-	    	return $response->withRedirect(
-			    $uri->withPath(
-				    str_replace($locale . '/', '', $uri->getPath())
-			    )
-		    );
-	    }
+//	    if(isset($routeInfo[2]) && strpos($uri->getPath(), $routeInfo[2]['locale']) <= 1) {
+//	    	echo '<pre>';
+//	    	    print_r($routeInfo);
+//	    	echo '</pre>';
+//	    	die();
+//
+//	    	die('Called');
+//	    	return $response->withRedirect(
+//			    $uri->withPath(
+//				    str_replace($locale . '/', '', $uri->getPath())
+//			    )
+//		    );
+//	    }
 
 	    $uri = $uri->withPath(
 		    $locale . $uri->getPath()
@@ -86,7 +92,6 @@ class Sitable
 	    $routeInfo['request'] = [ $request->getMethod(), (string) $request->getUri() ];
 	    $request              = $request->withAttribute( 'route', $route )
 	                                    ->withAttribute( 'routeInfo', $routeInfo );
-
 
 	    return $next( $request, $response );
     }

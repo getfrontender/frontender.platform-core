@@ -182,6 +182,13 @@ class App {
 			new $class($this);
 		}
 
+		foreach(glob(__DIR__ . '/Routes/Api/*') as $file) {
+			$name = str_replace('.php', '', basename($file));
+			$class = 'Prototype\\Routes\\Api\\' . $name;
+
+			new $class($this);
+		}
+
 		/*$app->group('/api', function() {
 			$this->get('/containers', function(Request $request, Response $response) {
 				$finder = new Finder();
