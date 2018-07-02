@@ -43,7 +43,7 @@ class Escaping extends \Twig_Extension
         $str = str_replace('-', ' ', $str);
 
         // Replace forbidden characters by whitespaces
-        $str = preg_replace('#[:\#\*"@+=;!><&\.%()\]\/\'\\\\|\[]#', "\x20", $str);
+        $str = preg_replace('#[:\#\*"@+=;!>–<&\.%()\]\/\'\\\\|\[]#', "\x20", $str);
 
         // Delete all '?'
         $str = str_replace('?', '', $str);
@@ -54,6 +54,6 @@ class Escaping extends \Twig_Extension
         // Remove any duplicate whitespace and replace whitespaces by hyphens
         $str = preg_replace('#\x20+#', '-', $str);
 
-        return $str;
+        return preg_replace('/[-]+/', '-', $str);
     }
 }
