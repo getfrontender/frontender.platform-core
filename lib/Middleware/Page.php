@@ -51,6 +51,10 @@ class Page
 		}
 
 		$route = $request->getAttribute('route');
+		if(!$route) {
+			throw new \Slim\Exception\NotFoundException( $request, $response );
+		}
+
 		$page = $route->getArgument('page');
 		$patterns = array_map(function($group) {
 			return $group->getPattern();
