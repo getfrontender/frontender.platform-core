@@ -80,6 +80,10 @@ class Router extends \Twig_Extension
 	    // Check if the page is in the aliasses.
 	    if(array_key_exists('page', $params)) {
 		    $page = @json_decode(file_get_contents($this->container->settings['project']['path'] . '/pages/published/' . $params['page'] . '.json'));
+		    if(is_object($page) && property_exists($page, 'cononical') && is_object($page->cononical) && property_exists($page->cononical, $params['locale'])) {
+			    $params['page'] = $page->cononical->{$params['locale']};
+		    }
+
 		    if(is_object($page) && property_exists($page, 'alias') && is_object($page->alias) && property_exists($page->alias, $params['locale'])) {
 		    	$params['page'] = $page->alias->{$params['locale']};
 		    }
