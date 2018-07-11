@@ -33,27 +33,39 @@ class Page {
 		$info    = $request->getAttribute( 'routeInfo' )[2];
 
 		$page = $adapter->collection( 'pages.public' )->findOne( [
-			'definition.route.' . $info['locale'] => $info['page']
+			'$or' => [
+				['definition.route.' . $info['locale'] => $info['page']],
+				['definition.cononical.' . $info['locale'] => $info['page']]
+			]
 		] );
 
 		if ( !$page ) {
 			return $this->_findRedirect( $request, $response, $adapter );
 		}
 
-		if($page->definition->cononical->{$info['locale']}) {
-			return $this->_setRedirect($request, $response, $page->definition->cononical->{$info['locale']});
+		if(property_exists($page->definition, 'cononical') && $page->definition->cononical->{$info['locale']}) {
+			$cononical = $page->definition->cononical->{$info['locale']};
+
+			// This only needs to happen if we don't have a cononical in the url.
+			if(strpos($request->getUri()->getPath(), $cononical) === false) {
+				return $this->_setRedirect( $request, $response, $cononical );
+			}
 		}
 
-		// Check if there is a redirect/ if so we will follow that.
-		$redirect = $adapter->collection( 'routes.static' )->findOne( [
-			'source' => $page->definition->template_config->model->name . '/' . $info['id']
-		] );
-		$redirect = $redirect->destination->{$info['locale']};
+		if(isset($info['id'])) {
+			// Check if there is a redirect/ if so we will follow that.
+			$redirect = $adapter->collection( 'routes.static' )->findOne( [
+				'source' => $page->definition->template_config->model->name . '/' . $info['id']
+			] );
 
-		if ( $redirect ) {
-			return $this->_setRedirect($request, $response, $info['locale'] . '/' . $redirect);
+			if ( $redirect ) {
+				$redirect = $redirect->destination->{$info['locale']};
+
+				return $this->_setRedirect( $request, $response, $info['locale'] . '/' . $redirect );
+			}
 		}
 
+		$request = $request->withAttribute('json', $page);
 		return $next( $request, $response );
 	}
 
