@@ -60,11 +60,10 @@ class Page {
 
 			if ( $redirect ) {
 				$redirect = $redirect->destination->{$info['locale']};
-
 				return $this->_setRedirect( $request, $response, $info['locale'] . '/' . $redirect );
 			}
 		}
-
+		
 		$request = $request->withAttribute('json', $page);
 		return $next( $request, $response );
 	}
