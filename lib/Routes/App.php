@@ -16,18 +16,28 @@ class App extends CoreRoute {
 		});
 
 		$this->app->get('/{locale}/', function (Request $request, Response $response) {
-			$locale = $request->getAttribute('locale');
+			$locale = $request->getAttribute( 'locale' );
 
-			$this->language->set($locale);
+			$this->language->set( $locale );
 
-			$data = Adapter::getInstance()->toJSON($request->getAttribute('json'), true);
+			$page = Adapter::getInstance()->collection( 'pages.public' )->findOne( [
+				'$or' => [
+					[ 'definition.route.' . $locale => '/' ],
+					[ 'definition.cononical.' . $locale => '/' ]
+				]
+			] );
+			$data = Adapter::getInstance()->toJSON( $page, true );
 
 			$page = $this->page;
-			$page->setParameters(['locale' => $locale, 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
-			$page->setData($data['definition']);
-			$page->setRequest($request);
+			$page->setParameters( [
+				'locale' => $locale,
+				'debug'  => $this->settings['debug'],
+				'query'  => $request->getQueryParams()
+			] );
+			$page->setData( $data['definition'] );
+			$page->setRequest( $request );
 
-			$response->getBody()->write($page->render());
+			$response->getBody()->write( $page->render() );
 
 			return $response;
 		})->setName('home');
