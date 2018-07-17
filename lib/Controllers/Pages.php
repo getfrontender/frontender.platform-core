@@ -104,6 +104,13 @@ class Pages extends Core {
 
 			return $carry[ $key ];
 		}, $page->definition );
+		$adapterName = array_reduce( [ 'template_config', 'model', 'adapter' ], function ( $carry, $key ) {
+			if ( ! isset( $carry[ $key ] ) || ! $carry ) {
+				return false;
+			}
+
+			return $carry[ $key ];
+		}, $page->definition );
 		$modelId   = array_reduce( [ 'template_config', 'model', 'id' ], function ( $carry, $key ) {
 			if ( ! isset( $carry[ $key ] ) || ! $carry ) {
 				return false;
@@ -112,7 +119,7 @@ class Pages extends Core {
 			return $carry[ $key ];
 		}, $page->definition );
 
-		if ( $modelName && $modelId && ( $page->definition['route'] || $page->defintion['cononical'] ) ) {
+		if ( $adapterName && $modelName && $modelId && ( $page->definition['route'] || $page->defintion['cononical'] ) ) {
 			// We prefer the cononical
 			$route = $page->definition['route'] ?? $page->definition['cononical'];
 
@@ -129,7 +136,7 @@ class Pages extends Core {
 
 			// TODO: Something to do with the domains has to come in here as well.
 			$this->adapter->collection( 'routes.static' )->insertOne( [
-				'source'      => $modelName . '/' . $modelId,
+				'source'      => implode('/', [$adapterName, $modelName, $modelId]),
 				'destination' => $route,
 				'page_id'     => $page_id
 			] );
