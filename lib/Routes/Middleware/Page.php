@@ -20,7 +20,8 @@ class Page {
 	 */
 	public function __invoke( Request $request, Response $response, $next ) {
 		// Exclude api calls
-		if ( strpos( $request->getUri()->getPath(), '/api' ) === 0 ) {
+		// Exclude post calls.
+		if ( $request->getMethod() === 'POST' || strpos( $request->getUri()->getPath(), '/api' ) === 0 ) {
 			return $next( $request, $response );
 		}
 
