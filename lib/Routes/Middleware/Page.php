@@ -55,15 +55,15 @@ class Page {
 		if(isset($info['id'])) {
 			// Check if there is a redirect/ if so we will follow that.
 			$redirect = $adapter->collection( 'routes.static' )->findOne( [
-				'source' => $page->definition->template_config->model->name . '/' . $info['id']
+				'source' => implode('/', [$page->definition->template_config->model->adapter, $page->definition->template_config->model->name, $info['id']])
 			] );
 
 			if ( $redirect ) {
 				$redirect = $redirect->destination->{$info['locale']};
-				return $this->_setRedirect( $request, $response, $info['locale'] . '/' . $redirect );
+				return $this->_setRedirect( $request, $response, $redirect );
 			}
 		}
-		
+
 		$request = $request->withAttribute('json', $page);
 		return $next( $request, $response );
 	}
@@ -74,7 +74,10 @@ class Page {
 		]);
 
 		if($static) {
-			return $this->_setRedirect($request, $response, $static->destination);
+			$info        = $request->getAttribute( 'routeInfo' )[2];
+			$destination = $static->destination[ $info['locale'] ] ?? '404';
+			
+			return $this->_setRedirect( $request, $response, $destination );
 		}
 
 		$dynamic = $adapter->collection('routes.dynamic')->find()->toArray();
@@ -84,7 +87,7 @@ class Page {
 			}
 		}
 
-		return $this->_setRedirect($request, $response, '/404');
+		return $this->_setRedirect($request, $response, '404');
 	}
 
 	private function _setRedirect(Request $request, Response $response, $redirect) {
@@ -92,10 +95,24 @@ class Page {
 			return $response->withRedirect( $redirect , 301);
 		}
 
-		return $response->withRedirect(
-			$request->getUri()
-			        ->withPath( $redirect ),
-			301
-		);
+		// TODO: Add a function here to check the domain and the path of that domain.
+		$info        = $request->getAttribute( 'routeInfo' )[2];
+		$settings = Adapter::getInstance()->collection('settings')->find()->toArray();
+		$setting = Adapter::getInstance()->toJSON(array_shift($settings), true);
+		$uri = $request->getUri();
+		$domain = $uri->getHost();
+
+		$amount = array_filter($setting['scopes'], function($scope) use ($domain) {
+			return $scope['domain'] === $domain;
+		});
+
+		if(count($amount) === 1) {
+			// Use the current domain, without any locale
+			$uri = $uri->withPath($redirect);
+		} else {
+			$uri = $uri->withPath($info['locale'] . '/' . $redirect);
+		}
+
+		return $response->withRedirect($uri, 301);
 	}
 }

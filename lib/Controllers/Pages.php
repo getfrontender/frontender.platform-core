@@ -160,7 +160,7 @@ class Pages extends Core {
 			$blueprint                    = $this->adapter->collection( 'blueprints' )->findOne( [
 				'_id' => new ObjectId( $container['blueprint'] )
 			] );
-			$blueprint                    = json_decode( json_encode( $this->adapter->toJSON( $blueprint ) ), true );
+			$blueprint                    = $this->adapter->toJSON( $blueprint, true );
 			$container['template']        = $blueprint['definition']['template'];
 			$container['template_config'] = $blueprint['definition']['template_config'];
 			$container['fe-id']           = $blueprint['definition']['fe-id'];

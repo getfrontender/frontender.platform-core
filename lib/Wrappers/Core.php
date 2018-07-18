@@ -10,6 +10,10 @@ abstract class Core implements \Iterator, \ArrayAccess {
 		$this->data = $data;
 	}
 
+	public function getData() {
+		return $this->data;
+	}
+
 	public function offsetExists( $offset ) {
 		return array_key_exists($offset, $this->data);
 	}

@@ -4,9 +4,9 @@ namespace Frontender\Core\Routes\Middleware;
 
 use FastRoute\Dispatcher;
 use Frontender\Core\DB\Adapter;
-use \Psr\Http\Message\ServerRequestInterface as Request;
-use \Psr\Http\Message\ResponseInterface as Response;
 use Slim\Exception\NotFoundException;
+use Slim\Http\Request;
+use Slim\Http\Response;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 
@@ -41,16 +41,34 @@ class Sitable
 		    throw new NotFoundException($request, $response);
 	    }
 
-	    $setting  = Adapter::getInstance()->toJSON( $setting )->scopes;
-	    $domains = array_column( $setting, 'domain' );
+	    $setting  = Adapter::getInstance()->toJSON( $setting, true );
+	    $domains = array_column( $setting['scopes'], 'domain' );
 	    $routeInfo = $request->getAttribute('routeInfo');
 
 	    if ( ! in_array( $request->getUri()->getHost(), $domains ) ) {
 		    throw new NotFoundException($request, $response);
 	    }
 
-	    $index  = array_search( $request->getUri()->getHost(), $domains );
-	    $locale = $setting[ $index ]->locale;
+	    $uri = $request->getUri();
+	    $domain = $uri->getHost();
+	    // First is the default.
+	    $index  = array_search( $domain, $domains );
+	    $locale = $setting['scopes'][ $index ]['locale'];
+	    $amount = array_filter($setting['scopes'], function($scope) use ($domain) {
+		    return $scope['domain'] === $domain;
+	    });
+
+	    if(count($amount) > 1) {
+		    if(isset($routeInfo[2]['locale'])) {
+		    	return $next($request, $response);
+		    } else {
+		    	return $response->withRedirect(
+		    		$uri->withPath(
+		    			$locale . $uri->getPath()
+				    )
+			    );
+		    }
+	    }
 
 	    // TODO: Check the scenarios here, there are a few to be honest.
 	    $uri = $request->getUri();

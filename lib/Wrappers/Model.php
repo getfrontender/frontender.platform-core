@@ -48,6 +48,10 @@ class Model extends Core {
 		return isset( $data[ $this->position ] );
 	}
 
+	public function getData() {
+		return $this->fetch();
+	}
+
 	private function fetch() {
 		if ( $this->data === null ) {
 			$this->data = $this->model->fetch();

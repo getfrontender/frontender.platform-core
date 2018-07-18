@@ -97,7 +97,7 @@ class DefaultPage extends Object
     {
 	    // Check if we have a frontender request, if so return the post id, else return null;
 	    $parameters = $this->getParameters();
-	    $id = $this->parameters['default']['id'] ?? null;
+	    $id = $this->parameters['default']['id'] ?? 'unexisting-id';
 
 	    // Needed to get things from nested values.
 	    if ( strpos( $id, '.' ) !== false ) {

@@ -33,24 +33,29 @@ class Router extends \Twig_Extension
 	    $params['locale'] = $params['locale'] ?? $this->container->language->language;
 	    $params['slug'] = $params['slug'] ?? '';
 
-	    /**
-	     * So what do we need to do?
-	     *
-	     * I have to check if the current domain (we can use it now)
-	     * exists a few times, if so we need to append the locale to the url.
-	     *
-	     * If not we don't need to locale and the domain has a locale itself.
-	     * 
-	     * So the steps are basically the same however we only need the basic path.
-	     * We are not bound to the routing of Slim Framework, we can make as much logics we need ourselves.
-	     */
-
 	    // If a url is found, we won't even look further
 	    if(isset($params['url'])) {
 		    return $params['url'];
 	    }
 
 	    $path = $this->_getPath($params);
+	    if(is_object($path)) {
+	    	$path = $path->{$params['locale']};
+	    } else if(is_array($path)) {
+	    	$path = $path[$params['locale']];
+	    }
+
+	    // Check if the page also has a cononical.
+	    $page = Adapter::getInstance()->collection('pages.public')->findOne([
+	    	'definition.route.' . $params['locale'] => $path
+	    ]);
+
+	    if($page) {
+	    	if(property_exists($page->definition, 'cononical') && $page->definition->cononical->{$params['locale']}) {
+	    		$path = $page->definition->cononical->{$params['locale']};
+		    }
+	    }
+
 	    $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
 	    $setting = Adapter::getInstance()->toJSON(array_shift($settings), true);
 	    $uri = $this->container->get('request')->getUri();
@@ -60,36 +65,16 @@ class Router extends \Twig_Extension
 		    return $scope['domain'] === $domain;
 	    });
 
-	    if(count($amount) === 1) {
-	    	// Use the current domain, without any locale
-		    return $uri->withPath($path);
+	    if ( count( $amount ) === 1 ) {
+		    // Use the current domain, without any locale
+		    return $uri->withPath( $path );
 	    } else {
-		    return $uri->withPath($params['locale'] . '/' . $path);
+		    return $uri->withPath( $params['locale'] . '/' . $path );
 	    }
-
-	    // Check if the page is in the aliasses.
-	    if(array_key_exists('page', $params)) {
-		    $page = @json_decode(file_get_contents($this->container->settings['project']['path'] . '/pages/published/' . $params['page'] . '.json'));
-		    if(is_object($page) && property_exists($page, 'cononical') && is_object($page->cononical) && property_exists($page->cononical, $params['locale'])) {
-			    $params['page'] = $page->cononical->{$params['locale']};
-		    }
-
-		    if(is_object($page) && property_exists($page, 'alias') && is_object($page->alias) && property_exists($page->alias, $params['locale'])) {
-		    	$params['page'] = $page->alias->{$params['locale']};
-		    }
-	    }
-
-//	    $path = $this->container->router->pathFor($name, $params);
-//	    $route = $this->container->has('domain') ? str_replace((array_key_exists('locale', $params) && !empty($params['locale']) ? '/' . $params['locale'] : ''), '', $path) : $path;
-
-	    return '';
-	    return str_replace('//', '/', $route);
     }
 
     private function _getPath($params = []) {
-	    if(array_key_exists('id', $params)) {
-	    	$path = 'details??'; // TBD
-
+	    if(isset($params['id'])) {
 	    	// First we will check if we can find the page.
 		    $page = Adapter::getInstance()->collection('pages.public')->findOne([
 		    	'$or' => [
@@ -98,31 +83,23 @@ class Router extends \Twig_Extension
 			    ]
 		    ]);
 
-//		    $routes = json_decode(file_get_contents($this->container->settings['project']['path'] . '/routes.json'), true);
 		    if($page) {
 		    	// TODO: This must change.
 			    // Here we also have a slug anyway.
 			    // Else the slug is an empty string.
 
-			    $model = $page->definition->template_config->model->controls->name->value ?? false;
-			    if ( $model ) {
+			    $model = $page->definition->template_config->model->name ?? false;
+			    $adapter = $page->definition->template_config->model->adapter ?? false;
+			    $id = $params['id'];
+
+			    if ( $model && $adapter && $id ) {
 			    	// Check if we have a redirect.
 				    $redirect = Adapter::getInstance()->collection('routes.static')->findOne([
-				    	'source' => $model . '/' . $params['id']
+				    	'source' => implode('/', [$adapter, $model, $id])
 				    ]);
 
-				    if ( array_key_exists( $model, $routes ) && array_key_exists( $params['id'], $routes[ $model ] ) ) {
-					    // Check if we have an alias for the current language.
-					    // Load the new json.
-					    $json_path = $this->container->settings['project']['path'] . '/pages/published/' . $routes[ $model ][ $params['id'] ]['path'] . '.json';
-					    if(file_exists($json_path)) {
-						    $json = json_decode( file_get_contents( $json_path ) );
-						    if ( $json && is_object( $json ) && property_exists( $json, 'alias' ) && is_object( $json->alias ) && property_exists( $json->alias, $params['locale'] ) ) {
-							    return ( $this->container->has( 'domain' ) ? '' : '/' . $params['locale'] ) . '/' . $json->alias->{$params['locale']};
-						    }
-					    }
-
-					    return $routes[ $model ][ $params['id'] ]['path'];
+				    if($redirect) {
+				    	return $redirect['destination'];
 				    }
 			    }
 		    }

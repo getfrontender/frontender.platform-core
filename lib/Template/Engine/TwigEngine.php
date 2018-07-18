@@ -9,6 +9,8 @@ namespace Frontender\Core\Template\Engine;
 
 use Frontender\Core\Object\Object;
 
+use Frontender\Core\Template\Engine\Twig\Environment;
+use Frontender\Core\Template\Engine\Twig\Loader;
 use Frontender\Core\Template\Filter\Date;
 use Frontender\Core\Template\Filter\Escaping;
 use Frontender\Core\Template\Filter\Filter;
@@ -36,16 +38,12 @@ class TwigEngine extends Object implements EngineInterface
     {
         parent::__construct($container);
 
-        $settings = [
-            $container['settings']['template']['path'],
-            [
-                'cache' => $container['settings']['caching'] ? $container['settings']['template']['cache']['path'] : false,
-                'debug' =>  $container['settings']['template']['debug'],
-	            'auto_reload' => $container['settings']['template']['auto_reload'] ?? false
-            ]
-        ];
-
-        $this->engine = new Twig(...$settings);
+        $loader = new \Twig_Loader_Filesystem($container['settings']['template']['path']);
+        $this->engine = new Environment($loader, [
+	        'cache' => $container['settings']['caching'] ? $container['settings']['template']['cache']['path'] : false,
+	        'debug' =>  $container['settings']['template']['debug'],
+	        'auto_reload' => $container['settings']['template']['auto_reload'] ?? false
+        ]);
 
         if ($container['settings']['debug']) {
             $this->engine->addExtension(new \Twig_Extension_Debug());
@@ -106,6 +104,6 @@ class TwigEngine extends Object implements EngineInterface
 
     public function render(array $data = array())
     {
-        return $this->engine->fetch($this->template, $data);
+        return $this->engine->render($this->template, $data);
     }
 }
