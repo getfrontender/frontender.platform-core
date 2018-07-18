@@ -196,6 +196,7 @@ class App {
 				new $class( $this );
 			}
 		} catch (\Error $e) {}
+		catch(\Exception $e) {}
 
 		return $this;
 	}
