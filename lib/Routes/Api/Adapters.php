@@ -77,10 +77,25 @@ class Adapters extends CoreRoute {
 			$model->setState($request->getQueryParams());
 			$items = $model->fetch();
 			$data = [];
+			$path = new \ReflectionClass($classname);
+			$path = str_replace('.php', '.json', $path->getFileName());
+			$mapping = json_decode(file_get_contents($path), true);
 
 			if($items) {
-				$data['items'] = array_map(function($entry) {
-					return $entry->toArray();
+				$data['items'] = array_map(function($entry) use ($mapping) {
+					$newItem = [];
+
+					foreach($mapping['map'] as $key => $map) {
+						$newItem[$key] = array_reduce(explode('.', $map), function($object, $key) {
+							if(!$object || !isset($key, $object)) {
+								return false;
+							}
+
+							return $object[$key];
+						}, $entry);
+					}
+
+					return $newItem;
 				}, $items);
 				$data['states'] = $model->getState()->getValues();
 				$data['total'] = $model->getTotal();
