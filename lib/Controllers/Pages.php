@@ -86,12 +86,11 @@ class Pages extends Core {
 		$page->definition = json_decode( json_encode( $page->definition ), true );
 		$page->definition = $this->actionSanitize( $page->definition );
 
-		$result = $this->adapter->collection( 'pages.public' )->findOneAndReplace( [
+
+		$this->adapter->collection( 'pages.public' )->deleteMany([
 			'revision.lot' => $page->revision->lot
-		], $page, [
-			'upsert'            => true,
-			'returnNewDocument' => true
-		] );
+		]);
+		$result = $this->adapter->collection( 'pages.public' )->insertOne($page);
 
 		// If the template_config has a model name and id set then we can create a static reroute in the system.
 		// I will append the page_id to it so we can remove it when there is an update or when we remove the public page.
