@@ -14,28 +14,41 @@ class Sites extends CoreRoute {
 	public function registerReadRoutes() {
 		parent::registerReadRoutes();
 
-		$this->app->get('/settings', function(Request $request, Response $response) {
-			$settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-			$setting = Adapter::getInstance()->toJSON(array_shift($settings));
+		$this->app->get( '/settings', function ( Request $request, Response $response ) {
+			$settings = Adapter::getInstance()->collection( 'settings' )->find()->toArray();
+			$setting  = Adapter::getInstance()->toJSON( array_shift( $settings ) );
 
-			return $response->withJson($setting ?? new \stdClass());
-		});
+			return $response->withJson( $setting ?? new \stdClass() );
+		} );
+
+		$this->app->get( '/reset_settings', function ( Request $request, Response $response ) {
+			$client = new \GuzzleHttp\Client();
+			$res = $client->get('http://manager.getfrontender.com/api/sites/?id=' . $request->getQueryParam('id'));
+
+			$content = json_decode($res->getBody()->getContents(), true);
+			$content['scopes'] = json_decode($content['scopes']);
+
+			Adapter::getInstance()->collection('settings')->drop();
+			Adapter::getInstance()->collection('settings')->insertOne($content);
+
+			return $response->withStatus(200);
+		} );
 	}
 
 	public function registerUpdateRoutes() {
 		parent::registerUpdateRoutes();
 
-		$this->app->post('/settings', function(Request $request, Response $response) {
-			$settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-			$setting = array_shift($settings);
-			$data = $request->getParsedBody();
-			unset($data['_id']);
+		$this->app->post( '/settings', function ( Request $request, Response $response ) {
+			$settings = Adapter::getInstance()->collection( 'settings' )->find()->toArray();
+			$setting  = array_shift( $settings );
+			$data     = $request->getParsedBody();
+			unset( $data['_id'] );
 
-			Adapter::getInstance()->collection('settings')->findOneAndReplace([
+			Adapter::getInstance()->collection( 'settings' )->findOneAndReplace( [
 				'_id' => $setting->_id
-			], $data);
+			], $data );
 
-			return $response->withStatus(200);
-		});
+			return $response->withStatus( 200 );
+		} );
 	}
 }
