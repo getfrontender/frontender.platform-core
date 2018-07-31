@@ -8,6 +8,7 @@
 namespace Frontender\Core\Template\Filter;
 
 use Slim\Container;
+use Frontender\Core\DB\Adapter;
 
 class Translate extends \Twig_Extension
 {
@@ -23,7 +24,11 @@ class Translate extends \Twig_Extension
         $this->_locale = $container['language']->get();
         $this->_translator = $container['translate'];
         $this->_debug = $this->_container->settings->get('translation_debug');
-        $this->_fallback = $this->_container->settings->get('default_locale');
+
+        $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
+        $setting = array_shift($settings);
+
+        $this->_fallback = $setting['fallback_locale'];
     }
 
     public function getFilters()
