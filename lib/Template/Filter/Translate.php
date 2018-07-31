@@ -26,9 +26,9 @@ class Translate extends \Twig_Extension
         $this->_debug = $this->_container->settings->get('translation_debug');
 
         $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-        $setting = array_shift($settings);
+        $setting = count($settings) > 0 ? array_shift($settings) : [];
 
-        $this->_fallback = $setting['fallback_locale'];
+        $this->_fallback = $setting['fallback_locale'] ?? false;
     }
 
     public function getFilters()
@@ -61,7 +61,7 @@ class Translate extends \Twig_Extension
 
 		    if(array_key_exists($this->_locale, $text) && !empty($text[$this->_locale])) {
 			    return $text[$this->_locale];
-		    } else if(array_key_exists($this->_fallback, $text)) {
+		    } else if($this->_fallback && array_key_exists($this->_fallback, $text)) {
 			    return $text[$this->_fallback];
 		    }
 
