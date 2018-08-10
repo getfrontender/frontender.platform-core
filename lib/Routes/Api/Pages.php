@@ -110,8 +110,6 @@ class Pages extends CoreRoute {
 			try {
 				$page = $this->page;
 				$this->language->set($request->getQueryParam('locale'));
-//			$page->setName($attributes['page']);
-//			$page->setParameters(['debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
 				$page->setData( $json );
 				$page->setRequest( $request );
 				$page->parseData();
@@ -176,6 +174,16 @@ class Pages extends CoreRoute {
 			$data = \Frontender\Core\Controllers\Pages::update( $request->getAttribute( 'lot_id' ), $request->getParsedBody() );
 		} );
 
+		$this->app->post( '/{page_id}/update', function ( Request $request, Response $response) {
+			Adapter::getInstance()->collection('pages.public')->updateOne([
+				'_id' => $request->getAttribute('page_id')
+			], [
+				'$set' => $request->getParsedBody()
+			]);
+
+			return $response->withStatus(200);
+		});
+
 		$this->app->post( '/{page_id}/preview', function ( Request $request, Response $response) {
 			$body = $request->getParsedBody();
 			$json = json_decode($body['data'], true);
@@ -184,8 +192,6 @@ class Pages extends CoreRoute {
 			try {
 				$page = $this->page;
 				$this->language->set($request->getQueryParam('locale'));
-//			$page->setName($attributes['page']);
-//			$page->setParameters(['debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
 				$page->setData( $json );
 				$page->setRequest( $request );
 				$page->parseData();
