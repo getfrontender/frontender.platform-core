@@ -14,16 +14,7 @@ class Pages extends Core {
 			$findFilter->{'revision.lot'} = $filter['lot'];
 		}
 
-		$postSort = null;
-		if(isset($filter['sort']) && isset($filter['locale']) && isset($filter['direction'])) {
-			$postSort = [
-				'$sort' => [
-					$filter['sort'] . '.' . $filter['locale'] => (int) $filter['direction']
-				]
-			];
-		}
-
-		$aggregation = [
+		$revisions = $this->adapter->collection( $collection )->aggregate( [
 			[
 				'$sort' => [
 					'revision.date' => - 1
@@ -46,16 +37,13 @@ class Pages extends Core {
 					]
 				]
 			],
-			$postSort,
+			[
+				'$sort' => [
+					$filter['sort'] . '.' . $filter['locale'] => (int) $filter['direction']
+				]
+			],
 			[ '$match' => $findFilter ]
-		];
-
-		$aggregation = array_filter($aggregation, function($item) {
-			return $item;
-		});
-		$aggregation = array_values($aggregation);
-
-		$revisions = $this->adapter->collection( $collection )->aggregate($aggregation)->toArray();
+		] )->toArray();
 
 		return array_map( function ( $revision ) {
 			$revision['_id'] = $revision['uuid'];
