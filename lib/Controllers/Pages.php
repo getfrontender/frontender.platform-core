@@ -40,9 +40,6 @@ class Pages extends Core {
 					'uuid' => '$uuid',
 					'revision' => '$revision',
 					'definition' => '$definition',
-					'sortType' => [
-						'$type' => '$' . $filter['sort']
-					],
 					'sortKey' => [
 						'$cond' => [
 							'if' => [
@@ -65,6 +62,7 @@ class Pages extends Core {
 		return array_map( function ( $revision ) {
 			$revision['_id'] = $revision['uuid'];
 			unset( $revision['uuid'] );
+			unset( $revision['sortKey'] );
 
 			return $revision;
 		}, $revisions );
