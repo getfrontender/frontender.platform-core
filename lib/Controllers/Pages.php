@@ -23,6 +23,9 @@ class Pages extends Core {
 			[
 				'$group' => [
 					'_id'        => '$revision.lot',
+					'date'		 => [
+						'$first'   => '$revision.date'
+					],
 					'uuid'       => [
 						'$first' => '$_id'
 					],
@@ -34,12 +37,18 @@ class Pages extends Core {
 					]
 				]
 			],
+			[
+				'$sort' => [
+					'date' => -1
+				]
+			],
 			[ '$match' => $findFilter ]
 		] )->toArray();
 
 		return array_map( function ( $revision ) {
 			$revision['_id'] = $revision['uuid'];
 			unset( $revision['uuid'] );
+			unset( $revision['date'] );
 
 			return $revision;
 		}, $revisions );
