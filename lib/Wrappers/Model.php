@@ -6,19 +6,25 @@ use Doctrine\Common\Inflector\Inflector;
 
 class Model extends Core {
 	private $model;
+	private $container;
 
 	public function __construct( $model, $container ) {
-		$name = $model['name'];
-		$adapter = $model['adapter'];
-		unset($model['name']);
-		unset($model['adapter']);
+		if(is_array($model)) {
+			$name = $model['name'];
+			$adapter = $model['adapter'];
+			unset($model['name']);
+			unset($model['adapter']);
 
-		// The rest are states.
-		$model['language'] = $model['language'] ?? $container->language->get();
-		$model_class = 'Prototype\\Model\\' . $adapter . '\\' . ucfirst($name) . 'Model';
-		$instance = new $model_class($container);
-		$instance->setState($model);
+			// The rest are states.
+			$model['language'] = $model['language'] ?? $container->language->get();
+			$model_class = 'Prototype\\Model\\' . $adapter . '\\' . ucfirst($name) . 'Model';
+			$instance = new $model_class($container);
+			$instance->setState($model);
+		} else if(is_object($model)) {
+			$instance = $model;
+		}
 
+		$this->container = $container;
 		$this->model = $instance;
 	}
 
@@ -36,7 +42,7 @@ class Model extends Core {
 
 	public function current() {
 		$item    = $this->data[ $this->position ];
-		$wrapper = new Wrapper( $this->model );
+		$wrapper = new self( $this->model, $this->container );
 		$wrapper->setData( $item );
 
 		return $wrapper;

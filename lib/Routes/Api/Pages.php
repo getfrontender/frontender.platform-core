@@ -175,10 +175,13 @@ class Pages extends CoreRoute {
 		} );
 
 		$this->app->post( '/{page_id}/update', function ( Request $request, Response $response) {
-			Adapter::getInstance()->collection('pages.public')->updateOne([
-				'_id' => $request->getAttribute('page_id')
+			$data = $request->getParsedBody();
+			unset($data['_id']);
+
+			Adapter::getInstance()->collection('pages')->updateOne([
+				'_id' => new ObjectId($request->getAttribute('page_id'))
 			], [
-				'$set' => $request->getParsedBody()
+				'$set' => $data
 			]);
 
 			return $response->withStatus(200);
