@@ -39,7 +39,7 @@ class Pages extends Core {
 			],
 			[
 				'$sort' => [
-					'date' => -1
+					$filter['sort'] . '.' . $filter['locale'] => (int) $filter['direction']
 				]
 			],
 			[ '$match' => $findFilter ]

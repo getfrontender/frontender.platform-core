@@ -75,7 +75,10 @@ class Pages extends CoreRoute {
 			$json = Adapter::getInstance()->toJSON(
 				\Frontender\Core\Controllers\Pages::browse( [
 					'collection' => $request->getQueryParam( 'collection' ),
-					'lot'        => $request->getQueryParam( 'lot' )
+					'lot'        => $request->getQueryParam( 'lot' ),
+					'sort'		 => $request->getQueryParam( 'sort', 'definition.name' ),
+					'direction'	 => $request->getQueryParam( 'direction', 1 ),
+					'locale'	 => $request->getQueryParam( 'locale', 'en-GB' )
 				] )
 			);
 
