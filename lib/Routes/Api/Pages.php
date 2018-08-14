@@ -76,9 +76,9 @@ class Pages extends CoreRoute {
 				\Frontender\Core\Controllers\Pages::browse( [
 					'collection' => $request->getQueryParam( 'collection' ),
 					'lot'        => $request->getQueryParam( 'lot' ),
-					'sort'		 => $request->getQueryParam( 'sort', 'definition.name' ),
-					'direction'	 => $request->getQueryParam( 'direction', 1 ),
-					'locale'	 => $request->getQueryParam( 'locale', 'en-GB' )
+					'sort'		 => $request->getQueryParam( 'sort' ) ?? 'definition.name',
+					'direction'	 => $request->getQueryParam( 'direction' ) ?? 1,
+					'locale'	 => $request->getQueryParam( 'locale' ) ?? 'en-GB'
 				] )
 			);
 
@@ -88,7 +88,10 @@ class Pages extends CoreRoute {
 		$this->app->get( '/public', function ( Request $request, Response $response ) {
 			$json = Adapter::getInstance()->toJSON(
 				\Frontender\Core\Controllers\Pages::browse( [
-					'collection' => 'public'
+					'collection' => 'public',
+					'sort'		 => $request->getQueryParam( 'sort' ) ?? 'definition.name',
+					'direction'	 => $request->getQueryParam( 'direction' ) ?? 1,
+					'locale'	 => $request->getQueryParam( 'locale' ) ?? 'en-GB'
 				] )
 			);
 
@@ -162,7 +165,10 @@ class Pages extends CoreRoute {
 			$json = Adapter::getInstance()->toJSON(
 				\Frontender\Core\Controllers\Pages::browse( [
 					'collection' => 'trash',
-					'lot'        => $request->getAttribute( 'lot_id' )
+					'lot'        => $request->getAttribute( 'lot_id' ),
+					'sort'		 => $request->getQueryParam( 'sort' ) ?? 'definition.name',
+					'direction'	 => $request->getQueryParam( 'direction' ) ?? 1,
+					'locale'	 => $request->getQueryParam( 'locale' ) ?? 'en-GB'
 				] )
 			);
 
