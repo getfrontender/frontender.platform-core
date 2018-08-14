@@ -76,9 +76,9 @@ class Pages extends CoreRoute {
 				\Frontender\Core\Controllers\Pages::browse( [
 					'collection' => $request->getQueryParam( 'collection' ),
 					'lot'        => $request->getQueryParam( 'lot' ),
-					'sort'		 => $request->getQueryParam( 'sort' ) ?? 'definition.name',
-					'direction'	 => $request->getQueryParam( 'direction' ) ?? 1,
-					'locale'	 => $request->getQueryParam( 'locale' ) ?? 'en-GB'
+					'sort'		 => !empty($request->getQueryParam( 'sort' )) ? $request->getQueryParam( 'sort' ) : 'definition.name',
+					'direction'	 => !empty($request->getQueryParam( 'direction' )) ? $request->getQueryParam( 'direction' ) : 1,
+					'locale'	 => !empty($request->getQueryParam( 'locale' )) ? $request->getQueryParam( 'locale' ) : 'en-GB'
 				] )
 			);
 
@@ -89,9 +89,9 @@ class Pages extends CoreRoute {
 			$json = Adapter::getInstance()->toJSON(
 				\Frontender\Core\Controllers\Pages::browse( [
 					'collection' => 'public',
-					'sort'		 => $request->getQueryParam( 'sort' ) ?? 'definition.name',
-					'direction'	 => $request->getQueryParam( 'direction' ) ?? 1,
-					'locale'	 => $request->getQueryParam( 'locale' ) ?? 'en-GB'
+					'sort'		 => !empty($request->getQueryParam( 'sort' )) ? $request->getQueryParam( 'sort' ) : 'definition.name',
+					'direction'	 => !empty($request->getQueryParam( 'direction' )) ? $request->getQueryParam( 'direction' ) : 1,
+					'locale'	 => !empty($request->getQueryParam( 'locale' )) ? $request->getQueryParam( 'locale' ) : 'en-GB'
 				] )
 			);
 
@@ -166,9 +166,9 @@ class Pages extends CoreRoute {
 				\Frontender\Core\Controllers\Pages::browse( [
 					'collection' => 'trash',
 					'lot'        => $request->getAttribute( 'lot_id' ),
-					'sort'		 => $request->getQueryParam( 'sort' ) ?? 'definition.name',
-					'direction'	 => $request->getQueryParam( 'direction' ) ?? 1,
-					'locale'	 => $request->getQueryParam( 'locale' ) ?? 'en-GB'
+					'sort'		 => !empty($request->getQueryParam( 'sort' )) ? $request->getQueryParam( 'sort' ) : 'definition.name',
+					'direction'	 => !empty($request->getQueryParam( 'direction' )) ? $request->getQueryParam( 'direction' ) : 1,
+					'locale'	 => !empty($request->getQueryParam( 'locale' )) ? $request->getQueryParam( 'locale' ) : 'en-GB'
 				] )
 			);
 
