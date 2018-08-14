@@ -76,9 +76,9 @@ class Pages extends CoreRoute {
 				\Frontender\Core\Controllers\Pages::browse( [
 					'collection' => $request->getQueryParam( 'collection' ),
 					'lot'        => $request->getQueryParam( 'lot' ),
-					'sort'		 => $request->getQueryParam( 'sort', 'definition.name' ),
-					'direction'	 => $request->getQueryParam( 'direction', 1 ),
-					'locale'	 => $request->getQueryParam( 'locale', 'en-GB' )
+					'sort'		 => $request->getQueryParam( 'sort' ),
+					'direction'	 => $request->getQueryParam( 'direction' ),
+					'locale'	 => $request->getQueryParam( 'locale' )
 				] )
 			);
 
