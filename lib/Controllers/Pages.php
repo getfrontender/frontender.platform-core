@@ -23,9 +23,6 @@ class Pages extends Core {
 			[
 				'$group' => [
 					'_id'        => '$revision.lot',
-					'date'		 => [
-						'$first'   => '$revision.date'
-					],
 					'uuid'       => [
 						'$first' => '$_id'
 					],
@@ -38,8 +35,28 @@ class Pages extends Core {
 				]
 			],
 			[
+				'$project' => [
+					'_id' => '$_id',
+					'uuid' => '$uuid',
+					'revision' => '$revision',
+					'definition' => '$definition',
+					'sortType' => [
+						'$type' => '$' . $filter['sort']
+					],
+					'sortKey' => [
+						'$cond' => [
+							'if' => [
+								'$eq' => [ ['$type' => '$' . $filter['sort']], 'object' ]
+							],
+							'then' => '$' . $filter['sort'] . '.' . $filter['locale'],
+							'else' => '$' . $filter['sort']
+						]
+					]
+				]
+			],
+			[
 				'$sort' => [
-					$filter['sort'] . '.' . $filter['locale'] => (int) $filter['direction']
+					'sortKey' => (int) $filter['direction']
 				]
 			],
 			[ '$match' => $findFilter ]
@@ -48,7 +65,6 @@ class Pages extends Core {
 		return array_map( function ( $revision ) {
 			$revision['_id'] = $revision['uuid'];
 			unset( $revision['uuid'] );
-			unset( $revision['date'] );
 
 			return $revision;
 		}, $revisions );
