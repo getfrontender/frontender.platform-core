@@ -7,6 +7,7 @@ use Frontender\Core\Routes\Traits\Authorizable;
 use Slim\Http\Request;
 use Slim\Http\Response;
 use Symfony\Component\Finder\Finder;
+use Frontender\Core\Routes\Middleware\TokenCheck;
 
 class Adapters extends CoreRoute {
 	protected $group = '/api/adapters';
@@ -103,5 +104,13 @@ class Adapters extends CoreRoute {
 
 			return $response->withJson($data);
 		});
+	}
+
+	public function getGroupMiddleware() {
+		return [
+			new TokenCheck(
+				$this->app->getContainer()
+			)
+		];
 	}
 }

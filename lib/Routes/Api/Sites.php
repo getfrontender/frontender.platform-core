@@ -7,6 +7,7 @@ use Frontender\Core\Routes\Helpers\CoreRoute;
 use Frontender\Core\Routes\Traits\Authorizable;
 use Slim\Http\Request;
 use Slim\Http\Response;
+use Frontender\Core\Routes\Middleware\TokenCheck;
 
 class Sites extends CoreRoute {
 	protected $group = '/api/sites';
@@ -52,5 +53,13 @@ class Sites extends CoreRoute {
 
 			return $response->withStatus( 200 );
 		} );
+	}
+
+	public function getGroupMiddleware() {
+		return [
+			new TokenCheck(
+				$this->app->getContainer()
+			)
+		];
 	}
 }

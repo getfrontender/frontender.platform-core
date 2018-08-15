@@ -8,6 +8,7 @@ use Frontender\Core\Routes\Traits\Authorizable;
 use MongoDB\BSON\ObjectId;
 use Slim\Http\Request;
 use Slim\Http\Response;
+use Frontender\Core\Routes\Middleware\TokenCheck;
 
 class Controls extends CoreRoute {
 	protected $group = '/api/controls';
@@ -24,5 +25,13 @@ class Controls extends CoreRoute {
 
 			return $response->withJson($json);
 		});
+	}
+
+	public function getGroupMiddleware() {
+		return [
+			new TokenCheck(
+				$this->app->getContainer()
+			)
+		];
 	}
 }

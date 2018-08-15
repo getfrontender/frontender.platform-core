@@ -7,6 +7,7 @@ use Frontender\Core\Routes\Helpers\CoreRoute;
 use Frontender\Core\Routes\Traits\Authorizable;
 use Slim\Http\Request;
 use Slim\Http\Response;
+use Frontender\Core\Routes\Middleware\TokenCheck;
 
 class Blueprints extends CoreRoute {
 	protected $group = '/api/blueprints';
@@ -75,5 +76,13 @@ class Blueprints extends CoreRoute {
 
 			return $response;
 		} );
+	}
+
+	public function getGroupMiddleware() {
+		return [
+			new TokenCheck(
+				$this->app->getContainer()
+			)
+		];
 	}
 }

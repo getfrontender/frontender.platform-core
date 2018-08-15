@@ -72,8 +72,6 @@ class Pages extends CoreRoute {
 	protected function registerReadRoutes() {
 		parent::registerReadRoutes();
 
-		$checkToken = new TokenCheck($this->app->getContainer());
-
 		$this->app->get( '', function ( Request $request, Response $response ) {
 			$json = Adapter::getInstance()->toJSON(
 				\Frontender\Core\Controllers\Pages::browse( [
@@ -86,7 +84,7 @@ class Pages extends CoreRoute {
 			);
 
 			return $response->withJson( $json );
-		} )->add($checkToken);
+		} );
 
 		$this->app->get( '/public', function ( Request $request, Response $response ) {
 			$json = Adapter::getInstance()->toJSON(
@@ -238,5 +236,13 @@ class Pages extends CoreRoute {
 
 			return $response->withStatus( 200 );
 		} );
+	}
+
+	public function getGroupMiddleware() {
+		return [
+			new TokenCheck(
+				$this->app->getContainer()
+			)
+		];
 	}
 }
