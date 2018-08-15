@@ -81,7 +81,12 @@ class Blueprints extends CoreRoute {
 	public function getGroupMiddleware() {
 		return [
 			new TokenCheck(
-				$this->app->getContainer()
+				$this->app->getContainer(),
+				[
+					'exclude' => [
+						'/api/blueprints/preview'
+					]
+				]
 			)
 		];
 	}

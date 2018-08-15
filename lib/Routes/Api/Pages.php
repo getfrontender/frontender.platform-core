@@ -241,7 +241,12 @@ class Pages extends CoreRoute {
 	public function getGroupMiddleware() {
 		return [
 			new TokenCheck(
-				$this->app->getContainer()
+				$this->app->getContainer(),
+				[
+					'exclude' => [
+						'/api/pages/{page_id}/preview'
+					]
+				]
 			)
 		];
 	}
