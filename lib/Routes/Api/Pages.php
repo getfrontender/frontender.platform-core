@@ -9,6 +9,7 @@ use Frontender\Core\Routes\Traits\Authorizable;
 use MongoDB\BSON\ObjectId;
 use Slim\Http\Request;
 use Slim\Http\Response;
+use Frontender\Core\Routes\Middleware\TokenCheck;
 
 class Pages extends CoreRoute {
 	protected $group = '/api/pages';
@@ -71,6 +72,8 @@ class Pages extends CoreRoute {
 	protected function registerReadRoutes() {
 		parent::registerReadRoutes();
 
+		$checkToken = new TokenCheck($this->app->getContainer());
+
 		$this->app->get( '', function ( Request $request, Response $response ) {
 			$json = Adapter::getInstance()->toJSON(
 				\Frontender\Core\Controllers\Pages::browse( [
@@ -83,7 +86,7 @@ class Pages extends CoreRoute {
 			);
 
 			return $response->withJson( $json );
-		} );
+		} )->add($checkToken);
 
 		$this->app->get( '/public', function ( Request $request, Response $response ) {
 			$json = Adapter::getInstance()->toJSON(
