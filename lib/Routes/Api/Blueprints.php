@@ -7,6 +7,7 @@ use Frontender\Core\Routes\Helpers\CoreRoute;
 use Frontender\Core\Routes\Traits\Authorizable;
 use Slim\Http\Request;
 use Slim\Http\Response;
+use MongoDB\BSON\ObjectId;
 use Frontender\Core\Routes\Middleware\TokenCheck;
 
 class Blueprints extends CoreRoute {
@@ -83,8 +84,11 @@ class Blueprints extends CoreRoute {
 
 		$this->app->post('/update', function (Request $request, Response $response) {
 			$blueprint = $request->getParsedBody();
+			$id = new ObjectId($blueprint['_id']);
+			unset($blueprint['_id']);
+
 			Adapter::getInstance()->collection('blueprints')->findOneAndReplace([
-				'_id' => $blueprint['_id']
+				'_id' =>  $id
 			], $blueprint);
 
 			return $response->withStatus(200)->withJson($blueprint);
