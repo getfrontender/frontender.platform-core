@@ -18,9 +18,13 @@ class Blueprints extends CoreRoute {
 		parent::registerCreateRoutes();
 
 		$this->app->put( '', function ( Request $request, Response $response ) {
-			\Frontender\Core\Controllers\Blueprints::add( $request->getParsedBody() );
+			$blueprint = $request->getParsedBody();
+			$result = \Frontender\Core\Controllers\Blueprints::add( $blueprint );
+			$blueprint['_id'] = $result->getInsertedId()->__toString();
 
-			return $response->withStatus( 200 );
+			return $response
+				->withStatus( 200 )
+				->withJson($blueprint);
 		} );
 	}
 
@@ -76,6 +80,15 @@ class Blueprints extends CoreRoute {
 
 			return $response;
 		} );
+
+		$this->app->post('/update', function (Request $request, Response $response) {
+			$blueprint = $request->getParsedBody();
+			Adapter::getInstance()->collection('blueprints')->findOneAndReplace([
+				'_id' => $blueprint['_id']
+			], $blueprint);
+
+			return $response->withStatus(200)->withJson($blueprint);
+		});
 	}
 
 	public function getGroupMiddleware() {
