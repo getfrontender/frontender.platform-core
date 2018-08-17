@@ -26,11 +26,6 @@ class Pages extends Core
 			}
 		}
 
-		// echo '<pre>';
-		// 	print_r($findFilter);
-		// echo '</pre>';
-		// die();
-
 		$revisions = $this->adapter->collection($collection)->aggregate([
 			[
 				'$sort' => [
