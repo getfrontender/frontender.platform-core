@@ -14,7 +14,22 @@ class Pages extends Core
 
 		if (isset($filter['lot'])) {
 			$findFilter->{'revision.lot'} = $filter['lot'];
+		} else if(isset($filter['filter']) && is_array($filter['filter'])) {
+			foreach($filter['filter'] as $key => $value) {
+				if($value === 'true') {
+					$value = ['$eq' => true];
+				} else if ($value === 'false') {
+					$value = ['$eq' => false];
+				}
+
+				$findFilter->{$key} = $value;
+			}
 		}
+
+		// echo '<pre>';
+		// 	print_r($findFilter);
+		// echo '</pre>';
+		// die();
 
 		$revisions = $this->adapter->collection($collection)->aggregate([
 			[
@@ -37,6 +52,14 @@ class Pages extends Core
 				]
 			],
 			[
+				'$lookup' => [
+					'from' => 'pages.public',
+					'localField' => 'revision.lot',
+					'foreignField' => 'revision.lot',
+					'as' => 'publishedPage'
+				]
+			],
+			[
 				'$project' => [
 					'_id' => '$_id',
 					'uuid' => '$uuid',
@@ -49,6 +72,52 @@ class Pages extends Core
 							],
 							'then' => '$' . $filter['sort'] . '.' . $filter['locale'],
 							'else' => '$' . $filter['sort']
+						]
+					],
+					'states' => [
+						'isPublished' => [
+							'$cond' => [
+								'if' => [
+									'$gt' => [['$size' => '$publishedPage'], 0]
+								],
+								'then' => true,
+								'else' => false
+							]
+						],
+						'isPublic' => [
+							'$cond' => [
+								'if' => [
+									'$eq' => [['$arrayElemAt' => ['$publishedPage.revision.hash', 0]], '$revision.hash']
+								],
+								'then' => true,
+								'else' => false
+							]
+						],
+						'isRoute' => [
+							'$cond' => [
+								'if' => [
+									'$eq' => [['$type' => '$definition.template_config.model.controls.id.value'], 'string']
+								],
+								'then' => [
+									'$cond' => [
+										'if' => [
+											'$eq'=> [['$substr' => ['$definition.template_config.model.controls.id.value', 0, 1]], '{']
+										],
+										'then' => false,
+										'else' => true
+									]
+								],
+								'else' => false
+							]
+						],
+						'isRoot' => [
+							'$cond' => [
+								'if' => [
+									'$eq' => ['$definition.route.' . $filter['locale'], '/']
+								],
+								'then' => true,
+								'else' => false
+							]
 						]
 					]
 				]
@@ -72,9 +141,75 @@ class Pages extends Core
 
 	public function actionRead($id)
 	{
-		return $this->adapter->collection('pages')->findOne([
-			'_id' => new ObjectId($id)
-		]);
+		$revisions = $this->adapter->collection('pages')->aggregate([
+			[
+				'$lookup' => [
+					'from' => 'pages.public',
+					'localField' => 'revision.lot',
+					'foreignField' => 'revision.lot',
+					'as' => 'publishedPage'
+				]
+			],
+			[
+				'$project' => [
+					'_id' => '$_id',
+					'uuid' => '$uuid',
+					'revision' => '$revision',
+					'definition' => '$definition',
+					'states' => [
+						'isPublished' => [
+							'$cond' => [
+								'if' => [
+									'$gt' => [['$size' => '$publishedPage'], 0]
+								],
+								'then' => true,
+								'else' => false
+							]
+						],
+						'isPublic' => [
+							'$cond' => [
+								'if' => [
+									'$eq' => [['$arrayElemAt' => ['$publishedPage.revision.hash', 0]], '$revision.hash']
+								],
+								'then' => true,
+								'else' => false
+							]
+						],
+						'isRoute' => [
+							'$cond' => [
+								'if' => [
+									'$eq' => [['$type' => '$definition.template_config.model.controls.id.value'], 'string']
+								],
+								'then' => [
+									'$cond' => [
+										'if' => [
+											'$eq'=> [['$substr' => ['$definition.template_config.model.controls.id.value', 0, 1]], '{']
+										],
+										'then' => false,
+										'else' => true
+									]
+								],
+								'else' => false
+							]
+						],
+						'isRoot' => [
+							'$cond' => [
+								'if' => [
+									'$eq' => ['$definition.route.' . $_GET['locale'], '/']
+								],
+								'then' => true,
+								'else' => false
+							]
+						]
+					]
+				]
+			],
+			['$match' => [
+				'_id' => new ObjectId($id)
+			]]
+		])->toArray();
+
+		return array_shift($revisions);
 	}
 
 	public function actionEdit($id, $data)

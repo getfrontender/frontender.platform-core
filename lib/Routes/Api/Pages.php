@@ -79,7 +79,8 @@ class Pages extends CoreRoute {
 					'lot'        => $request->getQueryParam( 'lot' ),
 					'sort'		 => !empty($request->getQueryParam( 'sort' )) ? $request->getQueryParam( 'sort' ) : 'definition.name',
 					'direction'	 => !empty($request->getQueryParam( 'direction' )) ? $request->getQueryParam( 'direction' ) : 1,
-					'locale'	 => !empty($request->getQueryParam( 'locale' )) ? $request->getQueryParam( 'locale' ) : 'en-GB'
+					'locale'	 => !empty($request->getQueryParam( 'locale' )) ? $request->getQueryParam( 'locale' ) : 'en-GB',
+					'filter'     => $request->getQueryParam( 'filter' )
 				] )
 			);
 
