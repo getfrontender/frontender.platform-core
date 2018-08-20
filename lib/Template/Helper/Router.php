@@ -59,11 +59,14 @@ class Router extends \Twig_Extension
 	    $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
 	    $setting = Adapter::getInstance()->toJSON(array_shift($settings), true);
 	    $uri = $this->container->get('request')->getUri();
-	    $domain = $uri->getHost();
+		$domain = $uri->getHost();
+		$amount = 0;
 
-	    $amount = array_filter($setting['scopes'], function($scope) use ($domain) {
-		    return $scope['domain'] === $domain;
-	    });
+		if(isset($setting['scopes'])) {
+			$amount = array_filter($setting['scopes'], function($scope) use ($domain) {
+				return $scope['domain'] === $domain;
+			});
+		}
 
 	    if ( count( $amount ) === 1 ) {
 		    // Use the current domain, without any locale
