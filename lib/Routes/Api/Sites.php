@@ -24,7 +24,11 @@ class Sites extends CoreRoute {
 
 		$this->app->get( '/reset_settings', function ( Request $request, Response $response ) {
 			$client = new \GuzzleHttp\Client();
-			$res = $client->get('http://manager.getfrontender.com/api/sites/?id=' . $request->getQueryParam('site_id'));
+			$res = $client->get('http://manager.getfrontender.com/api/sites/?id=' . $request->getQueryParam('site_id'), [
+				'headers' => [
+					'X-Token' => $request->getHeader('X-Token')
+				]
+			]);
 
 			$content = json_decode($res->getBody()->getContents(), true);
 			$content['scopes'] = json_decode($content['scopes']);
