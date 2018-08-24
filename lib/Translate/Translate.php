@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @package     Dipity
  * @copyright   Copyright (C) 2014 - 2017 Dipity B.V. All rights reserved.
@@ -25,14 +26,15 @@ class Translate
         $this->_translator = new Translator($language, new MessageSelector());
 
         // We will always fall back to en.
-        $this->_translator->setFallbackLocales(['en']);
+        // TODO: Recheck this file.
+        // $this->_translator->setFallbackLocales(['en']);
 
         // Add the yaml file locator (translations files are in yml.
         $this->_translator->addLoader('yml', new YamlFileLoader());
 
         // Add the files.
-        $this->_translator->addResource('yml', $translations_path . 'en.yml', 'en');
-        $this->_translator->addResource('yml', $translations_path . $language . '.yml', $language);
+        // $this->_translator->addResource('yml', $translations_path . 'en.yml', 'en');
+        // $this->_translator->addResource('yml', $translations_path . $language . '.yml', $language);
 
         $this->_language = $language;
     }
@@ -42,7 +44,8 @@ class Translate
         return $this->_translator->trans(strtolower($string));
     }
 
-    public function hasTranslation($string) {
+    public function hasTranslation($string)
+    {
         return $this->_translator->getCatalogue($this->_language)->has(strtolower($string));
     }
 }

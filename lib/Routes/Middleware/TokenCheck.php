@@ -12,16 +12,17 @@ class TokenCheck
     private $_headerName;
     private $_config;
 
-	public function __construct($container, $config = [])
-	{
+    public function __construct($container, $config = [])
+    {
         $this->_container = $container;
         $this->_headerName = getenv('TOKEN_HEADER');
         $this->_config = $config;
-	}
+    }
 
-    public function __invoke(Request $request, Response $response, $next) {
-        if(isset($this->_config['exclude'])) {
-            if(in_array($request->getAttribute('route')->getPattern(), $this->_config['exclude'])) {
+    public function __invoke(Request $request, Response $response, $next)
+    {
+        if (isset($this->_config['exclude'])) {
+            if (in_array($request->getAttribute('route')->getPattern(), $this->_config['exclude'])) {
                 return $next($request, $response);
             }
         }
@@ -32,7 +33,7 @@ class TokenCheck
         $this->_container['token'] = $token;
         
         // Check if our site is in the token. If not we have an issue.
-        if(in_array($request->getUri()->getHost(), $token->getClaim('domains')) === false) {
+        if (in_array($request->getUri()->getHost(), $token->getClaim('domains')) === false) {
             return $response
                 ->withStatus(400)
                 ->withJson([
