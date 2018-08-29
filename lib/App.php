@@ -200,8 +200,10 @@ class App
             $files = $finder->files()->in(dirname($project['path']) . '/lib/Routes/Api')->name('*.php');
 
             foreach ($files as $file) {
+                $namespace = str_replace(DIRECTORY_SEPARATOR, '\\', $file->getRelativePath());
+
                 $name = str_replace('.php', '', $file->getBasename());
-                $class = 'Prototype\\Routes\\Api\\' . $name;
+                $class = 'Prototype\\Routes\\Api\\' . $namespace . '\\' . $name;
 
                 new $class($this);
             }
