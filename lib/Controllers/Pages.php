@@ -329,7 +329,7 @@ class Pages extends Core
             $blueprint = $this->adapter->toJSON($blueprint, true);
             $container['template'] = $blueprint['definition']['template'];
             $container['template_config'] = $blueprint['definition']['template_config'];
-            $container['fe-id'] = $blueprint['definition']['fe-id'];
+            $container['frontender'] = $blueprint['definition']['frontender'];
         }
 
         if (isset($container['template_config'])) {
