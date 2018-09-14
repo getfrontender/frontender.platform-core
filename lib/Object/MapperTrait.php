@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @package     Dipity
  * @copyright   Copyright (C) 2014 - 2017 Dipity B.V. All rights reserved.
@@ -9,13 +10,12 @@ namespace Frontender\Core\Object;
 
 trait MapperTrait
 {
-    public function mapValues($data, $iterator)
+    public function mapValues($data, $iterator = null)
     {
         $result = [];
 
-        foreach ($data as $name => $value)
-        {
-            if(is_string($value)) {
+        foreach ($data as $name => $value) {
+            if (is_string($value)) {
                 preg_match('/\{\s*(.*?)\s*\}/', $value, $match);
             } else {
                 $match = [];
@@ -32,9 +32,9 @@ trait MapperTrait
                 $parameters = $this->getParameters();
 
                 // Needed to get things from nested values.
-                if(strpos($value, '.') !== false) {
+                if (strpos($value, '.') !== false) {
                     $parts = explode('.', end($match));
-                    $value = array_reduce($parts, function($carry, $item) {
+                    $value = array_reduce($parts, function ($carry, $item) {
                         return $carry[$item] ?? null;
                     }, $parameters);
 

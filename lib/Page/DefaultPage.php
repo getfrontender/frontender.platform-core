@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @package     Dipity
  * @copyright   Copyright (C) 2014 - 2017 Dipity B.V. All rights reserved.
@@ -84,7 +85,7 @@ class DefaultPage extends Object
 
     public function parseData()
     {
-        if($this->_parsed === true) {
+        if ($this->_parsed === true) {
             return $this->data;
         }
 
@@ -96,19 +97,19 @@ class DefaultPage extends Object
     private function getId()
     {
 	    // Check if we have a frontender request, if so return the post id, else return null;
-	    $parameters = $this->getParameters();
-	    $id = $this->parameters['default']['id'] ?? 'unexisting-id';
+        $parameters = $this->getParameters();
+        $id = $this->parameters['default']['id'] ?? 'unexisting-id';
 
 	    // Needed to get things from nested values.
-	    if ( strpos( $id, '.' ) !== false ) {
-		    $parts = explode( '.', $id );
-		    $id = array_reduce( $parts, function ( $carry, $item ) {
-			    return $carry[ $item ] ?? null;
-		    }, $parameters );
+        if (strpos($id, '.') !== false) {
+            $parts = explode('.', $id);
+            $id = array_reduce($parts, function ($carry, $item) {
+                return $carry[$item] ?? null;
+            }, $parameters);
 
-	    }
+        }
 
-	    return $id;
+        return $id;
     }
 
     public function getFormValue($form)
@@ -141,25 +142,24 @@ class DefaultPage extends Object
         return $word;
     }
 
-	private function _parseArray(&$array) {
-		foreach ( $array as $key => &$values ) {
-			if ( $key === 'template_config' ) {
-				foreach ( $values as $name => $value ) {
-					if ( $name === 'model' ) {
-						if(isset($value['id']) && strpos($value['id'], '{') !== false) {
-							$value['id'] = $this->getId();
-						}
+    private function _parseArray(&$array)
+    {
+        foreach ($array as $key => &$values) {
+            if ($key === 'template_config') {
+                foreach ($values as $name => $value) {
+                    if ($name === 'model') {
+                        $value = $this->mapValues($value);
 
-						$array[ $name ] = new Wrappers\Model( $value, $this->container );
-					} else {
-						$array[ $name ] = new Wrappers\Config( $value );
-					}
-				}
-			}
+                        $array[$name] = new Wrappers\Model($value, $this->container);
+                    } else {
+                        $array[$name] = new Wrappers\Config($value);
+                    }
+                }
+            }
 
-			if ( is_array( $values ) ) {
-				$this->_parseArray( $values);
-			}
-		}
-	}
+            if (is_array($values)) {
+                $this->_parseArray($values);
+            }
+        }
+    }
 }

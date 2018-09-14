@@ -57,17 +57,6 @@ class App
         if (!$config->debug) {
             $container['notFoundHandler'] = $container['errorHandler'] = function ($container) {
                 return function (Request $request, Response $response, $exception = null) use ($container) {
-//					$previous = $exception->getPrevious();
-//					$error = [
-//						'code' => $exception->getCode() ? $exception->getCode() : 404,
-//						'message' => $exception->getMessage() ? $exception->getMessage() : 'Page not found'
-//					];
-//
-//					if ($previous) {
-//						$error['code'] = $previous->getCode();
-//						$error['message'] = $previous->getResponse()->getReasonPhrase();
-//					}
-
                     echo '<pre>';
                     print_r($exception->getMessage());
                     echo '</pre>';
@@ -83,10 +72,6 @@ class App
 
                     $container->language->set($locale);
                     $data = getFileJson($container->settings['project']['path'] . '/pages/published/' . $page . '.json', true);
-
-//					if($data->containers && count($data->containers) > 1) {
-//						$data->containers[1]->template_config = $error;
-//					}
 
                     $page = $container->page;
                     $page->setParameters(['locale' => $locale, 'debug' => $container->settings['debug'], 'query' => $request->getQueryParams()]);
@@ -104,7 +89,6 @@ class App
         $app = $this->getApp();
         $container = $this->getContainer();
 
-//		$app->add(new Middleware\Routable($container));
         $app->add(new Page($container));
         $app->add(new Routes\Middleware\Maintenance($container));
         $app->add(new Sitable($container));
