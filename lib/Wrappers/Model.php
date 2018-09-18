@@ -11,11 +11,13 @@ class Model extends Core
 
     public function __construct($model, $container)
     {
-        if (is_array($model)) {
+        if (is_array($model) && isset($model['data'])) {
+            $modelData = $model['data'];
+            unset($model['data']);
+
+            $adapter = $modelData['adapter'];
             $name = $model['name'];
-            $adapter = $model['adapter'];
-            unset($model['name']);
-            unset($model['adapter']);
+            $model['id'] = $modelData['id'];
 
 			// The rest are states.
             $model['language'] = $model['language'] ?? $container->language->get();
@@ -24,6 +26,8 @@ class Model extends Core
             $instance->setState($model);
         } else if (is_object($model)) {
             $instance = $model;
+        } else {
+            throw new \Exception('Model config incorrect!');
         }
 
         $this->container = $container;
@@ -34,23 +38,21 @@ class Model extends Core
     {
         $data = $this->fetch();
 
-        return isset($data[$offset]);
+        return $data[0]->offsetExists($offset);
     }
 
     public function offsetGet($offset)
     {
         $data = $this->fetch();
 
-        return $data[$offset];
+        // If we have multiple data entries,
+        // We will take the first, this way we will always have content.
+        return $data[0]->offsetGet($offset);
     }
 
     public function current()
     {
-        $item = $this->data[$this->position];
-        $wrapper = new self($this->model, $this->container);
-        $wrapper->setData($item);
-
-        return $wrapper;
+        return $this->data[$this->position];
     }
 
     public function valid()
@@ -65,7 +67,7 @@ class Model extends Core
         return $this->fetch();
     }
 
-    private function fetch()
+    private function fetch() : array
     {
         if ($this->data === null) {
             $this->data = $this->model->fetch();
