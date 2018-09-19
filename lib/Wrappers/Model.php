@@ -16,8 +16,11 @@ class Model extends Core
             unset($model['data']);
 
             $adapter = $modelData['adapter'];
-            $name = $model['name'];
-            $model['id'] = $modelData['id'];
+            $name = $modelData['model'];
+
+            if (isset($modelData['id'])) {
+                $model['id'] = $modelData['id'];
+            }
 
 			// The rest are states.
             $model['language'] = $model['language'] ?? $container->language->get();
