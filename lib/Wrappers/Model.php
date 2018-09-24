@@ -4,7 +4,7 @@ namespace Frontender\Core\Wrappers;
 
 use Doctrine\Common\Inflector\Inflector;
 
-class Model extends Core
+class Model extends Core implements \Countable
 {
     private $model;
     private $container;
@@ -77,5 +77,12 @@ class Model extends Core
         }
 
         return $this->data;
+    }
+
+    public function count()
+    {
+        $data = $this->fetch();
+
+        return count($data);
     }
 }
