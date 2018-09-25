@@ -106,7 +106,10 @@ class DefaultPage extends Object
             $id = array_reduce($parts, function ($carry, $item) {
                 return $carry[$item] ?? null;
             }, $parameters);
+        }
 
+        if (isset($_GET['id'])) {
+            $id = $_GET['id'];
         }
 
         return $id;
@@ -149,6 +152,10 @@ class DefaultPage extends Object
                 foreach ($values as $name => $value) {
                     if ($name === 'model') {
                         $value = $this->mapValues($value);
+
+                        if (isset($value['data'])) {
+                            $value['data'] = $this->mapValues($value['data']);
+                        }
 
                         $array[$name] = new Wrappers\Model($value, $this->container);
                     } else {

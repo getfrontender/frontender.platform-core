@@ -11,6 +11,12 @@ class Pages extends Core
     {
         $collection = isset($filter['collection']) ? 'pages.' . $filter['collection'] : 'pages';
         $findFilter = new \stdClass();
+        $skip = 0;
+
+        if (isset($filter['skip'])) {
+            $skip = $filter['skip'];
+            unset($filter['skip']);
+        }
 
         if (isset($filter['lot'])) {
             $findFilter->{'revision.lot'} = $filter['lot'];
@@ -31,7 +37,7 @@ class Pages extends Core
             }
         }
 
-        $revisions = $this->adapter->collection($collection)->aggregate([
+        $aggrigation = [
             [
                 '$sort' => [
                     'revision.date' => -1
@@ -128,15 +134,23 @@ class Pages extends Core
                 ]
             ],
             ['$match' => $findFilter]
-        ])->toArray();
+        ];
+        $total = count($this->adapter->collection($collection)->aggregate($aggrigation)->toArray());
 
-        return array_map(function ($revision) {
-            $revision['_id'] = $revision['uuid'];
-            unset($revision['uuid']);
-			// unset( $revision['sortKey'] );
+        $aggrigation[] = ['$limit' => 8 + $skip];
+        $aggrigation[] = ['$skip' => $skip];
+        $revisions = $this->adapter->collection($collection)->aggregate($aggrigation)->toArray();
 
-            return $revision;
-        }, $revisions);
+        return [
+            'total' => $total,
+            'items' => array_map(function ($revision) {
+                $revision['_id'] = $revision['uuid'];
+                unset($revision['uuid']);
+			    // unset( $revision['sortKey'] );
+
+                return $revision;
+            }, $revisions)
+        ];
     }
 
     public function actionRead($id)

@@ -28,78 +28,81 @@ class Sitable
         $this->_container = $container;
     }
 
-    public function __invoke(Request $request, Response $response, $next) {
-	    if ( strpos( $request->getUri()->getPath(), '/api' ) === 0 ) {
-		    return $next( $request, $response );
-	    }
+    public function __invoke(Request $request, Response $response, $next)
+    {
+        if (strpos($request->getUri()->getPath(), '/api') === 0) {
+            return $next($request, $response);
+        }
 
-	    $router   = $this->_container->get( 'router' );
-	    $settings = Adapter::getInstance()->collection( 'settings' )->find()->toArray();
-	    $setting  = array_shift( $settings );
+        $router = $this->_container->get('router');
+        $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
+        $setting = array_shift($settings);
 
-	    if(!$setting) {
-		    throw new NotFoundException($request, $response);
-	    }
+        if (!$setting) {
+            throw new NotFoundException($request, $response);
+        }
 
-	    $setting  = Adapter::getInstance()->toJSON( $setting, true );
-	    $domains = array_column( $setting['scopes'], 'domain' );
-	    $routeInfo = $request->getAttribute('routeInfo');
+        $setting = Adapter::getInstance()->toJSON($setting, true);
+        $domains = array_column($setting['scopes'], 'domain');
+        $routeInfo = $request->getAttribute('routeInfo');
 
-	    if ( ! in_array( $request->getUri()->getHost(), $domains ) ) {
-		    throw new NotFoundException($request, $response);
-	    }
+        if (!in_array($request->getUri()->getHost(), $domains)) {
+            throw new NotFoundException($request, $response);
+        }
 
-	    $uri = $request->getUri();
-	    $domain = $uri->getHost();
+        // TODO: Add some check for the path.
+
+        $uri = $request->getUri();
+        $domain = $uri->getHost();
 	    // First is the default.
-	    $index  = array_search( $domain, $domains );
-	    $locale = $setting['scopes'][ $index ]['locale'];
-	    $amount = array_filter($setting['scopes'], function($scope) use ($domain) {
-		    return $scope['domain'] === $domain;
-	    });
+        $index = array_search($domain, $domains);
+        $locale = $setting['scopes'][$index]['locale'];
+        $amount = array_filter($setting['scopes'], function ($scope) use ($domain) {
+            return $scope['domain'] === $domain;
+        });
 
-	    if(count($amount) > 1) {
-		    if(isset($routeInfo[2]['locale'])) {
-		    	return $next($request, $response);
-		    } else {
-		    	return $response->withRedirect(
-		    		$uri->withPath(
-		    			$locale . $uri->getPath()
-				    )
-			    );
-		    }
-	    }
+        if (count($amount) > 1) {
+            if (isset($routeInfo[2]['locale'])) {
+                return $next($request, $response);
+            } else {
+                return $response->withRedirect(
+                    $uri->withPath(
+                        $locale . $uri->getPath()
+                    )
+                );
+            }
+        }
 
 	    // TODO: Check the scenarios here, there are a few to be honest.
-	    $uri = $request->getUri();
+        $uri = $request->getUri();
 
-	    $uri = $uri->withPath(
-		    $locale . $uri->getPath()
-	    );
+        $uri = $uri->withPath(
+            $locale . $uri->getPath()
+        );
 
 	    // The following path comes directly from the App code from Slim framework.
 	    // This does what we need it to do and this will work for us.
 	    // Way better than internal redirects.
-	    $request   = $request->withUri( $uri );
-	    $routeInfo = $router->dispatch( $request );
+        $request = $request->withUri($uri);
+        $routeInfo = $router->dispatch($request);
 
-	    if($routeInfo[0] !== Dispatcher::FOUND) {
-	    	throw new NotFoundException($request, $response);
-	    }
+        if ($routeInfo[0] !== Dispatcher::FOUND) {
+            throw new NotFoundException($request, $response);
+        }
 
-	    $routeArguments = [];
-	    foreach ( $routeInfo[2] as $k => $v ) {
-		    $routeArguments[ $k ] = urldecode( $v );
-	    }
+        $routeArguments = [];
+        foreach ($routeInfo[2] as $k => $v) {
+            $routeArguments[$k] = urldecode($v);
+        }
 
-	    $route = $router->lookupRoute( $routeInfo[1] );
-	    $route->prepare( $request, $routeArguments );
+        $route = $router->lookupRoute($routeInfo[1]);
+        $route->prepare($request, $routeArguments);
 
 	    // add route to the request's attributes in case a middleware or handler needs access to the route
-	    $routeInfo['request'] = [ $request->getMethod(), (string) $request->getUri() ];
-	    $request              = $request->withAttribute( 'route', $route )
-	                                    ->withAttribute( 'routeInfo', $routeInfo );
+        $routeInfo['request'] = [$request->getMethod(), (string)$request->getUri()];
+        $request = $request->withAttribute('route', $route)
+            ->withAttribute('routeInfo', $routeInfo);
 
-	    return $next( $request, $response );
+        return $next($request, $response);
     }
 }

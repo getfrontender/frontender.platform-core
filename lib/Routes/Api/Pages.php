@@ -76,16 +76,17 @@ class Pages extends CoreRoute
         parent::registerReadRoutes();
 
         $this->app->get('', function (Request $request, Response $response) {
-            $json = Adapter::getInstance()->toJSON(
-                \Frontender\Core\Controllers\Pages::browse([
-                    'collection' => $request->getQueryParam('collection'),
-                    'lot' => $request->getQueryParam('lot'),
-                    'sort' => !empty($request->getQueryParam('sort')) ? $request->getQueryParam('sort') : 'definition.name',
-                    'direction' => !empty($request->getQueryParam('direction')) ? $request->getQueryParam('direction') : 1,
-                    'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB',
-                    'filter' => $request->getQueryParam('filter')
-                ])
-            );
+            $json = \Frontender\Core\Controllers\Pages::browse([
+                'collection' => $request->getQueryParam('collection'),
+                'lot' => $request->getQueryParam('lot'),
+                'sort' => !empty($request->getQueryParam('sort')) ? $request->getQueryParam('sort') : 'definition.name',
+                'direction' => !empty($request->getQueryParam('direction')) ? $request->getQueryParam('direction') : 1,
+                'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB',
+                'filter' => $request->getQueryParam('filter'),
+                'skip' => (int)$request->getQueryParam('skip')
+            ]);
+
+            $json['items'] = Adapter::getInstance()->toJSON($json['items']);
 
             return $response->withJson($json);
         });
