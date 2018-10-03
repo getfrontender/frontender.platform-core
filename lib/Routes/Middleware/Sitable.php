@@ -54,37 +54,69 @@ class Sitable
 
         $uri = $request->getUri();
         $domain = $uri->getHost();
+        $path = $uri->getPath();
 	    // First is the default.
         $index = array_search($domain, $domains);
-        $locale = $setting['scopes'][$index]['locale'];
-        $amount = array_filter($setting['scopes'], function ($scope) use ($domain) {
-            return $scope['domain'] === $domain;
-        });
+        $scope = $setting['scopes'][$index];
+        $amount = array_filter($setting['scopes'], function ($scope) use ($domain, $path) {
+            if ($scope['domain'] === $domain) {
+                if (isset($scope['path'])) {
+                    return strpos($path, $scope['path']) === 0;
+                }
 
-        if (count($amount) > 1) {
+                return true;
+            }
+
+            return false;
+        });
+        $currentScope = array_slice($amount, 0, 1);
+        $currentScope = array_shift($currentScope);
+
+        /**
+         * $scope: This is the fallback/ default scope.
+         * $amount: The scopes in which the current domain is found.
+         */
+        if (count($amount) > 1 || !count($amount)) {
             if (isset($routeInfo[2]['locale'])) {
                 return $next($request, $response);
             } else {
+                $prefix = $scope['path'] ?? $scope['locale'];
+
                 return $response->withRedirect(
                     $uri->withPath(
-                        $locale . $uri->getPath()
+                        str_replace('//', '/', $prefix . $uri->getPath())
                     )
                 );
             }
         }
 
-	    // TODO: Check the scenarios here, there are a few to be honest.
+        $prefix = $scope['path'] ?? $scope['locale'];
         $uri = $request->getUri();
-
-        $uri = $uri->withPath(
-            $locale . $uri->getPath()
-        );
 
 	    // The following path comes directly from the App code from Slim framework.
 	    // This does what we need it to do and this will work for us.
 	    // Way better than internal redirects.
         $request = $request->withUri($uri);
         $routeInfo = $router->dispatch($request);
+
+        /**
+         * I will check if we have a locale,
+         * if we have the locale, then we will check the current scope if it is the path or the locale itself,
+         * if it is the locale we won't touch it.
+         * 
+         * If it is the path, we will change it to the locale so the language is set correctly.
+         */
+
+        if (isset($routeInfo[2]) && isset($routeInfo[2]['locale'])) {
+            // We will check if our current scope has a path, else we will leave it.
+            if (isset($currentScope['path'])) {
+                $basePath = str_replace('/', '', $currentScope['path']);
+
+                if ($routeInfo[2]['locale'] === $basePath) {
+                    $routeInfo[2]['locale'] = $currentScope['locale'];
+                }
+            }
+        }
 
         if ($routeInfo[0] !== Dispatcher::FOUND) {
             throw new NotFoundException($request, $response);

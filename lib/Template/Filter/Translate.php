@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @package     Dipity
  * @copyright   Copyright (C) 2014 - 2017 Dipity B.V. All rights reserved.
@@ -42,37 +43,41 @@ class Translate extends \Twig_Extension
     /**
      * @param {String/ Array/ Object} $text The text to translate.
      */
-    public function translate($text, $translate = true, $locale = null)
+    public function translate($text, $languages = array())
     {
-	    if(is_string($text))
-	    {
-		    if($translate && $this->_translator->hasTranslation($text)) {
-			    return $this->_translator->translate($text, $locale);
-		    }
-	    }
-	    else if(is_array($text) || is_object($text))
-	    {
+        $locale = $this->_locale;
+        if ($languages) {
+            if (isset($languages[$locale])) {
+                $locale = $languages[$locale];
+            }
+        }
+
+        if (is_string($text)) {
+            if ($this->_translator->hasTranslation($text)) {
+                return $this->_translator->translate($text);
+            }
+        } else if (is_array($text) || is_object($text)) {
 		    // We always want an array.
-		    $text = (array) $text;
+            $text = (array)$text;
 
-		    if(array_key_exists($locale, $text) && !empty($text[$locale])) {
-			    return $text[$locale];
-		    }
+            if (array_key_exists($locale, $text) && !empty($text[$locale])) {
+                return $text[$locale];
+            }
 
-		    if(array_key_exists($this->_locale, $text) && !empty($text[$this->_locale])) {
-			    return $text[$this->_locale];
-		    } else if($this->_fallback && array_key_exists($this->_fallback, $text)) {
-			    return $text[$this->_fallback];
-		    }
+            if (array_key_exists($this->_locale, $text) && !empty($text[$this->_locale])) {
+                return $text[$this->_locale];
+            } else if ($this->_fallback && array_key_exists($this->_fallback, $text)) {
+                return $text[$this->_fallback];
+            }
 
-		    return '';
-	    }
+            return '';
+        }
 
 	    // No translation found
-	    if($this->_debug) {
-		    return '??' . $text . '??';
-	    }
+        if ($this->_debug) {
+            return '??' . $text . '??';
+        }
 
-	    return $text;
+        return $text;
     }
 }
