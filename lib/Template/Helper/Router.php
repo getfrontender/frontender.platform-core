@@ -31,7 +31,13 @@ class Router extends \Twig_Extension
 
     public function route($params = [])
     {
-        $params['locale'] = $params['locale'] ?? $this->container->language->language;
+        $fallbackLocale = $this->container->language->get('language');
+
+        if ($this->container->has('scope')) {
+            $fallbackLocale = str_replace('/', '', $this->container->scope['path']) ?? $this->container->scope['locale'];
+        }
+
+        $params['locale'] = $params['locale'] ?? $fallbackLocale;
         $params['slug'] = $params['slug'] ?? '';
 
 	    // If a url is found, we won't even look further

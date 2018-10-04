@@ -336,16 +336,6 @@ class Pages extends Core
 
     private function _sanitizeConfig(&$container)
     {
-        if (!isset($container['template_config']) && isset($container['blueprint'])) {
-            $blueprint = $this->adapter->collection('blueprints')->findOne([
-                '_id' => new ObjectId($container['blueprint'])
-            ]);
-            $blueprint = $this->adapter->toJSON($blueprint, true);
-            $container['template'] = $blueprint['definition']['template'];
-            $container['template_config'] = $blueprint['definition']['template_config'];
-            $container['frontender'] = $blueprint['definition']['frontender'];
-        }
-
         if (isset($container['template_config'])) {
             $newConfig = [];
 

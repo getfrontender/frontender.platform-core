@@ -58,19 +58,28 @@ class Sitable
 	    // First is the default.
         $index = array_search($domain, $domains);
         $scope = $setting['scopes'][$index];
-        $amount = array_filter($setting['scopes'], function ($scope) use ($domain, $path) {
+        $amount = array_filter($setting['scopes'], function ($scope) use ($domain, $path, $routeInfo) {
             if ($scope['domain'] === $domain) {
                 if (isset($scope['path'])) {
-                    return strpos($path, $scope['path']) === 0;
+                    if (strpos($path, $scope['path']) === 0) {
+                        return true;
+                    }
                 }
 
-                return true;
+                if (isset($scope['locale']) && isset($routeInfo[2]) && isset($routeInfo[2]['locale'])) {
+                    if ($scope['locale'] === $routeInfo[2]['locale']) {
+                        return true;
+                    }
+                }
             }
 
             return false;
         });
         $currentScope = array_slice($amount, 0, 1);
         $currentScope = array_shift($currentScope);
+
+        // Set the current scope.
+        $this->_container->scope = $currentScope;
 
         /**
          * $scope: This is the fallback/ default scope.

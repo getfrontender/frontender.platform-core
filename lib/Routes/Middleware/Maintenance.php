@@ -26,17 +26,18 @@ class Maintenance
         $parts = array_values(array_filter(explode('/', $request->getUri()->getPath())));
         $redir = false;
 
-        if($this->_container['settings']->get('offline')) {
-            if(count($parts) == 1 && $parts[0] !== 'maintenance') {
+        if ($this->_container['settings']->get('offline')) {
+            if (count($parts) == 1 && $parts[0] !== 'maintenance') {
                 $redir = true;
             }
 
-            if(count($parts) > 1 && $parts[1] !== 'maintenance') {
+            if (count($parts) > 1 && $parts[1] !== 'maintenance') {
                 $redir = true;
             }
         }
-        
-        if($redir) {
+
+        if ($redir) {
+            die('Called');
             return $response->withStatus(404)
                 ->withRedirect($path);
         }

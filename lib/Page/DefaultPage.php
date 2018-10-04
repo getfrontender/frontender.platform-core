@@ -18,6 +18,9 @@ use Frontender\Core\Wrappers;
 
 use Slim\Container;
 use Slim\Http\Request;
+use Frontender\Core\DB\Adapter;
+use MongoDB\BSON\ObjectId;
+use Frontender\Core\Controllers\Pages;
 
 class DefaultPage extends Object
 {
@@ -147,6 +150,26 @@ class DefaultPage extends Object
 
     private function _parseArray(&$array)
     {
+        /**
+         * Before we start to sanitize the current "container"
+         * we have to check if we have no template_config and a blueprint, if so we need to take the
+         * data from the blueprint.
+         */
+        if (isset($array['blueprint'])) {
+            if (!isset($array['template_config']) || isset($array['template_config']) && !$array['template_config']) {
+                // Get the blueprint.
+                $blueprint = Adapter::getInstance()->collection('blueprints')->findOne([
+                    '_id' => new ObjectId($array['blueprint'])
+                ]);
+                $blueprint = Adapter::getInstance()->toJSON($blueprint, true);
+
+                $array['template_config'] = $blueprint['definition']['template_config'] ?? [];
+                $array['containers'] = $blueprint['definition']['containers'] ?? [];
+
+                $array = Pages::sanitize($array);
+            }
+        }
+
         foreach ($array as $key => &$values) {
             if ($key === 'template_config') {
                 foreach ($values as $name => $value) {
