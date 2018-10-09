@@ -92,14 +92,17 @@ class Pages extends CoreRoute
         });
 
         $this->app->get('/public', function (Request $request, Response $response) {
-            $json = Adapter::getInstance()->toJSON(
-                \Frontender\Core\Controllers\Pages::browse([
+            try {
+                $json = \Frontender\Core\Controllers\Pages::browse([
                     'collection' => 'public',
                     'sort' => !empty($request->getQueryParam('sort')) ? $request->getQueryParam('sort') : 'definition.name',
                     'direction' => !empty($request->getQueryParam('direction')) ? $request->getQueryParam('direction') : 1,
                     'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB'
-                ])
-            );
+                ]);
+                $json = Adapter::getInstance()->toJSON($json['items']);
+            } catch (\Exception $e) {
+                $json = [];
+            }
 
             return $response->withJson($json);
         });
