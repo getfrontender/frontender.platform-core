@@ -22,6 +22,7 @@ class App extends CoreRoute
 
             $this->language->set($locale);
 
+            // Add fallback language here.
             $page = Adapter::getInstance()->collection('pages.public')->findOne([
                 '$or' => [
                     ['definition.route.' . $locale => '/'],

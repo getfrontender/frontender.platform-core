@@ -109,6 +109,7 @@ class Adapters extends CoreRoute
                 }, $items);
                 $data['states'] = $model->getState()->getValues();
                 $data['total'] = $model->getTotal();
+                $data['config'] = $mapping;
             }
 
             return $response->withJson($data);
