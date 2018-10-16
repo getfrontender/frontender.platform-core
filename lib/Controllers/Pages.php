@@ -275,21 +275,21 @@ class Pages extends Core
 		// I will append the page_id to it so we can remove it when there is an update or when we remove the public page.
 		// This only has to happen here, because I don't care about all the other pages in the system.
 
-        $modelName = array_reduce(['template_config', 'model', 'name'], function ($carry, $key) {
+        $modelName = array_reduce(['template_config', 'model', 'data', 'model'], function ($carry, $key) {
             if (!isset($carry[$key]) || !$carry) {
                 return false;
             }
 
             return $carry[$key];
         }, $page->definition);
-        $adapterName = array_reduce(['template_config', 'model', 'adapter'], function ($carry, $key) {
+        $adapterName = array_reduce(['template_config', 'model', 'data', 'adapter'], function ($carry, $key) {
             if (!isset($carry[$key]) || !$carry) {
                 return false;
             }
 
             return $carry[$key];
         }, $page->definition);
-        $modelId = array_reduce(['template_config', 'model', 'id'], function ($carry, $key) {
+        $modelId = array_reduce(['template_config', 'model', 'data', 'id'], function ($carry, $key) {
             if (!isset($carry[$key]) || !$carry) {
                 return false;
             }
@@ -303,9 +303,9 @@ class Pages extends Core
 
             $page_id = '';
             try {
-                $page_id = $result->_id->__toString();
-            } catch (\Error $e) {
                 $page_id = $result->getInsertedId()->__toString();
+            } catch (\Error $e) {
+                $page_id = $result->_id->__toString();
             }
 
             $this->adapter->collection('routes.static')->deleteMany([

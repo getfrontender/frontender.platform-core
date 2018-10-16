@@ -59,7 +59,7 @@ class Page
         if (isset($info['id'])) {
 			// Check if there is a redirect/ if so we will follow that.
             $redirect = $adapter->collection('routes.static')->findOne([
-                'source' => implode('/', [$page->definition->template_config->model->adapter, $page->definition->template_config->model->name, $info['id']])
+                'source' => implode('/', [$page->definition->template_config->model->data->adapter, $page->definition->template_config->model->data->model, $info['id']])
             ]);
 
             if ($redirect) {
