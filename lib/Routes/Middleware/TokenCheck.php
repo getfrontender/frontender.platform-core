@@ -15,7 +15,7 @@ class TokenCheck
     public function __construct($container, $config = [])
     {
         $this->_container = $container;
-        $this->_headerName = getenv('TOKEN_HEADER');
+        $this->_headerName = getenv('FEP_TOKEN_HEADER');
         $this->_config = $config;
     }
 
