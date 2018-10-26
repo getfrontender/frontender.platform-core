@@ -84,6 +84,19 @@ class Router extends \Twig_Extension
 		    // Use the current domain, without any locale
             return $uri->withPath($path);
         } else {
+            // Check the scopes for the current locale, and if it has a path.
+            $scopes = array_filter($amount, function ($scope) use ($params) {
+                return $scope['locale'] === $params['locale'];
+            });
+
+            if (count($scopes) === 1) {
+                $scope = array_shift($scopes);
+                $localePartial = $scope['path'] ?? $scope['locale'];
+                $localePartial = str_replace('/', '', $localePartial);
+
+                return $uri->withPath($localePartial . '/' . $path);
+            }
+
             return $uri->withPath($params['locale'] . '/' . $path);
         }
     }
