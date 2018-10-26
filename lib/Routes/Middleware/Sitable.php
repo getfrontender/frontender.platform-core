@@ -99,6 +99,15 @@ class Sitable
             }
         }
 
+        if ($currentScope['locale'] === $routeInfo[2]['locale'] && isset($currentScope['path'])) {
+            $path = $uri->getPath();
+            $path = str_replace('/' . $currentScope['locale'] . '/', $currentScope['path'], $path);
+
+            $uri = $uri->withPath($path);
+
+            return $response->withRedirect($uri);
+        }
+
         $prefix = $scope['path'] ?? $scope['locale'];
         $uri = $request->getUri();
 
