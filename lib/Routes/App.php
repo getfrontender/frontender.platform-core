@@ -23,13 +23,7 @@ class App extends CoreRoute
             $this->language->set($locale);
 
             // Add fallback language here.
-            $page = Adapter::getInstance()->collection('pages.public')->findOne([
-                '$or' => [
-                    ['definition.route.' . $locale => '/'],
-                    ['definition.cononical.' . $locale => '/']
-                ]
-            ]);
-            $data = Adapter::getInstance()->toJSON($page, true);
+            $data = Adapter::getInstance()->toJSON($request->getAttribute('json'), true);
 
             $page = $this->page;
             $page->setParameters([

@@ -28,18 +28,38 @@ class Page
             return $next($request, $response);
         }
 
+        $adapter = Adapter::getInstance();
+        $settings = $adapter->collection('settings')->find()->toArray();
+        $settings = $adapter->toJSON($settings, true);
+        $setting = array_shift($settings);
+        $fallbackLocale = $setting['scopes'][0];
+
 		// Exclude homepage
         if ($request->getAttribute('route')->getName() === 'home') {
+            $page = $adapter->collection('pages.public')->findOne([
+                '$or' => [
+                    ['definition.route.' . $info['locale'] => '/'],
+                    ['definition.cononical.' . $info['locale'] => '/'],
+
+                    // Try to find the fallback language.
+                    ['definition.route.' . $fallbackLocale['locale'] => '/'],
+                    ['definition.cononical.' . $fallbackLocale['locale'] => '/']
+                ]
+            ]);
+
+            $request = $request->withAttribute('json', $page);
             return $next($request, $response);
         }
-
-        $adapter = Adapter::getInstance();
         $info = $request->getAttribute('routeInfo')[2];
 
         $page = $adapter->collection('pages.public')->findOne([
             '$or' => [
                 ['definition.route.' . $info['locale'] => $info['page']],
-                ['definition.cononical.' . $info['locale'] => $info['page']]
+                ['definition.cononical.' . $info['locale'] => $info['page']],
+
+                // Try to find the fallback language.
+                ['definition.route.' . $fallbackLocale['locale'] => $info['page']],
+                ['definition.cononical.' . $fallbackLocale['locale'] => $info['page']]
             ]
         ]);
 
