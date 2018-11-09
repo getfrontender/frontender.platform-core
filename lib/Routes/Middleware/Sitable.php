@@ -43,6 +43,13 @@ class Sitable
         }
 
         $setting = Adapter::getInstance()->toJSON($setting, true);
+
+        $request = $this->checkProxyDomains($request, $response, $setting);
+
+        if ($request instanceof Response) {
+            return $request;
+        }
+
         $domains = array_column($setting['scopes'], 'domain');
         $routeInfo = $request->getAttribute('routeInfo');
 
@@ -154,5 +161,84 @@ class Sitable
             ->withAttribute('routeInfo', $routeInfo);
 
         return $next($request, $response);
+    }
+
+    /**
+     * This method will check the addon domains, if it isn't found, then we will 
+     */
+    public function checkProxyDomains(Request $request, Response $response, $settings)
+    {
+        if (!isset($settings['proxies']) || !count($settings['proxies'])) {
+            // There are no addon domains, so we will do nothing.
+            return $request;
+        }
+
+        $host = $request->getUri()->getHost();
+        $addonDomains = array_keys($settings['proxies']);
+
+        if (!in_array($host, $addonDomains)) {
+            // Check if the path is one of the subdomains, if so we will return a redirect.
+            $info = $request->getAttribute('routeInfo');
+            $uriPath = $request->getUri()->getPath();
+            $locale = '';
+
+            if (isset($info[2]) && isset($info[2]['locale'])) {
+                $locale = '/' . $info[2]['locale'];
+                $uriPath = str_replace($locale, '', $uriPath);
+            }
+
+            $paths = array_filter($settings['proxies'], function ($path) use ($uriPath) {
+                return strpos($uriPath, $path) === 0;
+            });
+
+            if (count($paths)) {
+                $uri = $request->getUri();
+                $domain = key($paths);
+                $path = $paths[$domain];
+
+                return $response->withRedirect(
+                    $uri->withHost($domain)
+                        ->withPath($locale . str_replace($path, '', $uriPath))
+                );
+            }
+
+            return $request;
+        }
+
+        $domain = array_shift($settings['scopes']);
+        $path = $settings['proxies'][$host];
+
+        $uri = $request->getUri();
+        $info = $request->getAttribute('routeInfo');
+        $uriPath = $uri->getPath();
+        $locale = '';
+
+        if (isset($info[2]) && isset($info[2]['locale'])) {
+            $locale = '/' . $info[2]['locale'];
+            $uriPath = str_replace($locale, '', $uriPath);
+        }
+
+        $newPath = implode('', [$locale, $path, $uriPath]);
+
+        // Set the original domain name here, this is done because it will check for the languages later on.
+        $request = $request->withUri(
+            $uri->withPath($newPath)
+                ->withHost($domain['domain'])
+        );
+        $router = $this->_container->get('router');
+        $routeInfo = $router->dispatch($request);
+
+        $routeArguments = [];
+        foreach ($routeInfo[2] as $k => $v) {
+            $routeArguments[$k] = urldecode($v);
+        }
+
+        $route = $router->lookupRoute($routeInfo[1]);
+        $route->prepare($request, $routeArguments);
+
+	    // add route to the request's attributes in case a middleware or handler needs access to the route
+        $routeInfo['request'] = [$request->getMethod(), (string)$request->getUri()];
+        return $request->withAttribute('route', $route)
+            ->withAttribute('routeInfo', $routeInfo);
     }
 }
