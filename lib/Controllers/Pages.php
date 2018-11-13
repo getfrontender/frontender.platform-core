@@ -298,26 +298,28 @@ class Pages extends Core
         }, $page->definition);
 
         if ($adapterName && $modelName && $modelId && ($page->definition['route'] || $page->defintion['cononical'])) {
-			// We prefer the cononical
-            $route = $page->definition['route'] ?? $page->definition['cononical'];
+            if (strpos(trim($modelId), '{') === false) {
+                // We prefer the cononical
+                $route = $page->definition['route'] ?? $page->definition['cononical'];
 
-            $page_id = '';
-            try {
-                $page_id = $result->getInsertedId()->__toString();
-            } catch (\Error $e) {
-                $page_id = $result->_id->__toString();
+                $page_id = '';
+                try {
+                    $page_id = $result->getInsertedId()->__toString();
+                } catch (\Error $e) {
+                    $page_id = $result->_id->__toString();
+                }
+
+                $this->adapter->collection('routes.static')->deleteMany([
+                    'page_id' => $page_id
+                ]);
+
+                // TODO: Something to do with the domains has to come in here as well.
+                $this->adapter->collection('routes.static')->insertOne([
+                    'source' => implode('/', [$adapterName, $modelName, $modelId]),
+                    'destination' => $route,
+                    'page_id' => $page_id
+                ]);
             }
-
-            $this->adapter->collection('routes.static')->deleteMany([
-                'page_id' => $page_id
-            ]);
-
-			// TODO: Something to do with the domains has to come in here as well.
-            $this->adapter->collection('routes.static')->insertOne([
-                'source' => implode('/', [$adapterName, $modelName, $modelId]),
-                'destination' => $route,
-                'page_id' => $page_id
-            ]);
         }
 
         return $result;
