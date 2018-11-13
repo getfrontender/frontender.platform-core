@@ -127,8 +127,8 @@ class Router extends \Twig_Extension
 			    // Here we also have a slug anyway.
 			    // Else the slug is an empty string.
 
-                $model = $page->definition->template_config->model->name ?? false;
-                $adapter = $page->definition->template_config->model->adapter ?? false;
+                $model = $page->definition->template_config->model->data->model ?? false;
+                $adapter = $page->definition->template_config->model->data->adapter ?? false;
                 $id = $params['id'];
 
                 if ($model && $adapter && $id) {
