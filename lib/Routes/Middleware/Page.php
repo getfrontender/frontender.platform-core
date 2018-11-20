@@ -52,16 +52,26 @@ class Page
         }
         $info = $request->getAttribute('routeInfo')[2];
 
-        $page = $adapter->collection('pages.public')->findOne([
-            '$or' => [
-                ['definition.route.' . $info['locale'] => $info['page']],
-                ['definition.cononical.' . $info['locale'] => $info['page']],
+        // Get the initial path
+        $parts = explode('/', $info['page']);
+        $templateName = array_pop($parts);
+        $page = false;
 
-                // Try to find the fallback language.
-                ['definition.route.' . $fallbackLocale['locale'] => $info['page']],
-                ['definition.cononical.' . $fallbackLocale['locale'] => $info['page']]
-            ]
-        ]);
+        if (count($parts)) {
+            while (count($parts) > 0) {
+                $page = $this->_getPage(implode('/', array_merge($parts, [$templateName])), $info['locale'], $fallbackLocale['locale']);
+
+                if (!$page) {
+                    array_pop($parts);
+                } else {
+                    break;
+                }
+            }
+        }
+
+        if (!$page && !count($parts) && $templateName) {
+            $page = $this->_getPage($templateName, $info['locale'], $fallbackLocale['locale']);
+        }
 
         if (!$page) {
             return $this->_findRedirect($request, $response, $adapter);
@@ -142,5 +152,21 @@ class Page
         }
 
         return $response->withRedirect($uri, 301);
+    }
+
+    private function _getPage($route, $locale, $fallbackLocale)
+    {
+        $adapter = Adapter::getInstance();
+
+        return $adapter->collection('pages.public')->findOne([
+            '$or' => [
+                ['definition.route.' . $locale => $route],
+                ['definition.cononical.' . $locale => $route],
+
+                    // Try to find the fallback language.
+                ['definition.route.' . $fallbackLocale => $route],
+                ['definition.cononical.' . $fallbackLocale => $route]
+            ]
+        ]);
     }
 }
