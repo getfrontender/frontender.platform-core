@@ -26,6 +26,7 @@ class Model extends Core implements \Countable
             $model['language'] = $model['language'] ?? $container->language->get();
             $model_class = 'Prototype\\Model\\' . $adapter . '\\' . ucfirst($name) . 'Model';
             $instance = new $model_class($container);
+
             $instance->setState($model);
         } else if (is_object($model)) {
             $instance = $model;

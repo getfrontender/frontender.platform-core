@@ -24,7 +24,7 @@ class Page
     {
 		// Exclude api calls
 		// Exclude post calls.
-        if ($request->getMethod() === 'POST' || strpos($request->getUri()->getPath(), '/api') === 0) {
+        if ($request->getMethod() === 'POST' || strpos($request->getUri()->getPath(), '/api') === 0 || $request->getAttribute('route')->getName() === 'partial') {
             return $next($request, $response);
         }
 

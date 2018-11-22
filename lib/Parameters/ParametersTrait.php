@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @package     Dipity
  * @copyright   Copyright (C) 2014 - 2017 Dipity B.V. All rights reserved.
@@ -13,9 +14,10 @@ trait ParametersTrait
 
     public function setParameters(array $parameters, $registry = 'default')
     {
-        foreach ($parameters as $name => $value)
-        {
-            if(is_string($value)) {
+        foreach ($parameters as $name => $value) {
+            $match = false;
+
+            if (is_string($value)) {
                 preg_match('/\{\s*(.*?)\s*\}/', $value, $match);
             }
 
