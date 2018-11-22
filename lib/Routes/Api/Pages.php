@@ -232,6 +232,7 @@ class Pages extends CoreRoute
                 $page->parseData();
 
                 $response->getBody()->write($page->render());
+                $response = $response->withHeader('X-XSS-Protection', '0');
             } catch (\Exception $e) {
                 echo $e->getMessage();
                 die('Called');
