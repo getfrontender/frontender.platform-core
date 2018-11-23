@@ -42,7 +42,11 @@ class Model extends Core implements \Countable
     {
         $data = $this->fetch();
 
+        // if (isset($data[0])) {
         return $data[0]->offsetExists($offset);
+        // }
+
+        return false;
     }
 
     public function offsetGet($offset)
