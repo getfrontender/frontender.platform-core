@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @package     Dipity
  * @copyright   Copyright (C) 2014 - 2017 Dipity B.V. All rights reserved.
@@ -29,7 +30,8 @@ class Date extends \Twig_Extension
         ];
     }
 
-    public function elapsedString($datetime, $full = false) {
+    public function elapsedString($datetime, $full = false)
+    {
         $now = new \DateTime;
         $ago = new \DateTime($datetime);
         $diff = $now->diff($ago);
@@ -70,8 +72,9 @@ class Date extends \Twig_Extension
      *
      * @param {String} $format The format of the date to translate
      */
-    public function translateDate($date, $format, $timezone = null) {
-        $locale = strtolower($this->_locale) . '_' . strtoupper($this->_locale);
+    public function translateDate($date, $format, $timezone = null)
+    {
+        $locale = str_replace('-', '_', $this->_locale);
         $mutations = [
             $locale,
             $locale . '.utf-8',
@@ -82,7 +85,7 @@ class Date extends \Twig_Extension
 
         $date = new \DateTime($date, new \DateTimeZone('UTC'));
 
-        if($timezone) {
+        if ($timezone) {
             $date->setTimeZone(new \DateTimeZone($timezone));
         }
 
@@ -94,9 +97,9 @@ class Date extends \Twig_Extension
     {
         $currentYear = date('Y');
 
-        if($currentYear == $year) {
+        if ($currentYear == $year) {
             return $currentClass;
-        } else if($currentYear > $year) {
+        } else if ($currentYear > $year) {
             return $completedClass;
         }
 
@@ -109,6 +112,6 @@ class Date extends \Twig_Extension
         $now = new \DateTime();
         $diff = $begin->diff($now)->days;
 
-        return floor(($diff/ 365) * 10) * 10;
+        return floor(($diff / 365) * 10) * 10;
     }
 }

@@ -57,11 +57,6 @@ class App
         if (!$config->debug) {
             $container['notFoundHandler'] = $container['errorHandler'] = function ($container) {
                 return function (Request $request, Response $response, $exception = null) use ($container) {
-                    echo '<pre>';
-                    print_r($exception->getMessage());
-                    echo '</pre>';
-                    die();
-
                     $parts = array_values(array_filter(explode('/', $request->getUri()->getPath())));
                     $locale = $parts[0] ?? 'en';
                     $page = '404';
