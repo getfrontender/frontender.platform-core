@@ -30,7 +30,7 @@ class Pages extends Core
 
                 if (!is_numeric($value) && is_string($value)) {
                     // We will filter strings as a regex and case insensitive.
-                    $value = ['$regex' => $value, '$options' => 'i'];
+                    $value = ['$regex' => '.*' . $value . '.*', '$options' => 'i'];
                 }
 
                 $findFilter->{$key} = $value;
