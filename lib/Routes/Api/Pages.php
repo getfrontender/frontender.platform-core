@@ -202,6 +202,23 @@ class Pages extends CoreRoute
     {
         parent::registerUpdateRoutes();
 
+        // New url for the pages endpoint.
+        $this->app->post('', function (Request $request, Response $response) {
+            $json = \Frontender\Core\Controllers\Pages::browse([
+                'collection' => $request->getParsedBodyParam('collection'),
+                'lot' => $request->getParsedBodyParam('lot'),
+                'sort' => !empty($request->getParsedBodyParam('sort')) ? $request->getParsedBodyParam('sort') : 'definition.name',
+                'direction' => !empty($request->getParsedBodyParam('direction')) ? $request->getParsedBodyParam('direction') : 1,
+                'locale' => !empty($request->getParsedBodyParam('locale')) ? $request->getParsedBodyParam('locale') : 'en-GB',
+                'filter' => $request->getParsedBodyParam('filter'),
+                'skip' => (int)$request->getParsedBodyParam('skip')
+            ]);
+
+            $json['items'] = Adapter::getInstance()->toJSON($json['items']);
+
+            return $response->withJson($json);
+        });
+
         $this->app->post('/{lot_id}', function (Request $request, Response $response) {
             $data = \Frontender\Core\Controllers\Pages::update($request->getAttribute('lot_id'), $request->getParsedBody());
         });
@@ -234,11 +251,7 @@ class Pages extends CoreRoute
                 $response->getBody()->write($page->render());
                 $response = $response->withHeader('X-XSS-Protection', '0');
             } catch (\Exception $e) {
-                echo $e->getMessage();
-                die('Called');
             } catch (\Error $e) {
-                echo $e->getMessage();
-                die('Called2');
             }
 
             return $response;
