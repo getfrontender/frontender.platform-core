@@ -34,14 +34,6 @@ class Markdown extends \Twig_Extension
             return $data;
         }
 
-        /*
-         * First, retrieve the images and replace them with a figure tag of the image
-         * Regex: (!\[.*?\]\(\/\/(.*\..*)\/(.{12})\/(.{12,26})\/(.*)\/(.*)\))
-         * $matches[1] is the alt text
-         * $matches[2] is the full asset url
-         * $matches[5] is the Contentful asset id
-         */
-
         return $this->parser->text($data);
     }
 }
