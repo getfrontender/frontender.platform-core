@@ -37,7 +37,6 @@ class Maintenance
         }
 
         if ($redir) {
-            die('Called');
             return $response->withStatus(404)
                 ->withRedirect($path);
         }

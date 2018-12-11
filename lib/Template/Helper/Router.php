@@ -59,7 +59,6 @@ class Router extends \Twig_Extension
             ]);
         } catch (\Exception $e) {
             var_dump($e->getMessage());
-            die('Called');
         }
 
         if ($page) {
