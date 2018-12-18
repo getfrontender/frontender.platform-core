@@ -36,7 +36,8 @@ class Translate extends \Twig_Extension
     {
         return [
             new \Twig_Filter('t', [$this, 'translate']),
-            new \Twig_Filter('translate', [$this, 'translate'])
+            new \Twig_Filter('translate', [$this, 'translate']),
+            new \Twig_Filter('i18n', [$this, 'internationalization'])
         ];
     }
 
@@ -52,11 +53,7 @@ class Translate extends \Twig_Extension
             }
         }
 
-        if (is_string($text)) {
-            if ($this->_translator->hasTranslation($text)) {
-                return $this->_translator->translate($text);
-            }
-        } else if (is_array($text) || is_object($text)) {
+        if (is_array($text) || is_object($text)) {
 		    // We always want an array.
             $text = (array)$text;
 
@@ -74,10 +71,15 @@ class Translate extends \Twig_Extension
         }
 
 	    // No translation found
-        if ($this->_debug) {
-            return '??' . $text . '??';
+        return $this->_debug ? '??' . $text . '??' : $text;
+    }
+
+    public function internationalization($text)
+    {
+        if ($this->_translator->hasTranslation($text)) {
+            return $this->_translator->translate($text);
         }
 
-        return $text;
+        return $this->_debug ? '??' . $text . '??' : $text;
     }
 }
