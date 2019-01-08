@@ -33,6 +33,7 @@ class Page
         $settings = $adapter->toJSON($settings, true);
         $setting = array_shift($settings);
         $fallbackLocale = $setting['scopes'][0];
+        $info = $request->getAttribute('routeInfo')[2];
 
 		// Exclude homepage
         if ($request->getAttribute('route')->getName() === 'home') {
@@ -50,7 +51,6 @@ class Page
             $request = $request->withAttribute('json', $page);
             return $next($request, $response);
         }
-        $info = $request->getAttribute('routeInfo')[2];
 
         // Get the initial path
         $parts = explode('/', $info['page']);
