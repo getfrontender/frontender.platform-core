@@ -265,10 +265,14 @@ class Pages extends Core
         $page->definition = json_decode(json_encode($page->definition), true);
         $page->definition = $this->actionSanitize($page->definition);
 
+        $oldPage = $this->adapter->collection('pages.public')->findOne([
+            'revision.lot' => $page->revision->lot
+        ]);
 
         $this->adapter->collection('pages.public')->deleteMany([
             'revision.lot' => $page->revision->lot
         ]);
+
         $result = $this->adapter->collection('pages.public')->insertOne($page);
 
 		// If the template_config has a model name and id set then we can create a static reroute in the system.
@@ -310,7 +314,7 @@ class Pages extends Core
                 }
 
                 $this->adapter->collection('routes.static')->deleteMany([
-                    'page_id' => $page_id
+                    'page_id' => $oldPage->_id->__toString()
                 ]);
 
                 // TODO: Something to do with the domains has to come in here as well.
