@@ -329,6 +329,14 @@ class Pages extends Core
     {
         $collection = 'pages' . ($collection ? '.' . $collection : '');
 
+        $page = $this->adapter->collection($collection)->findOne([
+            'revision.lot' => $lot_id
+        ]);
+
+        $this->adapter->collection('routes.static')->deleteMany([
+            'page_id' => $page->_id->__toString()
+        ]);
+
         $this->adapter->collection($collection)->deleteOne([
             'revision.lot' => $lot_id
         ]);
