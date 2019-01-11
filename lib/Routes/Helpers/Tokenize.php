@@ -29,7 +29,7 @@ class Tokenize
         }
 
         if ($token->isExpired()) {
-            throw new \Exception('Token is expired');
+            throw new ExpiredException('Token is expired');
         }
 
         return $this->makeBuilder($token);
@@ -56,4 +56,9 @@ class Tokenize
 
         return self::$instance;
     }
+}
+
+class ExpiredException extends \Exception
+{
+
 }

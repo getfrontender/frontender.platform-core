@@ -5,6 +5,7 @@ namespace Frontender\Core\Routes\Middleware;
 use Slim\Http\Request;
 use Slim\Http\Response;
 use Frontender\Core\Routes\Helpers\Tokenize;
+use Frontender\Core\Routes\Helpers\ExpiredException;
 
 class TokenCheck
 {
@@ -27,8 +28,12 @@ class TokenCheck
             }
         }
 
-        $header = $request->getHeader($this->_headerName)[0];
-        $token = Tokenize::getInstance()->parse($header);
+        try {
+            $header = $request->getHeader($this->_headerName)[0];
+            $token = Tokenize::getInstance()->parse($header);
+        } catch (ExpiredException $e) {
+            return $response->withStatus(403);
+        }
 
         $this->_container['token'] = $token;
         
