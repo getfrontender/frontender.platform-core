@@ -135,11 +135,15 @@ class Pages extends Core
             ],
             ['$match' => $findFilter]
         ];
-        $total = count($this->adapter->collection($collection)->aggregate($aggrigation)->toArray());
+        $total = count($this->adapter->collection($collection)->aggregate($aggrigation, [
+            'allowDiskUse' => true
+        ])->toArray());
 
         $aggrigation[] = ['$limit' => 8 + $skip];
         $aggrigation[] = ['$skip' => $skip];
-        $revisions = $this->adapter->collection($collection)->aggregate($aggrigation)->toArray();
+        $revisions = $this->adapter->collection($collection)->aggregate($aggrigation, [
+            'allowDiskUse' => true
+        ])->toArray();
 
         return [
             'total' => $total,
