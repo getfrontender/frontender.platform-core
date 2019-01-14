@@ -8,6 +8,7 @@ use Slim\Http\Request;
 use Slim\Http\Response;
 use Symfony\Component\Finder\Finder;
 use Frontender\Core\Routes\Middleware\TokenCheck;
+use Frontender\Core\DB\Adapter;
 
 class Adapters extends CoreRoute
 {
@@ -71,6 +72,22 @@ class Adapters extends CoreRoute
             }
 
             return $response->withJson($models);
+        });
+
+        $this->app->get('/config/preview', function (Request $request, Response $response) use ($config) {
+            $adapter = Adapter::getInstance();
+            $settings = $adapter->collection('settings')->find()->toArray();
+
+            if (!count($settings)) {
+                return $response->withStatus(404);
+            }
+
+            $setting = array_shift($settings);
+            if (!isset($setting->preview_settings)) {
+                return $response->withStatus(404);
+            }
+
+            return $response->withJson($setting->preview_settings);
         });
 
         $this->app->get('/content/{adapter}/{model:.*}', function (Request $request, Response $response) use ($config) {
