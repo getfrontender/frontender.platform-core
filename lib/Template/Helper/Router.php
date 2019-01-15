@@ -80,9 +80,10 @@ class Router extends \Twig_Extension
         }
 
         if (count($amount) === 1) {
+            // If it is a proxy, add the locale anyway.
+            // We need the locale here.
 		    // Use the current domain, without any locale
-            return $uri->withPath($path)
-                ->withQuery('');
+            return $this->modifyProxyDomain($uri, false, $path);
         } else {
             // Check the scopes for the current locale, and if it has a path.
             $scopes = array_filter($amount, function ($scope) use ($params) {
@@ -91,15 +92,21 @@ class Router extends \Twig_Extension
 
             if (count($scopes) === 1) {
                 $scope = array_shift($scopes);
-                $localePartial = $scope['path'] ?? $scope['locale'];
+                $localePartial = $scope['locale_prefix'] ?? $scope['locale'];
                 $localePartial = str_replace('/', '', $localePartial);
 
-                return $uri->withPath($localePartial . '/' . $path)
-                    ->withQuery('');
+                return $this->modifyProxyDomain(
+                    $uri,
+                    $localePartial,
+                    $path
+                );
             }
 
-            return $uri->withPath($params['locale'] . '/' . $path)
-                ->withQuery('');
+            return $this->modifyProxyDomain(
+                $uri,
+                $params['locale'],
+                $path
+            );
         }
     }
 
@@ -142,5 +149,53 @@ class Router extends \Twig_Extension
         } else {
             return '/';
         }
+    }
+
+    private function modifyProxyDomain(Uri $uri, $locale, $path)
+    {
+
+        // If anything of a proxy domain is in here, we will remove that part and add the domain.
+        $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
+        $settings = Adapter::getInstance()->toJson($settings, true);
+        $setting = array_shift($settings);
+
+        $domains = array_filter($setting['scopes'], function ($scope) use ($locale, $path) {
+            if (in_array('proxy_path', array_keys($scope))) {
+                $tempLocale = str_replace('/', '', $scope['locale_prefix']);
+                $tempPath = ltrim($path, '/');
+                $tempProxyPath = ltrim($scope['proxy_path'], '/');
+
+                if (!empty($tempPath)) {
+                    if (strpos($tempPath, $tempProxyPath) === 0) {
+                        // Check if the locale is the same
+                        if ($locale) {
+                            if ($locale == $tempLocale) {
+                                return true;
+                            } else {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return false;
+        });
+
+        $uri = $uri->withQuery('');
+
+        if (count($domains)) {
+            $domain = array_shift($domains);
+            $tempProxyPath = ltrim($domain['proxy_path'], '/');
+            $path = ltrim(str_replace($tempProxyPath, '', $path), '/');
+            $uri = $uri->withHost($domain['domain']);
+        }
+
+        if ($locale) {
+            return $uri->withPath(implode('/', [$locale, $path]));
+        }
+
+        // We now have the locale, and the path
+        return $uri->withPath($path);
     }
 }
