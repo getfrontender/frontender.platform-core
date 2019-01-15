@@ -153,7 +153,6 @@ class Router extends \Twig_Extension
 
     private function modifyProxyDomain(Uri $uri, $locale, $path)
     {
-
         // If anything of a proxy domain is in here, we will remove that part and add the domain.
         $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
         $settings = Adapter::getInstance()->toJson($settings, true);

@@ -54,7 +54,6 @@ class Sitable
         $routeInfo = $request->getAttribute('routeInfo');
 
         if (!in_array($request->getUri()->getHost(), $domains)) {
-            die('Called');
             throw new NotFoundException($request, $response);
         }
 
