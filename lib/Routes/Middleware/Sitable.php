@@ -229,8 +229,8 @@ class Sitable
         // $locale = empty($locale) ? str_replace('/', '', $domain['locale_prefix']) : $locale;
 
         if (!empty($locale)) {
-            $locale = '/' . $locale . '/';
-            $uriPath = '/' . str_replace($locale, '', $uriPath);
+            $locale = '/' . $locale;
+            $uriPath = '/' . str_replace($locale . '/', '', $uriPath);
         }
 
         $parts = array_filter([$locale, $path, $uriPath], function ($part) {
