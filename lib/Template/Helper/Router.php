@@ -195,6 +195,6 @@ class Router extends \Twig_Extension
         }
 
         // We now have the locale, and the path
-        return $uri->withPath($path);
+        return $uri->withPath($path ?? '/');
     }
 }
