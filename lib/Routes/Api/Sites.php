@@ -33,9 +33,10 @@ class Sites extends CoreRoute
             ]);
 
             $content = json_decode($res->getBody()->getContents(), true);
+
             $content['scopes'] = json_decode($content['scopes']);
             $content['site_id'] = $content['_id'];
-            $content['preview_settings'] = json_decode('preview_settings');
+            $content['preview_settings'] = json_decode($content['preview_settings']);
             unset($content['_id']);
 
             Adapter::getInstance()->collection('settings')->drop();
