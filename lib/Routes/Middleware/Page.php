@@ -144,10 +144,12 @@ class Page
 
         if (count($amount) === 1) {
 			// Use the current domain, without any locale
-            $uri = $uri->withPath($redirect);
+            $scope = array_shift($amount);
+            $prefix = $scope['locale_prefix'] ?? $scope['locale'];
+            $uri = $uri->withPath(str_replace('/', '', $prefix) . '/' . $redirect);
         } else {
             // Get the current scope
-            $prefix = $this->_container->scope['path'] ?? $this->_container->scope['locale'];
+            $prefix = $this->_container->scope['locale_prefix'] ?? $this->_container->scope['locale'];
             $uri = $uri->withPath(str_replace('/', '', $prefix) . '/' . $redirect);
         }
 

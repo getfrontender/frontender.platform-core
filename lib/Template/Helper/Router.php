@@ -34,7 +34,7 @@ class Router extends \Twig_Extension
         $fallbackLocale = $this->container->language->get('language');
 
         if ($this->container->has('scope')) {
-            $fallbackLocale = str_replace('/', '', $this->container->scope['path']) ?? $this->container->scope['locale'];
+            $fallbackLocale = str_replace('/', '', $this->container->scope['locale_prefix']) ?? $this->container->scope['locale'];
         }
 
         $params['locale'] = $params['locale'] ?? $fallbackLocale;
