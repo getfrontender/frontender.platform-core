@@ -183,7 +183,7 @@ class Sitable
 
             if (isset($info[2]) && isset($info[2]['locale'])) {
                 $locale = '/' . $info[2]['locale'];
-                $uriPath = str_replace($locale, '', $uriPath);
+                $uriPath = '/' . str_replace($locale . '/', '', $uriPath);
             }
 
             $paths = array_filter($proxyDomains, function ($proxy) use ($uriPath) {
