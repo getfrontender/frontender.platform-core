@@ -341,13 +341,15 @@ class Pages extends Core
             'revision.lot' => $lot_id
         ]);
 
-        $this->adapter->collection('routes.static')->deleteMany([
-            'page_id' => $page->_id->__toString()
-        ]);
+        if ($page) {
+            $this->adapter->collection('routes.static')->deleteMany([
+                'page_id' => $page->_id->__toString()
+            ]);
 
-        $this->adapter->collection($collection)->deleteOne([
-            'revision.lot' => $lot_id
-        ]);
+            $this->adapter->collection($collection)->deleteOne([
+                'revision.lot' => $lot_id
+            ]);
+        }
 
         return true;
     }
