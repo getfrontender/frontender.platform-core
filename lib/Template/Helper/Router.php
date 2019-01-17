@@ -188,6 +188,29 @@ class Router extends \Twig_Extension
             $tempProxyPath = ltrim($domain['proxy_path'], '/');
             $path = ltrim(str_replace($tempProxyPath, '', $path), '/');
             $uri = $uri->withHost($domain['domain']);
+        } else {
+            // We have to reset the host to the "default".
+            $domains = array_filter($setting['scopes'], function ($scope) use ($locale) {
+                // We have to find the same locale, and one that doesn't have a proxy_path.
+                $tempLocale = str_replace('/', '', $scope['locale_prefix']);
+                if ($locale && $tempLocale != $locale) {
+                    return false;
+                }
+
+                if (in_array('proxy_path', array_keys($scope))) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            if (count($domains)) {
+                $domain = array_shift($domains);
+
+                if (isset($domain['domain'])) {
+                    $uri = $uri->withHost($domain['domain']);
+                }
+            }
         }
 
         if ($locale) {
