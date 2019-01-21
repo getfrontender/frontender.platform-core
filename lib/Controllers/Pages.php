@@ -317,9 +317,11 @@ class Pages extends Core
                     $page_id = $result->_id->__toString();
                 }
 
-                $this->adapter->collection('routes.static')->deleteMany([
-                    'page_id' => $oldPage->_id->__toString()
-                ]);
+                if ($oldPage && $oldPage->_id) {
+                    $this->adapter->collection('routes.static')->deleteMany([
+                        'page_id' => $oldPage->_id->__toString()
+                    ]);
+                }
 
                 // TODO: Something to do with the domains has to come in here as well.
                 $this->adapter->collection('routes.static')->insertOne([
@@ -329,6 +331,7 @@ class Pages extends Core
                 ]);
             }
         }
+
 
         return $result;
     }
