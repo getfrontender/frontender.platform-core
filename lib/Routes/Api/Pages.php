@@ -75,9 +75,11 @@ class Pages extends CoreRoute
     {
         parent::registerReadRoutes();
 
-        $this->app->get('', function (Request $request, Response $response) {
+        $self = $this;
+
+        $this->app->get('', function (Request $request, Response $response) use ($self) {
             $filter = $request->getParsedBodyParam('filter');
-            $filter = $self->appendProxyPathToFitler($filter, $request);
+            $filter = $self->appendProxyPathToFilter($filter, $request);
 
             $json = \Frontender\Core\Controllers\Pages::browse([
                 'collection' => $request->getQueryParam('collection'),
@@ -210,9 +212,7 @@ class Pages extends CoreRoute
         // New url for the pages endpoint.
         $this->app->post('', function (Request $request, Response $response) use ($self) {
             $filter = $request->getParsedBodyParam('filter');
-            $filter = $self->appendProxyPathToFitler($filter, $request);
-
-            error_log(print_r($filter, 1));
+            $filter = $self->appendProxyPathToFilter($filter, $request);
 
             $json = \Frontender\Core\Controllers\Pages::browse([
                 'collection' => $request->getParsedBodyParam('collection'),
@@ -299,7 +299,7 @@ class Pages extends CoreRoute
         ];
     }
 
-    private function appendProxyPathToFitler($filter, Request $request)
+    private function appendProxyPathToFilter($filter, Request $request)
     {
         $uri = $request->getUri();
         $locale = $request->getQueryParam('locale') ?? 'en-GB';
