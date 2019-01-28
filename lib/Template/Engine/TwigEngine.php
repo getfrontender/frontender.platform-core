@@ -29,6 +29,7 @@ use Slim\Container;
 use Slim\Views\Twig;
 use Slim\Views\TwigExtension;
 use Symfony\Component\Finder\Finder;
+use Frontender\Core\Template\Helper\Template;
 
 class TwigEngine extends Object implements EngineInterface
 {
@@ -84,6 +85,7 @@ class TwigEngine extends Object implements EngineInterface
         $this->engine->addExtension(new Router($container));
         $this->engine->addExtension(new HashedPath($container));
         $this->engine->addExtension(new Url($container));
+        $this->engine->addExtension(new Template($container));
 
         $finder = new Finder();
         $finder
