@@ -168,9 +168,25 @@ class Sitable
      */
     public function checkProxyDomains(Request $request, Response $response, $settings)
     {
+        // I want the locale that we need.
+        $routeInfo = $request->getAttribute('routeInfo');
+        $locale = $routeInfo[2]['locale'] ?? null;
+
         $proxyDomains = array_filter($settings['scopes'], function ($scope) {
             return in_array('proxy_path', array_keys($scope));
         });
+        $proxyDomains = array_filter($proxyDomains, function ($domain) use ($locale) {
+            if (!$locale) {
+                return true;
+            }
+
+            if (trim($domain['locale_prefix'], '/') == $locale) {
+                return true;
+            }
+
+            return false;
+        });
+
         $domains = array_column($proxyDomains, 'domain');
         $host = $request->getUri()->getHost();
         $uri = $request->getUri();
