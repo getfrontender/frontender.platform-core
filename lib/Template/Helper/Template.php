@@ -37,7 +37,7 @@ class Template extends \Twig_Extension
      */
     public function getTemplatePath(string $templatePath, string $fileName, string $format = 'html') : string
     {
-        $scope = $this->container->scope;
+        $scope = $this->container->scope ?? false;
         $proxyPath = null;
         $basePath = $this->container->settings['template']['path'];
 
