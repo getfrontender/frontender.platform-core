@@ -186,7 +186,7 @@ class Router extends \Twig_Extension
         if (count($domains)) {
             $domain = array_shift($domains);
             $tempProxyPath = ltrim($domain['proxy_path'], '/');
-            $path = ltrim(str_replace($tempProxyPath, '', $path), '/');
+            $path = ltrim(preg_replace('/' . $tempProxyPath . '/', '', $path, 1), '/');
             $uri = $uri->withHost($domain['domain']);
         } else {
             // We have to reset the host to the "default".
