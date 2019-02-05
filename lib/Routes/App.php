@@ -14,10 +14,10 @@ class App extends CoreRoute
         parent::registerReadRoutes();
 
         $this->app->get('/', function (Request $request, Response $response) {
-            return $response->withRedirect('/en/');
+            return $response->withRedirect('/en');
         });
 
-        $this->app->get('/{locale}/', function (Request $request, Response $response) {
+        $this->app->get('/{locale}', function (Request $request, Response $response) {
             $locale = $request->getAttribute('locale');
 
             $this->language->set($locale);

@@ -9,6 +9,7 @@ use Slim\Http\Request;
 use Slim\Http\Response;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
+use Frontender\Core\Routes\Exceptions\NotImplemented;
 
 /**
  * The Sitable middleware is the heart of the multi-site functionality.
@@ -36,245 +37,106 @@ class Sitable
 
         $router = $this->_container->get('router');
         $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-        $setting = array_shift($settings);
+        $settings = array_shift($settings);
 
-        if (!$setting) {
+        if (!$settings) {
             throw new NotFoundException($request, $response);
         }
 
-        $setting = Adapter::getInstance()->toJSON($setting, true);
+        $settings = Adapter::getInstance()->toJSON($settings, true);
+        $host = $request->getUri()->getHost();
+        $path = $request->getUri()->getPath();
+        $segments = array_filter(explode('/', $path));
+        $segments = array_values($segments);
 
-        $request = $this->checkProxyDomains($request, $response, $setting);
-
-        if ($request instanceof Response) {
-            return $request;
-        }
-
-        $domains = array_column($setting['scopes'], 'domain');
-        $routeInfo = $request->getAttribute('routeInfo');
-
-        if (!in_array($request->getUri()->getHost(), $domains)) {
-            throw new NotFoundException($request, $response);
-        }
-
-        // TODO: Add some check for the path.
-
-        $uri = $request->getUri();
-        $domain = $uri->getHost();
-        $path = $uri->getPath();
-	    // First is the default.
-        $index = array_search($domain, $domains);
-        $scope = $setting['scopes'][$index];
-        $amount = array_filter($setting['scopes'], function ($scope) use ($domain, $path, $routeInfo) {
-            if ($scope['domain'] === $domain) {
-                if (isset($scope['locale_prefix'])) {
-                    if (strpos($path, $scope['locale_prefix']) === 0) {
-                        return true;
-                    }
-                }
-
-                if (isset($scope['locale']) && isset($routeInfo[2]) && isset($routeInfo[2]['locale'])) {
-                    if ($scope['locale'] === $routeInfo[2]['locale']) {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
+        $hosts = array_filter($settings['scopes'], function ($scope) use ($host) {
+            return $scope['domain'] == $host;
         });
-        $currentScope = array_slice($amount, 0, 1);
-        $currentScope = array_shift($currentScope);
-
-        // Set the current scope.
-        $this->_container->scope = $currentScope;
-
-        /**
-         * $scope: This is the fallback/ default scope.
-         * $amount: The scopes in which the current domain is found.
-         */
-        if (count($amount) > 1 || !count($amount)) {
-            if (isset($routeInfo[2]['locale'])) {
-                return $next($request, $response);
-            } else {
-                $prefix = $scope['locale_prefix'] ?? $scope['locale'];
-
-                return $response->withRedirect(
-                    $uri->withPath(
-                        str_replace('//', '/', $prefix . $uri->getPath())
-                    )
-                );
+        $hosts = array_map(function ($host) {
+            if (isset($host['locale_prefix'])) {
+                $host['locale_prefix'] = trim($host['locale_prefix'], '/');
             }
+
+            return $host;
+        }, $hosts);
+        $hosts = array_values($hosts);
+
+        if (empty($hosts)) {
+            // If a host is requested, that is not handled by the platform, we will return
+            // a 501 (Not Implemented) response.
+            throw new NotImplemented($request, $response);
         }
 
-        if ($currentScope['locale'] === $routeInfo[2]['locale'] && isset($currentScope['locale_prefix'])) {
-            $path = $uri->getPath();
-            $path = str_replace('/' . $currentScope['locale'] . '/', $currentScope['locale_prefix'], $path);
+        // Only when we know that the host is supported, we will get the locale_prefixes.
+        $localePrefixes = [];
+        foreach ($hosts as $index => $host) {
+            if (!isset($host['locale_prefix'])) {
+                continue;
+            }
 
-            $uri = $uri->withPath($path);
+            $localePrefixes[$host['locale_prefix']] = $index;
+        }
+        $host = $hosts[0];
 
-            return $response->withRedirect($uri);
+        // Check if path is set, if not, redirect to default locale homepage.
+        if (empty($segments) && !empty($localePrefixes)) {
+            return $response->withRedirect(
+                $request->getUri()->withPath($host['locale_prefix'])
+            );
         }
 
-        $prefix = $scope['locale_prefix'] ?? $scope['locale'];
+        if (current($segments) && isset($localePrefixes[current($segments)])) {
+            $index = $localePrefixes[current($segments)];
+            $host = $hosts[$index];
+
+            array_shift($segments);
+        }
+
+        $locale = $host['locale'];
+        $path = implode('/', $segments);
+        $proxies = array_filter($settings['scopes'], function ($scope) use ($path, $locale) {
+            if (!isset($scope['proxy_path'])) {
+                return false;
+            }
+
+            if ($scope['locale'] !== $locale) {
+                return false;
+            }
+
+            $regexString = trim($scope['proxy_path'], '/');
+            $regexString = str_replace('/', '\/', $regexString);
+            $regexString = '/^' . $regexString . '$|^' . $regexString . '\/.*$/i';
+
+            return preg_match($regexString, $path, $matches) === 1;
+        });
+        $proxies = array_values(array_filter($proxies));
+
+        if (!empty($proxies)) {
+            $proxy = $proxies[0];
+            $path = preg_replace('/^' . trim($proxy['proxy_path'], '/') . '/i', '', $path, 1);
+            $path = [$proxy['locale_prefix'], $path];
+            $path = array_map(function ($segment) {
+                return trim($segment, '/');
+            }, $path);
+
+            return $response->withRedirect(
+                $request->getUri()
+                    ->withHost($proxy['domain'])
+                    ->withPath(implode('/', $path))
+            );
+        }
+
+        array_unshift($segments, $locale);
+
         $uri = $request->getUri();
+        $request = $request->withUri(
+            $uri->withPath(implode('/', $segments))
+        );
 
-	    // The following path comes directly from the App code from Slim framework.
-	    // This does what we need it to do and this will work for us.
-	    // Way better than internal redirects.
-        $request = $request->withUri($uri);
-        $routeInfo = $router->dispatch($request);
-
-        /**
-         * I will check if we have a locale,
-         * if we have the locale, then we will check the current scope if it is the path or the locale itself,
-         * if it is the locale we won't touch it.
-         * 
-         * If it is the path, we will change it to the locale so the language is set correctly.
-         */
-
-        if (isset($routeInfo[2]) && isset($routeInfo[2]['locale'])) {
-            // We will check if our current scope has a path, else we will leave it.
-            if (isset($currentScope['locale_prefix'])) {
-                $basePath = str_replace('/', '', $currentScope['locale_prefix']);
-
-                if ($routeInfo[2]['locale'] === $basePath) {
-                    $routeInfo[2]['locale'] = $currentScope['locale'];
-                }
-            }
-        }
-
-        if ($routeInfo[0] !== Dispatcher::FOUND) {
-            throw new NotFoundException($request, $response);
-        }
-
-        $routeArguments = [];
-        foreach ($routeInfo[2] as $k => $v) {
-            $routeArguments[$k] = urldecode($v);
-        }
-
-        $route = $router->lookupRoute($routeInfo[1]);
-        $route->prepare($request, $routeArguments);
-
-	    // add route to the request's attributes in case a middleware or handler needs access to the route
-        $routeInfo['request'] = [$request->getMethod(), (string)$request->getUri()];
-        $request = $request->withAttribute('route', $route)
-            ->withAttribute('routeInfo', $routeInfo);
+        // Before we will continue through the system, we will set the current scope.
+        // This is required elsewere.
+        $this->_container['scope'] = $host;
 
         return $next($request, $response);
-    }
-
-    /**
-     * This method will check the addon domains, if it isn't found, then we will 
-     */
-    public function checkProxyDomains(Request $request, Response $response, $settings)
-    {
-        // I want the locale that we need.
-        $routeInfo = $request->getAttribute('routeInfo');
-        $locale = $routeInfo[2]['locale'] ?? null;
-
-        $proxyDomains = array_filter($settings['scopes'], function ($scope) {
-            return in_array('proxy_path', array_keys($scope));
-        });
-        $proxyDomains = array_filter($proxyDomains, function ($domain) use ($locale) {
-            if (!$locale) {
-                return true;
-            }
-
-            if (trim($domain['locale_prefix'], '/') == $locale) {
-                return true;
-            }
-
-            return false;
-        });
-
-        $domains = array_column($proxyDomains, 'domain');
-        $host = $request->getUri()->getHost();
-        $uri = $request->getUri();
-
-        if (!in_array($host, $domains)) {
-            // Check if the path is one of the subdomains, if so we will return a redirect.
-            $info = $request->getAttribute('routeInfo');
-            $uriPath = $uri->getPath();
-            $locale = '';
-
-            if (isset($info[2]) && isset($info[2]['locale'])) {
-                $locale = '/' . $info[2]['locale'];
-                $uriPath = '/' . str_replace($locale . '/', '', $uriPath);
-            }
-
-            $paths = array_filter($proxyDomains, function ($proxy) use ($uriPath) {
-                return strpos($uriPath, $proxy['proxy_path']) === 0;
-            });
-
-            if (count($paths)) {
-                $proxy = array_shift($paths);
-                $locale = str_replace('/', '', $locale ?? $proxy['locale_prefix']);
-                $path = ltrim($proxy['proxy_path'], '/');
-                $uriPath = ltrim(str_replace($path, '', $uriPath), '/');
-
-                // I have to re-create the path.
-                return $response->withRedirect(
-                    $uri->withHost($proxy['domain'])
-                        ->withPath(implode('/', [$locale, $uriPath]))
-                );
-            }
-
-            return $request;
-        }
-
-        // Get our current domain.
-        $info = $request->getAttribute('routeInfo');
-        $locale = isset($info[2]) && isset($info[2]['locale']) ? $info[2]['locale'] : false;
-
-        // If there is no locale set we will first do the default functionality, so the language is set.
-        if (!$locale) {
-            return $request;
-        }
-
-        $domains = array_filter($proxyDomains, function ($domain) use ($locale, $host) {
-            if ($domain['domain'] == $host && $domain['locale_prefix'] == '/' . $locale . '/') {
-                return true;
-            }
-
-            return false;
-        });
-        $domain = array_shift($domains);
-        $path = $domain['proxy_path'];
-        $info = $request->getAttribute('routeInfo');
-        $uriPath = $uri->getPath();
-        // $locale = empty($locale) ? str_replace('/', '', $domain['locale_prefix']) : $locale;
-
-        if (!empty($locale)) {
-            $locale = '/' . $locale;
-            $uriPath = '/' . str_replace($locale . '/', '', $uriPath);
-        }
-
-        $parts = array_filter([$locale, $path, $uriPath], function ($part) {
-            $part = ltrim($part, '/');
-
-            return !empty($part) && $part;
-        });
-        $newPath = implode('', $parts);
-
-        // Set the original domain name here, this is done because it will check for the languages later on.
-        $request = $request->withUri(
-            $uri->withPath($newPath)
-                ->withHost($domain['domain'])
-        );
-        $router = $this->_container->get('router');
-        $routeInfo = $router->dispatch($request);
-
-        $routeArguments = [];
-        foreach ($routeInfo[2] as $k => $v) {
-            $routeArguments[$k] = urldecode($v);
-        }
-
-        $route = $router->lookupRoute($routeInfo[1]);
-        $route->prepare($request, $routeArguments);
-
-	    // add route to the request's attributes in case a middleware or handler needs access to the route
-        $routeInfo['request'] = [$request->getMethod(), (string)$request->getUri()];
-        return $request->withAttribute('route', $route)
-            ->withAttribute('routeInfo', $routeInfo);
     }
 }
