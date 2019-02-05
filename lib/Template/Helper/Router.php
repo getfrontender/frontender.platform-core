@@ -38,12 +38,13 @@ class Router extends \Twig_Extension
 
         $params['locale'] = $params['locale'] ?? $this->container->language->get('language');
         $params['slug'] = $params['slug'] ?? '';
+        $fallbackLocale = $this->_container['fallbackScope']['locale'];
 
         $path = $this->_getPath($params);
         if (is_object($path)) {
-            $path = $path->{$params['locale']};
+            $path = $path->{$params['locale']} ?? $path->{$fallbackLocale};
         } else if (is_array($path)) {
-            $path = $path[$params['locale']];
+            $path = $path[$params['locale']] ?? $path[$fallbackLocale];
         }
 
 	    // Check if the page also has a cononical.
@@ -105,12 +106,16 @@ class Router extends \Twig_Extension
 
     private function _getPath($params = [])
     {
+        $fallbackLocale = $this->_container['fallbackScope']['locale'];
+
         if (isset($params['id'])) {
 	    	// First we will check if we can find the page.
             $page = Adapter::getInstance()->collection('pages.public')->findOne([
                 '$or' => [
                     ['definition.route.' . $params['locale'] => $params['page']],
-                    ['definition.cononical.' . $params['locale'] => $params['page']]
+                    ['definition.route.' . $fallbackLocale => $params['page']],
+                    ['definition.cononical.' . $params['locale'] => $params['page']],
+                    ['definition.cononical.' . $fallbackLocale => $params['page']]
                 ]
             ]);
 

@@ -103,8 +103,11 @@ class Page
             ]);
 
             if ($redirect) {
-                $redirect = $redirect->destination->{$locale};
-                return $this->_setRedirect($request, $response, $redirect);
+                $redirect = $redirect->destination->{$locale} ?? $redirect->destination->{$fallbackLocale};
+
+                if ($redirect) {
+                    return $this->_setRedirect($request, $response, $redirect);
+                }
             }
         }
 
