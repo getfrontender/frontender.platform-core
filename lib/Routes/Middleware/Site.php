@@ -20,7 +20,7 @@ use Frontender\Core\Routes\Exceptions\NotImplemented;
  * 2. If the site is found, do a internal redirect.
  * 3. If the site isn't found as a main container or language alias, return a 404 error.
  */
-class Sitable
+class Site
 {
     protected $_container;
 
@@ -126,6 +126,10 @@ class Sitable
             );
         }
 
+        if (isset($host['proxy_path'])) {
+            array_unshift($segments, trim($host['proxy_path'], '/'));
+        }
+
         array_unshift($segments, $locale);
 
         $uri = $request->getUri();
@@ -136,6 +140,7 @@ class Sitable
         // Before we will continue through the system, we will set the current scope.
         // This is required elsewere.
         $this->_container['scope'] = $host;
+        $this->_container->language->set($locale);
 
         return $next($request, $response);
     }
