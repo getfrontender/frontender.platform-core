@@ -24,27 +24,31 @@ class Page
     {
 		// Exclude api calls
 		// Exclude post calls.
-        if ($request->getMethod() === 'POST' || strpos($request->getUri()->getPath(), '/api') === 0 || $request->getAttribute('route')->getName() === 'partial') {
+        if ($request->getMethod() === 'POST' || strpos($request->getUri()->getPath(), '/api') === 0) {
             return $next($request, $response);
         }
 
         $adapter = Adapter::getInstance();
         $settings = $adapter->collection('settings')->find()->toArray();
         $settings = $adapter->toJSON($settings, true);
-        $setting = array_shift($settings);
-        $fallbackLocale = $setting['scopes'][0];
-        $info = $request->getAttribute('routeInfo')[2];
+        $settings = array_shift($settings);
+        $segments = array_filter(explode('/', $request->getUri()->getPath()));
+        $locale = array_shift($segments);
+
+        $fallbackScope = $settings['scopes'][0];
+        $fallbackLocale = $fallbackScope['locale'];
+        $requestId = false;
 
 		// Exclude homepage
-        if ($request->getAttribute('route')->getName() === 'home') {
+        if (empty($segments)) {
             $page = $adapter->collection('pages.public')->findOne([
                 '$or' => [
-                    ['definition.route.' . $info['locale'] => '/'],
-                    ['definition.cononical.' . $info['locale'] => '/'],
+                    ['definition.route.' . $locale => '/'],
+                    ['definition.cononical.' . $locale => '/'],
 
                     // Try to find the fallback language.
-                    ['definition.route.' . $fallbackLocale['locale'] => '/'],
-                    ['definition.cononical.' . $fallbackLocale['locale'] => '/']
+                    ['definition.route.' . $fallbackLocale => '/'],
+                    ['definition.cononical.' . $fallbackLocale => '/']
                 ]
             ]);
 
@@ -52,33 +56,39 @@ class Page
             return $next($request, $response);
         }
 
+        if (stripos(end($segments), $this->_container->config->id_separator)) {
+            array_pop($segments);
+
+            $parts = explode($segments, $this->_container->config->id_separator);
+            $requestId = end($parts);
+        }
+
         // Get the initial path
-        $parts = explode('/', $info['page']);
-        $templateName = array_pop($parts);
+        $templateName = array_pop($segments);
         $page = false;
 
-        if (count($parts)) {
-            while (count($parts) > 0) {
-                $page = $this->_getPage(implode('/', array_merge($parts, [$templateName])), $info['locale'], $fallbackLocale['locale']);
+        if (count($segments)) {
+            while (count($segments) > 0) {
+                $page = $this->_getPage(implode('/', array_merge($segments, [$templateName])), $locale, $fallbackLocale);
 
-                if (!$page) {
-                    array_pop($parts);
+                if (!$segments) {
+                    array_pop($segments);
                 } else {
                     break;
                 }
             }
         }
 
-        if (!$page && !count($parts) && $templateName) {
-            $page = $this->_getPage($templateName, $info['locale'], $fallbackLocale['locale']);
+        if (!$page && !count($segments) && $templateName) {
+            $page = $this->_getPage($templateName, $locale, $fallbackLocale);
         }
 
         if (!$page) {
             return $this->_findRedirect($request, $response, $adapter);
         }
 
-        if (property_exists($page->definition, 'cononical') && $page->definition->cononical->{$info['locale']}) {
-            $cononical = $page->definition->cononical->{$info['locale']};
+        if (property_exists($page->definition, 'cononical') && $page->definition->cononical->{$locale}) {
+            $cononical = $page->definition->cononical->{$locale};
 
 			// This only needs to happen if we don't have a cononical in the url.
             if (strpos($request->getUri()->getPath(), $cononical) === false) {
@@ -86,14 +96,14 @@ class Page
             }
         }
 
-        if (isset($info['id'])) {
+        if ($requestId) {
 			// Check if there is a redirect/ if so we will follow that.
             $redirect = $adapter->collection('routes.static')->findOne([
-                'source' => implode('/', [$page->definition->template_config->model->data->adapter, $page->definition->template_config->model->data->model, $info['id']])
+                'source' => implode('/', [$page->definition->template_config->model->data->adapter, $page->definition->template_config->model->data->model, $requestId])
             ]);
 
             if ($redirect) {
-                $redirect = $redirect->destination->{$info['locale']};
+                $redirect = $redirect->destination->{$locale};
                 return $this->_setRedirect($request, $response, $redirect);
             }
         }

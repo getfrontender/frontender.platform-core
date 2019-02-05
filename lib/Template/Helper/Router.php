@@ -31,19 +31,13 @@ class Router extends \Twig_Extension
 
     public function route($params = [])
     {
-        $fallbackLocale = $this->container->language->get('language');
-
-        if ($this->container->has('scope')) {
-            $fallbackLocale = str_replace('/', '', $this->container->scope['locale_prefix']) ?? $this->container->scope['locale'];
-        }
-
-        $params['locale'] = $params['locale'] ?? $fallbackLocale;
-        $params['slug'] = $params['slug'] ?? '';
-
-	    // If a url is found, we won't even look further
+        // If a url is found, we won't even look further
         if (isset($params['url'])) {
             return $params['url'];
         }
+
+        $params['locale'] = $params['locale'] ?? $this->container->language->get('language');
+        $params['slug'] = $params['slug'] ?? '';
 
         $path = $this->_getPath($params);
         if (is_object($path)) {
@@ -58,7 +52,6 @@ class Router extends \Twig_Extension
                 'definition.route.' . $params['locale'] => utf8_encode($path)
             ]);
         } catch (\Exception $e) {
-            var_dump($e->getMessage());
         }
 
         if ($page) {
@@ -122,10 +115,6 @@ class Router extends \Twig_Extension
             ]);
 
             if ($page) {
-		    	// TODO: This must change.
-			    // Here we also have a slug anyway.
-			    // Else the slug is an empty string.
-
                 $model = $page->definition->template_config->model->data->model ?? false;
                 $adapter = $page->definition->template_config->model->data->adapter ?? false;
                 $id = $params['id'];
@@ -192,7 +181,7 @@ class Router extends \Twig_Extension
             // We have to reset the host to the "default".
             $domains = array_filter($setting['scopes'], function ($scope) use ($locale) {
                 // We have to find the same locale, and one that doesn't have a proxy_path.
-                $tempLocale = str_replace('/', '', $scope['locale_prefix']);
+                $tempLocale = str_replace('/', '', $scope['locale_prefix'] ?? '');
                 if ($locale && $tempLocale != $locale) {
                     return false;
                 }
@@ -214,7 +203,11 @@ class Router extends \Twig_Extension
         }
 
         if ($locale) {
-            return $uri->withPath(implode('/', [$locale, $path]));
+            $path = array_map(function ($part) {
+                return trim($part, '/');
+            }, [$locale, $path]);
+            $path = array_filter($path);
+            return $uri->withPath(implode('/', $path));
         }
 
         // We now have the locale, and the path
