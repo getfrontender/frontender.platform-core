@@ -6,7 +6,7 @@ use Frontender\Core\Config\Config;
 use Frontender\Core\Language\Language;
 use Frontender\Core\Page\DefaultPage;
 use Frontender\Core\Routes\Middleware\Page;
-use Frontender\Core\Routes\Middleware\Sitable;
+use Frontender\Core\Routes\Middleware\Site;
 use Frontender\Core\Translate\Translate;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
@@ -61,10 +61,6 @@ class App
                     $locale = $parts[0] ?? 'en';
                     $page = '404';
 
-                    if (($route = $this->_tryRedirectNotFound($request->getUri())) !== false) {
-                        return $response->withRedirect($route);
-                    }
-
                     $container->language->set($locale);
                     $data = getFileJson($container->settings['project']['path'] . '/pages/published/' . $page . '.json', true);
 
@@ -83,10 +79,11 @@ class App
     {
         $app = $this->getApp();
         $container = $this->getContainer();
+        $container['config'] = $this->getConfig();
 
         $app->add(new Page($container));
         $app->add(new Routes\Middleware\Maintenance($container));
-        $app->add(new Sitable($container));
+        $app->add(new Site($container));
 
         /**
          * This will add the cors headers on every request, still needs to be a little more strict though.
@@ -117,46 +114,6 @@ class App
         $container['translate'] = function ($container) {
             return new Translate($container);
         };
-    }
-
-    private function _tryRedirectNotFound($url)
-    {
-		// Check if the redirect file can be found.
-        $config = $this->getConfig();
-        $project = $config->project;
-        $path = $url->getPath();
-
-        if (file_exists($project['path'] . '/redirects.json')) {
-            $redirects = json_decode(file_get_contents($project['path'] . '/redirects.json'), true);
-
-            if (array_key_exists('static', $redirects)) {
-                foreach ($redirects['static'] as $source => $destination) {
-                    if ($source === $path) {
-                        if (preg_match('/^http[s]?/', $destination) == true) {
-                            return $destination;
-                        }
-
-                        return $url->withPath($destination);
-                    }
-                }
-            }
-
-            if (array_key_exists('dynamic', $redirects)) {
-                foreach ($redirects['dynamic'] as $regex => $replace) {
-                    if (preg_match($regex, $path) == true) {
-                        $path = preg_replace($regex, $replace, $path);
-
-                        if (preg_match('/^http[s]?/', $path) == true) {
-                            return $path;
-                        }
-
-                        return $url->withPath($path);
-                    }
-                }
-            }
-        }
-
-        return false;
     }
 
     public function init()
