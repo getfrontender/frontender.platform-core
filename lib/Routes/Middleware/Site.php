@@ -140,6 +140,7 @@ class Site
         // Before we will continue through the system, we will set the current scope.
         // This is required elsewere.
         $this->_container['scope'] = $host;
+        $this->_container['fallbackScope'] = $settings['scopes'][0];
         $this->_container->language->set($locale);
 
         return $next($request, $response);
