@@ -18,16 +18,12 @@ class App extends CoreRoute
         });
 
         $this->app->get('/{locale}', function (Request $request, Response $response) {
-            $locale = $request->getAttribute('locale');
-
-            $this->language->set($locale);
-
             // Add fallback language here.
             $data = Adapter::getInstance()->toJSON($request->getAttribute('json'), true);
 
             $page = $this->page;
             $page->setParameters([
-                'locale' => $locale,
+                'locale' => $this->language->get(),
                 'debug' => $this->settings['debug'],
                 'query' => $request->getQueryParams()
             ]);
@@ -42,13 +38,17 @@ class App extends CoreRoute
         $this->app->get('/{locale}/{page:.*}/{slug:.*}' . $this->config->id_separator . '{id}', function (Request $request, Response $response) {
             $attributes = $request->getAttributes();
 
-            $this->language->set($attributes['locale']);
-
             $data = Adapter::getInstance()->toJSON($request->getAttribute('json'), true);
 
             $page = $this->page;
             $page->setName($attributes['page']);
-            $page->setParameters(['page' => $request->getAttribute('page'), 'locale' => $attributes['locale'], 'id' => $attributes['id'], 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
+            $page->setParameters([
+                'page' => $request->getAttribute('page'),
+                'locale' => $this->language->get(),
+                'id' => $attributes['id'],
+                'debug' => $this->settings['debug'],
+                'query' => $request->getQueryParams()
+            ]);
             $page->setData($data['definition']);
             $page->setRequest($request);
 
@@ -61,8 +61,6 @@ class App extends CoreRoute
 
         $this->app->get('/{locale}/partial', function (Request $request, Response $response) {
             $query = $request->getQueryParams();
-            $query['language'] = $request->getAttribute('locale');
-            $this->language->set($query['language']);
 
 			// I know that the states will be in need of parsing.
 			// This needs to be done here.
@@ -128,7 +126,12 @@ class App extends CoreRoute
             $data['template_config']['container'] = $clone;
 
             $page = $this->page;
-            $page->setParameters(['page' => $request->getAttribute('page'), 'locale' => $query['language'], 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
+            $page->setParameters([
+                'page' => $request->getAttribute('page'),
+                'locale' => $this->language->get(),
+                'debug' => $this->settings['debug'],
+                'query' => $request->getQueryParams()
+            ]);
             $page->setData($data);
             $page->setRequest($request);
             $response->getBody()->write($page->render());
@@ -136,14 +139,15 @@ class App extends CoreRoute
         })->setName('partial');
 
         $this->app->get('/{locale}/{page:.*}', function (Request $request, Response $response) {
-            $locale = $request->getAttribute('locale');
-
-            $this->language->set($locale);
-
             $data = Adapter::getInstance()->toJSON($request->getAttribute('json'), true);
 
             $page = $this->page;
-            $page->setParameters(['page' => $request->getAttribute('page'), 'locale' => $locale, 'debug' => $this->settings['debug'], 'query' => $request->getQueryParams()]);
+            $page->setParameters([
+                'page' => $request->getAttribute('page'),
+                'locale' => $this->language->get(),
+                'debug' => $this->settings['debug'],
+                'query' => $request->getQueryParams()
+            ]);
             $page->setData($data['definition']);
             $page->setRequest($request);
             $response->getBody()->write($page->render());
