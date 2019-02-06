@@ -71,7 +71,7 @@ class Page
             while (count($segments) > 0) {
                 $page = $this->_getPage(implode('/', array_merge($segments, [$templateName])), $locale, $fallbackLocale);
 
-                if (!$segments) {
+                if (!$page) {
                     array_pop($segments);
                 } else {
                     break;
