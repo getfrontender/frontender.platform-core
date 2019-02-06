@@ -31,10 +31,6 @@ class Site
 
     public function __invoke(Request $request, Response $response, $next)
     {
-        if (strpos($request->getUri()->getPath(), '/api') === 0) {
-            return $next($request, $response);
-        }
-
         $router = $this->_container->get('router');
         $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
         $settings = array_shift($settings);
@@ -60,6 +56,11 @@ class Site
             return $host;
         }, $hosts);
         $hosts = array_values($hosts);
+
+        if (strpos($request->getUri()->getPath(), '/api') === 0) {
+            $this->_container['fallbackScope'] = $settings['scopes'][0];
+            return $next($request, $response);
+        }
 
         if (empty($hosts)) {
             // If a host is requested, that is not handled by the platform, we will return

@@ -57,9 +57,9 @@ class Page
         }
 
         if (stripos(end($segments), $this->_container->config->id_separator)) {
-            array_pop($segments);
+            $segment = array_pop($segments);
 
-            $parts = explode($segments, $this->_container->config->id_separator);
+            $parts = explode($this->_container->config->id_separator, $segment);
             $requestId = end($parts);
         }
 

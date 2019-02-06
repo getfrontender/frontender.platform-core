@@ -38,7 +38,7 @@ class Router extends \Twig_Extension
 
         $params['locale'] = $params['locale'] ?? $this->container->language->get('language');
         $params['slug'] = $params['slug'] ?? '';
-        $fallbackLocale = $this->_container['fallbackScope']['locale'];
+        $fallbackLocale = $this->container['fallbackScope']['locale'];
 
         $path = $this->_getPath($params);
         if (is_object($path)) {
@@ -106,7 +106,7 @@ class Router extends \Twig_Extension
 
     private function _getPath($params = [])
     {
-        $fallbackLocale = $this->_container['fallbackScope']['locale'];
+        $fallbackLocale = $this->container['fallbackScope']['locale'];
 
         if (isset($params['id'])) {
 	    	// First we will check if we can find the page.
