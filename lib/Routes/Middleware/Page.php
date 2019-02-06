@@ -35,6 +35,11 @@ class Page
         $segments = array_filter(explode('/', $request->getUri()->getPath()));
         $locale = array_shift($segments);
 
+        // If the first segment is partial, then let it go through.
+        if (isset($segments[0]) && $segments[0] === 'partial') {
+            return $next($request, $response);
+        }
+
         $fallbackScope = $settings['scopes'][0];
         $fallbackLocale = $fallbackScope['locale'];
         $requestId = false;
