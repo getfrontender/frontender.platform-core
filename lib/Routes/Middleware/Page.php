@@ -162,13 +162,15 @@ class Page
 
         if (count($amount) === 1) {
 			// Use the current domain, without any locale
-            $scope = array_shift($amount);
-            $prefix = $scope['locale_prefix'] ?? $scope['locale'];
-            $uri = $uri->withPath(str_replace('/', '', $prefix) . '/' . $redirect);
+            $uri = $uri->withPath(trim($redirect, '/'));
         } else {
             // Get the current scope
             $prefix = $this->_container->scope['locale_prefix'] ?? $this->_container->scope['locale'];
-            $uri = $uri->withPath(str_replace('/', '', $prefix) . '/' . $redirect);
+            $path = array_map(function($segment) {
+                return trim($segment, '/');
+            }, [$prefix, $redirect]);
+
+            $uri = $uri->withPath(implode('/', $path));
         }
 
         return $response->withRedirect($uri, 301);
