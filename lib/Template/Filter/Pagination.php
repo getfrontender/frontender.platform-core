@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @package     Dipity
  * @copyright   Copyright (C) 2014 - 2017 Dipity B.V. All rights reserved.
@@ -18,9 +19,10 @@ class Pagination extends \Twig_Extension
         ];
     }
 
-    public function getPagination($entries, $total, $model) {
+    public function getPagination($entries, $total, $model)
+    {
         // We only accept an array.
-        if(!is_array($entries)) {
+        if (!is_array($entries)) {
             return false;
         }
 
@@ -43,14 +45,15 @@ class Pagination extends \Twig_Extension
         return $links;
     }
 
-    protected function _getPages($current, $pages, $states, $total) {
+    protected function _getPages($current, $pages, $states, $total)
+    {
         $links = [];
 
-        if(($states['skip'] ?? 0) >= 0) {
+        if (($states['skip'] ?? 0) >= 0) {
             $start = $current - 2;
 
-            while($start < $current) {
-                if($start >= 0) {
+            while ($start < $current) {
+                if ($start >= 0) {
                     $links[] = [
                         'title' => $start + 1,
                         'query' => '?skip=' . $states['limit'] * $start,
@@ -71,7 +74,7 @@ class Pagination extends \Twig_Extension
         ];
 
         $end = $current + 1;
-        while($end * $states['limit'] < $total && $end < $current + 3) {
+        while ($end * $states['limit'] < $total && $end < $current + 3) {
             $links[] = [
                 'title' => $end + 1,
                 'query' => '?skip=' . $states['limit'] * $end,
@@ -84,7 +87,8 @@ class Pagination extends \Twig_Extension
         return $links;
     }
 
-    protected function _getFirstPage($current, $pages, $states, $total) {
+    protected function _getFirstPage($current, $pages, $states, $total)
+    {
         return [
             'title' => 'First',
             'query' => '?skip=0',
@@ -93,7 +97,8 @@ class Pagination extends \Twig_Extension
         ];
     }
 
-    protected function _getPreviousPage($current, $pages, $states, $total) {
+    protected function _getPreviousPage($current, $pages, $states, $total)
+    {
         return [
             'title' => 'Previous',
             'query' => '?skip=' . ($current - 1 < 0 ? 0 : $current - 1) * $states['limit'],
@@ -102,10 +107,11 @@ class Pagination extends \Twig_Extension
         ];
     }
 
-    protected function _getNextPage($current, $pages, $states, $total) {
+    protected function _getNextPage($current, $pages, $states, $total)
+    {
         $next = ($current + 1) * $states['limit'];
 
-        if($next > $total) {
+        if ($next > $total) {
             return $this->_getLastPage($current, $pages, $states, $total);
         }
 
@@ -118,7 +124,8 @@ class Pagination extends \Twig_Extension
         ];
     }
 
-    protected function _getLastPage($current, $pages, $states, $total) {
+    protected function _getLastPage($current, $pages, $states, $total)
+    {
         $pages = floor($total / $states['limit']);
         $pages = $total % $states['limit'] > 0 ? $pages : $pages - 1;
 

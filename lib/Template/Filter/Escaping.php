@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @package     Dipity
  * @copyright   Copyright (C) 2014 - 2017 Dipity B.V. All rights reserved.
@@ -27,23 +28,28 @@ class Escaping extends \Twig_Extension
         return preg_replace('/style=(["\'])[^\1]*?\1/i', '', $string);
     }
 
-    public function slugify($string) {
+    public function slugify($string)
+    {
         // We will only accept strings for this function.
-        if(!is_string($string)) {
+        if (!is_string($string)) {
             return $string;
         }
 
         /** Thank you Joomla! **/
+        $string = preg_replace('~[^\pL\d]+~u', '-', $string);
+        $string = iconv('UTF-8', 'us-ascii//TRANSLIT', $string);
         // Replace double byte whitespaces by single byte (East Asian languages)
         $str = preg_replace('/\xE3\x80\x80/', ' ', $string);
+        $str = preg_replace('~[^-\w]+~', '', $str);
 
         // Remove any '-' from the string as they will be used as concatenator.
         // Would be great to let the spaces in but only Firefox is friendly with this
 
-        $str = str_replace('-', ' ', $str);
+        // $str = str_replace('-', ' ', $str);
 
         // Replace forbidden characters by whitespaces
-        $str = preg_replace('#[:\#\*"@+=;!><&\.%()\]\/\'\\\\|\[]#', "\x20", $str);
+        $str = preg_replace('#[:\#\*"@+=;!>–<&\.%()\]\/\'\\\\|\[]#', "\x20", $str);
+        $str = trim($str, '-');
 
         // Delete all '?'
         $str = str_replace('?', '', $str);
@@ -54,6 +60,6 @@ class Escaping extends \Twig_Extension
         // Remove any duplicate whitespace and replace whitespaces by hyphens
         $str = preg_replace('#\x20+#', '-', $str);
 
-        return $str;
+        return preg_replace('/[-]+/', '-', $str);
     }
 }

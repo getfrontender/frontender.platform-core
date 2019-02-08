@@ -21,7 +21,7 @@ class Humanize extends \Twig_Extension
     public function __construct(Container $container)
     {
         $this->_container = $container;
-        $this->_locale = $container['language']->get();
+        $this->_locale = substr($container['language']->get(), 0, 2);
     }
 
     public function getFilters()

@@ -21,7 +21,7 @@ class Language
         return $this->language;
     }
 
-    public function set(string $language)
+    public function set(string $language = '')
     {
         $this->language = $language;
 

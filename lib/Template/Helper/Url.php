@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @package     Dipity
  * @copyright   Copyright (C) 2014 - 2017 Dipity B.V. All rights reserved.
@@ -39,18 +40,9 @@ class Url extends \Twig_Extension
 
     public function isActiveUrl($route, $class)
     {
-        $currentParts = explode('/', $this->getCurrentUrl()->getPath());
-        $routeParts = explode('/', $route);
+        $path = is_object($route) ? ltrim($route->getPath(), '/') : $route;
 
-        switch(count($routeParts)) {
-            case 0:
-            case 1:
-                return '';
-            case 2:
-                return $routeParts[1] === $currentParts[1] ? $class : '';
-            case 3:
-                return (($routeParts[2] === $currentParts[2] || Inflector::pluralize($currentParts[2]) === $routeParts[2]) && $routeParts[1] === $currentParts[1]) ? $class : '';
-        }
+        return $path === ltrim($this->getCurrentUrl()->getPath(), '/') ? $class : '';
     }
 
     /**
@@ -69,9 +61,9 @@ class Url extends \Twig_Extension
         $params = $route->getArguments();
         $params['locale'] = $locale;
 
-        if(array_key_exists('id', $params) && $params['id']) {
+        if (array_key_exists('id', $params) && $params['id']) {
             $params['id'] .= !empty($query) ? '?' . $query : '';
-        } else if(array_key_exists('page', $params)) {
+        } else if (array_key_exists('page', $params)) {
             $params['page'] .= !empty($query) ? '?' . $query : '';
         }
 

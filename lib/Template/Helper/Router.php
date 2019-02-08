@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @package     Dipity
  * @copyright   Copyright (C) 2014 - 2017 Dipity B.V. All rights reserved.
@@ -7,6 +8,7 @@
 
 namespace Frontender\Core\Template\Helper;
 
+use Frontender\Core\DB\Adapter;
 use Slim\Container;
 use Slim\Http\Uri;
 use Doctrine\Common\Inflector\Inflector;
@@ -29,65 +31,191 @@ class Router extends \Twig_Extension
 
     public function route($params = [])
     {
-	    $params['locale'] = $params['locale'] ?? $this->container->language->language;
-	    $params['slug'] = $params['slug'] ?? '';
+        // If a url is found, we won't even look further
+        if (isset($params['url'])) {
+            return $params['url'];
+        }
 
-	    /**
-	     * So to get the correct routing, what do we need to do here:
-	     * 1. Get the page json
-	     * 2. Try to get the model.
-	     * 3. If a model is found, use the model name and given ID to create the new route.
-	     */
-	    if(array_key_exists('url', $params)) {
-		    // Direct url.
-		    return $params['url'];
-	    } else if(array_key_exists('id', $params)) {
-		    $routes = json_decode(file_get_contents($this->container->settings['project']['path'] . '/routes.json'), true);
-		    $json = @json_decode(file_get_contents($this->container->settings['project']['path'] . '/pages/published/' . $params['page'] . '.json'));
-		    if($json) {
-			    $model_path = [ 'template_config', 'model', 'controls', 'name', 'value' ];
-			    $model      = array_reduce( $model_path, function ( $json, $index ) {
-				    if ( ! $json || ! $json->{$index} ) {
-					    return false;
-				    }
+        $params['locale'] = $params['locale'] ?? $this->container->language->get('language');
+        $params['slug'] = $params['slug'] ?? '';
+        $fallbackLocale = $this->container['fallbackScope']['locale'];
 
-				    return $json->{$index};
-			    }, $json );
+        $path = $this->_getPath($params);
+        if (is_object($path)) {
+            $path = $path->{$params['locale']} ?? $path->{$fallbackLocale};
+        } else if (is_array($path)) {
+            $path = $path[$params['locale']] ?? $path[$fallbackLocale];
+        }
 
-			    if ( $model ) {
-				    if ( array_key_exists( $model, $routes ) && array_key_exists( $params['id'], $routes[ $model ] ) ) {
-				    	// Check if we have an alias for the current language.
-					    // Load the new json.
-					    $json_path = $this->container->settings['project']['path'] . '/pages/published/' . $routes[ $model ][ $params['id'] ]['path'] . '.json';
-					    if(file_exists($json_path)) {
-						    $json = json_decode( file_get_contents( $json_path ) );
-						    if ( $json && is_object( $json ) && property_exists( $json, 'alias' ) && is_object( $json->alias ) && property_exists( $json->alias, $params['locale'] ) ) {
-							    return ( $this->container->has( 'domain' ) ? '' : '/' . $params['locale'] ) . '/' . $json->alias->{$params['locale']};
-						    }
-					    }
+	    // Check if the page also has a cononical.
+        try {
+            $page = Adapter::getInstance()->collection('pages.public')->findOne([
+                'definition.route.' . $params['locale'] => utf8_encode($path)
+            ]);
+        } catch (\Exception $e) {
+        }
 
-					    return ($this->container->has('domain') ? '' : '/' . $params['locale']) . $routes[ $model ][ $params['id'] ]['path'];
-				    }
-			    }
-		    }
-		    $name = 'details';
-	    } else if(array_key_exists('page', $params) && !array_key_exists('id', $params)) {
-		    $name = 'list';
-	    } else {
-		    $name = 'home';
-	    }
+        if ($page) {
+            if (property_exists($page->definition, 'cononical') && $page->definition->cononical->{$params['locale']}) {
+                $path = $page->definition->cononical->{$params['locale']};
+            }
+        }
 
-	    // Check if the page is in the aliasses.
-	    if(array_key_exists('page', $params)) {
-		    $page = @json_decode(file_get_contents($this->container->settings['project']['path'] . '/pages/published/' . $params['page'] . '.json'));
-		    if(is_object($page) && property_exists($page, 'alias') && is_object($page->alias) && property_exists($page->alias, $params['locale'])) {
-		    	$params['page'] = $page->alias->{$params['locale']};
-		    }
-	    }
+        $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
+        $setting = Adapter::getInstance()->toJSON(array_shift($settings), true);
+        $uri = $this->container->get('request')->getUri();
+        $domain = $uri->getHost();
+        $amount = 0;
 
-	    $path = $this->container->router->pathFor($name, $params);
-	    $route = $this->container->has('domain') ? str_replace((array_key_exists('locale', $params) && !empty($params['locale']) ? '/' . $params['locale'] : ''), '', $path) : $path;
+        if (isset($setting['scopes'])) {
+            $amount = array_filter($setting['scopes'], function ($scope) use ($domain) {
+                return $scope['domain'] === $domain;
+            });
+        }
 
-	    return str_replace('//', '/', $route);
+        if (count($amount) === 1) {
+            // If it is a proxy, add the locale anyway.
+            // We need the locale here.
+		    // Use the current domain, without any locale
+            return $this->modifyProxyDomain($uri, false, $path);
+        } else {
+            // Check the scopes for the current locale, and if it has a path.
+            $scopes = array_filter($amount, function ($scope) use ($params) {
+                return $scope['locale'] === $params['locale'];
+            });
+
+            if (count($scopes) === 1) {
+                $scope = array_shift($scopes);
+                $localePartial = $scope['locale_prefix'] ?? $scope['locale'];
+                $localePartial = str_replace('/', '', $localePartial);
+
+                return $this->modifyProxyDomain(
+                    $uri,
+                    $localePartial,
+                    $path
+                );
+            }
+
+            return $this->modifyProxyDomain(
+                $uri,
+                $params['locale'],
+                $path
+            );
+        }
+    }
+
+    private function _getPath($params = [])
+    {
+        $fallbackLocale = $this->container['fallbackScope']['locale'];
+
+        if (isset($params['id'])) {
+	    	// First we will check if we can find the page.
+            $page = Adapter::getInstance()->collection('pages.public')->findOne([
+                '$or' => [
+                    ['definition.route.' . $params['locale'] => $params['page']],
+                    ['definition.route.' . $fallbackLocale => $params['page']],
+                    ['definition.cononical.' . $params['locale'] => $params['page']],
+                    ['definition.cononical.' . $fallbackLocale => $params['page']]
+                ]
+            ]);
+
+            if ($page) {
+                $model = $page->definition->template_config->model->data->model ?? false;
+                $adapter = $page->definition->template_config->model->data->adapter ?? false;
+                $id = $params['id'];
+
+                if ($model && $adapter && $id) {
+			    	// Check if we have a redirect.
+                    $redirect = Adapter::getInstance()->collection('routes.static')->findOne([
+                        'source' => implode('/', [$adapter, $model, $id])
+                    ]);
+
+                    if ($redirect) {
+                        return $redirect['destination'];
+                    }
+                }
+            }
+
+		    // We don't have anything else, return the build path
+            return $params['page'] . '/' . $params['slug'] . $this->container->settings->get('id_separator') . $params['id'];
+        } else if (array_key_exists('page', $params) && !array_key_exists('id', $params)) {
+            return $params['page'];
+        } else {
+            return '/';
+        }
+    }
+
+    private function modifyProxyDomain(Uri $uri, $locale, $path)
+    {
+        // If anything of a proxy domain is in here, we will remove that part and add the domain.
+        $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
+        $settings = Adapter::getInstance()->toJson($settings, true);
+        $setting = array_shift($settings);
+
+        $domains = array_filter($setting['scopes'], function ($scope) use ($locale, $path) {
+            if (in_array('proxy_path', array_keys($scope))) {
+                $tempLocale = str_replace('/', '', $scope['locale_prefix']);
+                $tempPath = ltrim($path, '/');
+                $tempProxyPath = ltrim($scope['proxy_path'], '/');
+
+                if (!empty($tempPath)) {
+                    if (strpos($tempPath, $tempProxyPath) === 0) {
+                        // Check if the locale is the same
+                        if ($locale) {
+                            if ($locale == $tempLocale) {
+                                return true;
+                            } else {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return false;
+        });
+
+        $uri = $uri->withQuery('');
+
+        if (count($domains)) {
+            $domain = array_shift($domains);
+            $tempProxyPath = ltrim($domain['proxy_path'], '/');
+            $path = ltrim(preg_replace('/' . $tempProxyPath . '/', '', $path, 1), '/');
+            $uri = $uri->withHost($domain['domain']);
+        } else {
+            // We have to reset the host to the "default".
+            $domains = array_filter($setting['scopes'], function ($scope) use ($locale) {
+                // We have to find the same locale, and one that doesn't have a proxy_path.
+                $tempLocale = str_replace('/', '', $scope['locale_prefix'] ?? '');
+                if ($locale && $tempLocale != $locale) {
+                    return false;
+                }
+
+                if (in_array('proxy_path', array_keys($scope))) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            if (count($domains)) {
+                $domain = array_shift($domains);
+
+                if (isset($domain['domain'])) {
+                    $uri = $uri->withHost($domain['domain']);
+                }
+            }
+        }
+
+        if ($locale) {
+            $path = array_map(function ($part) {
+                return trim($part, '/');
+            }, [$locale, $path]);
+            $path = array_filter($path);
+            return $uri->withPath(implode('/', $path));
+        }
+
+        // We now have the locale, and the path
+        return $uri->withPath($path ?? '/');
     }
 }
