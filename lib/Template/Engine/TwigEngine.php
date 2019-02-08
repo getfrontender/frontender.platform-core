@@ -1,4 +1,5 @@
 <?php
+
 /*******************************************************
  * @copyright 2017-2019 Dipity B.V., The Netherlands
  * @package Frontender
@@ -64,7 +65,7 @@ class TwigEngine extends Object implements EngineInterface
 
 	    // Register the core filters
         $this->engine->addExtension(new Date($container));
-        $this->engine->addExtension(new Escaping());
+        $this->engine->addExtension(new Escaping($container));
         $this->engine->addExtension(new Asset($container));
         $this->engine->addExtension(new Filter());
         $this->engine->addExtension(new Humanize($container));
