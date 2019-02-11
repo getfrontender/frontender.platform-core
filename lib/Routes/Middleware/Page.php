@@ -141,21 +141,20 @@ class Page
 
     /**
      * This method will check for the redirects, one page to another.
+     * 
+     * The found redirects will have a domain and no protocol,
+     * the protocol is to be added to the request.
      */
     private function _findRedirect(Request $request, Response $response, $adapter)
     {
         $translator = new Translate($this->_container);
         $static = $adapter->collection('routes')->findOne([
-            'resource' => $request->getUri()->getPath(),
+            'resource' => implode('/', [$request->getUri()->getHost(), $request->getUri()->getPath()]),
             'type' => 'simple'
         ]);
 
         if ($static) {
-            $destination = $translator->translate(
-                $static->destination
-            );
-
-            return $this->_setRedirect($request, $response, $destination);
+            return $this->_setRedirect($request, $response, $static->destination, 302, true);
         }
 
         $dynamic = $adapter->collection('routes')->find([
@@ -164,31 +163,36 @@ class Page
 
         foreach ($dynamic as $redirect) {
             if (preg_match($redirect->source, $request->getUri()->getPath()) === 1) {
-                return $this->_setRedirect($request, $response, $redirect->destination);
+                return $this->_setRedirect($request, $response, $redirect->destination, 302, true);
             }
         }
 
-        return $this->_setRedirect($request, $response, '404', 302, true);
+        return $this->_setRedirect($request, $response, '404', 302);
     }
 
-    private function _setRedirect(Request $request, Response $response, $redirect, $status = 302, $addScopePrefix = false)
+    private function _setRedirect(Request $request, Response $response, $redirect, $status = 302, $isFoundRedirect = false)
     {
         // If the url is a static url (eg. containing http(s)) then we will return that redirect.
-        if (preg_match('/http[s]?:\/\//', $redirect) === 1) {
+        if ($isFoundRedirect) {
+            if (preg_match('/http[s]?:\/\//', $redirect) === 0) {
+                // I have to append the protocol.
+                $redirect = implode('://', [$request->getUri()->getScheme(), $redirect]);
+            }
+
             return $response->withRedirect($redirect, $status);
         }
 
-        if ($addScopePrefix) {
+        if (!$isFoundRedirect) {
             $scope = $this->_container['scope'];
             $prefix = $scope['locale_prefix'] ?? null;
-            $path = array_map(function ($segment) {
+            $redirect = array_map(function ($segment) {
                 return trim($segment, '/');
-            }, [$prefix, $path]);
-            $path = implode('/', $path);
+            }, [$prefix, $redirect]);
+            $redirect = implode('/', $redirect);
         }
 
         return $response->withRedirect(
-            $request->getUri()->withPath(implode('/', $path)),
+            $request->getUri()->withPath(implode('/', $redirect)),
             $status
         );
     }
