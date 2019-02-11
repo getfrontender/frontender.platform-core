@@ -126,7 +126,8 @@ class Page
                         $request,
                         $response,
                         $translator->translate($redirect->destination),
-                        $redirect->status
+                        $redirect->status,
+                        true
                     );
                 }
             }
@@ -143,43 +144,53 @@ class Page
      */
     private function _findRedirect(Request $request, Response $response, $adapter)
     {
-        $static = $adapter->collection('routes.static')->findOne([
-            'source' => $request->getUri()->getPath()
+        $translator = new Translate($this->_container);
+        $static = $adapter->collection('routes')->findOne([
+            'resource' => $request->getUri()->getPath(),
+            'type' => 'simple'
         ]);
 
         if ($static) {
-            $info = $request->getAttribute('routeInfo')[2];
-            $destination = $static->destination[$info['locale']] ?? '404';
+            $destination = $translator->translate(
+                $static->destination
+            );
 
             return $this->_setRedirect($request, $response, $destination);
         }
 
-        $dynamic = $adapter->collection('routes.dynamic')->find()->toArray();
+        $dynamic = $adapter->collection('routes')->find([
+            'type' => 'regex'
+        ])->toArray();
+
         foreach ($dynamic as $redirect) {
             if (preg_match($redirect->source, $request->getUri()->getPath()) === 1) {
                 return $this->_setRedirect($request, $response, $redirect->destination);
             }
         }
 
-        return $this->_setRedirect($request, $response, '404');
+        return $this->_setRedirect($request, $response, '404', 302, true);
     }
 
-    private function _setRedirect(Request $request, Response $response, $redirect, $status = 302)
+    private function _setRedirect(Request $request, Response $response, $redirect, $status = 302, $addScopePrefix = false)
     {
+        // If the url is a static url (eg. containing http(s)) then we will return that redirect.
         if (preg_match('/http[s]?:\/\//', $redirect) === 1) {
             return $response->withRedirect($redirect, $status);
         }
 
-        $scope = $this->_container['scope'];
-        $uri = $request->getUri();
-        $prefix = $scope['locale_prefix'] ?? null;
-        $path = array_map(function ($segment) {
-            return trim($segment, '/');
-        }, [$prefix, $redirect]);
+        if ($addScopePrefix) {
+            $scope = $this->_container['scope'];
+            $prefix = $scope['locale_prefix'] ?? null;
+            $path = array_map(function ($segment) {
+                return trim($segment, '/');
+            }, [$prefix, $path]);
+            $path = implode('/', $path);
+        }
 
-        $uri = $uri->withPath(implode('/', $path));
-
-        return $response->withRedirect($uri, $status);
+        return $response->withRedirect(
+            $request->getUri()->withPath(implode('/', $path)),
+            $status
+        );
     }
 
     private function _getPage($route, $locale, $fallbackLocale)
