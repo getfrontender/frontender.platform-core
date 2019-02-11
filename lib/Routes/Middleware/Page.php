@@ -148,13 +148,15 @@ class Page
     private function _findRedirect(Request $request, Response $response, $adapter)
     {
         $translator = new Translate($this->_container);
+        $findUri = implode('/', [$request->getUri()->getHost(), $request->getUri()->getPath()]);
+
         $static = $adapter->collection('routes')->findOne([
-            'resource' => implode('/', [$request->getUri()->getHost(), $request->getUri()->getPath()]),
+            'resource' => $findUri,
             'type' => 'simple'
         ]);
 
         if ($static) {
-            return $this->_setRedirect($request, $response, $static->destination, 302, true);
+            return $this->_setRedirect($request, $response, $static->destination, $static->status, true);
         }
 
         $dynamic = $adapter->collection('routes')->find([
@@ -162,8 +164,10 @@ class Page
         ])->toArray();
 
         foreach ($dynamic as $redirect) {
-            if (preg_match($redirect->source, $request->getUri()->getPath()) === 1) {
-                return $this->_setRedirect($request, $response, $redirect->destination, 302, true);
+            if (preg_match($redirect->resource, $findUri) === 1) {
+                $destination = preg_replace($redirect->resource, $redirect->destination, $findUri);
+
+                return $this->_setRedirect($request, $response, $destination, $redirect->status, true);
             }
         }
 
@@ -188,12 +192,11 @@ class Page
             $redirect = array_map(function ($segment) {
                 return trim($segment, '/');
             }, [$prefix, $redirect]);
-            $redirect = implode('/', $redirect);
         }
 
         return $response->withRedirect(
             $request->getUri()->withPath(implode('/', $redirect)),
-            $status
+            (int)$status
         );
     }
 
