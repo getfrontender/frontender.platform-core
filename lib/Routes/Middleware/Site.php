@@ -105,7 +105,7 @@ class Site
             $index = $localePrefixes[current($segments)];
             $host = $hosts[$index];
 
-            array_shift($segments);
+            $localeSegment = array_shift($segments);
         }
 
         $locale = $host['locale'];
@@ -147,7 +147,9 @@ class Site
             array_unshift($segments, trim($host['proxy_path'], '/'));
         }
 
-        array_unshift($segments, $locale);
+        if ($localeSegment) {
+            array_unshift($segments, $localeSegment);
+        }
 
         $uri = $request->getUri();
         $request = $request->withUri(
