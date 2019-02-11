@@ -147,7 +147,7 @@ class Site
             array_unshift($segments, trim($host['proxy_path'], '/'));
         }
 
-        if ($localeSegment) {
+        if (isset($localeSegment)) {
             array_unshift($segments, $localeSegment);
         }
 
