@@ -1,4 +1,5 @@
 <?php
+
 /*******************************************************
  * @copyright 2017-2019 Dipity B.V., The Netherlands
  * @package Frontender
@@ -19,6 +20,7 @@ namespace Frontender\Core\Routes\Middleware;
 use Frontender\Core\DB\Adapter;
 use Slim\Http\Request;
 use Slim\Http\Response;
+use Frontender\Core\Template\Filter\Translate;
 
 class Page
 {
@@ -42,6 +44,7 @@ class Page
             return $next($request, $response);
         }
 
+        $translator = new Translate($this->_container);
         $adapter = Adapter::getInstance();
         $settings = $adapter->collection('settings')->find()->toArray();
         $settings = $adapter->toJSON($settings, true);
@@ -102,38 +105,42 @@ class Page
             $page = $this->_getPage($templateName, $locale, $fallbackLocale);
         }
 
-        if (!$page) {
-            return $this->_findRedirect($request, $response, $adapter);
-        }
+        if ($page) {
+            if (property_exists($page->definition, 'cononical') && $page->definition->cononical->{$locale}) {
+                $cononical = $page->definition->cononical->{$locale};
 
-        if (property_exists($page->definition, 'cononical') && $page->definition->cononical->{$locale}) {
-            $cononical = $page->definition->cononical->{$locale};
-
-			// This only needs to happen if we don't have a cononical in the url.
-            if (strpos($request->getUri()->getPath(), $cononical) === false) {
-                return $this->_setRedirect($request, $response, $cononical);
-            }
-        }
-
-        if ($requestId) {
-			// Check if there is a redirect/ if so we will follow that.
-            $redirect = $adapter->collection('routes.static')->findOne([
-                'source' => implode('/', [$page->definition->template_config->model->data->adapter, $page->definition->template_config->model->data->model, $requestId])
-            ]);
-
-            if ($redirect) {
-                $redirect = $redirect->destination->{$locale} ?? $redirect->destination->{$fallbackLocale};
-
-                if ($redirect) {
-                    return $this->_setRedirect($request, $response, $redirect);
+			    // This only needs to happen if we don't have a cononical in the url.
+                if (strpos($request->getUri()->getPath(), $cononical) === false) {
+                    return $this->_setRedirect($request, $response, $cononical);
                 }
             }
+
+            if ($requestId) {
+                $redirect = $adapter->collection('routes')->findOne([
+                    'resource' => implode('/', [$page->definition->template_config->model->data->adapter, $page->definition->template_config->model->data->model, $requestId]),
+                    'type' => 'landingpage'
+                ]);
+
+                if ($redirect) {
+                    return $this->_setRedirect(
+                        $request,
+                        $response,
+                        $translator->translate($redirect->destination),
+                        $redirect->status
+                    );
+                }
+            }
+
+            $request = $request->withAttribute('json', $page);
+            return $next($request, $response);
         }
 
-        $request = $request->withAttribute('json', $page);
-        return $next($request, $response);
+        return $this->_findRedirect($request, $response, $adapter);
     }
 
+    /**
+     * This method will check for the redirects, one page to another.
+     */
     private function _findRedirect(Request $request, Response $response, $adapter)
     {
         $static = $adapter->collection('routes.static')->findOne([
@@ -157,37 +164,22 @@ class Page
         return $this->_setRedirect($request, $response, '404');
     }
 
-    private function _setRedirect(Request $request, Response $response, $redirect)
+    private function _setRedirect(Request $request, Response $response, $redirect, $status = 302)
     {
         if (preg_match('/http[s]?:\/\//', $redirect) === 1) {
-            return $response->withRedirect($redirect, 301);
+            return $response->withRedirect($redirect, $status);
         }
 
-		// TODO: Add a function here to check the domain and the path of that domain.
-        $info = $request->getAttribute('routeInfo')[2];
-        $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-        $setting = Adapter::getInstance()->toJSON(array_shift($settings), true);
+        $scope = $this->_container['scope'];
         $uri = $request->getUri();
-        $domain = $uri->getHost();
+        $prefix = $scope['locale_prefix'] ?? null;
+        $path = array_map(function ($segment) {
+            return trim($segment, '/');
+        }, [$prefix, $redirect]);
 
-        $amount = array_filter($setting['scopes'], function ($scope) use ($domain) {
-            return $scope['domain'] === $domain;
-        });
+        $uri = $uri->withPath(implode('/', $path));
 
-        if (count($amount) === 1) {
-			// Use the current domain, without any locale
-            $uri = $uri->withPath(trim($redirect, '/'));
-        } else {
-            // Get the current scope
-            $prefix = $this->_container->scope['locale_prefix'] ?? $this->_container->scope['locale'];
-            $path = array_map(function($segment) {
-                return trim($segment, '/');
-            }, [$prefix, $redirect]);
-
-            $uri = $uri->withPath(implode('/', $path));
-        }
-
-        return $response->withRedirect($uri, 301);
+        return $response->withRedirect($uri, $status);
     }
 
     private function _getPage($route, $locale, $fallbackLocale)

@@ -1,4 +1,5 @@
 <?php
+
 /*******************************************************
  * @copyright 2017-2019 Dipity B.V., The Netherlands
  * @package Frontender
@@ -137,7 +138,8 @@ class Site
             return $response->withRedirect(
                 $request->getUri()
                     ->withHost($proxy['domain'])
-                    ->withPath(implode('/', $path))
+                    ->withPath(implode('/', $path)),
+                302
             );
         }
 
