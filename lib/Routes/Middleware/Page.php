@@ -46,18 +46,17 @@ class Page
 
         $translator = new Translate($this->_container);
         $adapter = Adapter::getInstance();
-        $settings = $adapter->collection('settings')->find()->toArray();
-        $settings = $adapter->toJSON($settings, true);
-        $settings = array_shift($settings);
         $segments = array_filter(explode('/', $request->getUri()->getPath()));
-        $locale = array_shift($segments);
+        $uriLocale = array_shift($segments);
+        $locale = $this->_container['scope']['locale'];
+
 
         // If the first segment is partial, then let it go through.
         if (isset($segments[0]) && $segments[0] === 'partial') {
             return $next($request, $response);
         }
 
-        $fallbackScope = $settings['scopes'][0];
+        $fallbackScope = $this->_container['fallbackScope'];
         $fallbackLocale = $fallbackScope['locale'];
         $requestId = false;
 
@@ -91,6 +90,8 @@ class Page
 
         if (count($segments)) {
             while (count($segments) > 0) {
+                var_dump(implode('/', array_merge($segments, [$templateName])));
+
                 $page = $this->_getPage(implode('/', array_merge($segments, [$templateName])), $locale, $fallbackLocale);
 
                 if (!$page) {
@@ -122,10 +123,20 @@ class Page
                 ]);
 
                 if ($redirect) {
+                    $destination = $translator->translate($redirect->destination);
+                    $destination = array_filter([
+                        $request->getUri()->getHost(),
+                        $this->_container['scope']['locale_prefix'] ?? null,
+                        $destination
+                    ]);
+                    $destination = array_map(function ($segment) {
+                        return trim($segment, '/');
+                    }, $destination);
+
                     return $this->_setRedirect(
                         $request,
                         $response,
-                        $translator->translate($redirect->destination),
+                        implode('/', $destination),
                         $redirect->status,
                         true
                     );
@@ -203,7 +214,6 @@ class Page
     private function _getPage($route, $locale, $fallbackLocale)
     {
         $adapter = Adapter::getInstance();
-
         return $adapter->collection('pages.public')->findOne([
             '$or' => [
                 ['definition.route.' . $locale => $route],

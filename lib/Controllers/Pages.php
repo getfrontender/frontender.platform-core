@@ -326,14 +326,6 @@ class Pages extends Core
                     $page_id = $result->_id->__toString();
                 }
 
-                if ($oldPage && $oldPage->_id) {
-                    $this->adapter->collection('routes')->deleteMany([
-                        'page_id' => $oldPage->_id->__toString(),
-                        'type' => 'landingpage'
-                    ]);
-                }
-
-                // TODO: Something to do with the domains has to come in here as well.
                 $this->adapter->collection('routes')->insertOne([
                     'resource' => implode('/', [$adapterName, $modelName, $modelId]),
                     'destination' => $route,
