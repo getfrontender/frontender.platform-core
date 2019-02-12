@@ -1,4 +1,5 @@
 <?php
+
 /*******************************************************
  * @copyright 2017-2019 Dipity B.V., The Netherlands
  * @package Frontender
@@ -134,8 +135,9 @@ class Router extends \Twig_Extension
 
                 if ($model && $adapter && $id) {
 			    	// Check if we have a redirect.
-                    $redirect = Adapter::getInstance()->collection('routes.static')->findOne([
-                        'source' => implode('/', [$adapter, $model, $id])
+                    $redirect = Adapter::getInstance()->collection('routes')->findOne([
+                        'resource' => implode('/', [$adapter, $model, $id]),
+                        'type' => 'landingpage'
                     ]);
 
                     if ($redirect) {

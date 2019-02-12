@@ -1,4 +1,5 @@
 <?php
+
 /*******************************************************
  * @copyright 2017-2019 Dipity B.V., The Netherlands
  * @package Frontender
@@ -283,13 +284,7 @@ class Pages extends Core
         $page->definition = json_decode(json_encode($page->definition), true);
         $page->definition = $this->actionSanitize($page->definition);
 
-        $oldPage = $this->adapter->collection('pages.public')->findOne([
-            'revision.lot' => $page->revision->lot
-        ]);
-
-        $this->adapter->collection('pages.public')->deleteMany([
-            'revision.lot' => $page->revision->lot
-        ]);
+        $this->actionDelete($page->revision->lot);
 
         $result = $this->adapter->collection('pages.public')->insertOne($page);
 
@@ -332,16 +327,19 @@ class Pages extends Core
                 }
 
                 if ($oldPage && $oldPage->_id) {
-                    $this->adapter->collection('routes.static')->deleteMany([
-                        'page_id' => $oldPage->_id->__toString()
+                    $this->adapter->collection('routes')->deleteMany([
+                        'page_id' => $oldPage->_id->__toString(),
+                        'type' => 'landingpage'
                     ]);
                 }
 
                 // TODO: Something to do with the domains has to come in here as well.
-                $this->adapter->collection('routes.static')->insertOne([
-                    'source' => implode('/', [$adapterName, $modelName, $modelId]),
+                $this->adapter->collection('routes')->insertOne([
+                    'resource' => implode('/', [$adapterName, $modelName, $modelId]),
                     'destination' => $route,
-                    'page_id' => $page_id
+                    'page_id' => $page_id,
+                    'type' => 'landingpage',
+                    'status' => 302
                 ]);
             }
         }
@@ -359,7 +357,7 @@ class Pages extends Core
         ]);
 
         if ($page) {
-            $this->adapter->collection('routes.static')->deleteMany([
+            $this->adapter->collection('routes')->deleteMany([
                 'page_id' => $page->_id->__toString()
             ]);
 
