@@ -1,4 +1,5 @@
 <?php
+
 /*******************************************************
  * @copyright 2017-2019 Dipity B.V., The Netherlands
  * @package Frontender
@@ -48,6 +49,13 @@ class Url extends \Twig_Extension
 
     public function isActiveUrl($route, $class)
     {
+        // I also have to check the domain of the current scope compaired to the domain of the delivered route.
+        if (!is_string($route)) {
+            if ($route->getHost() !== $this->getCurrentUrl()->getHost()) {
+                return '';
+            }
+        }
+
         $path = is_object($route) ? ltrim($route->getPath(), '/') : $route;
 
         return $path === ltrim($this->getCurrentUrl()->getPath(), '/') ? $class : '';
