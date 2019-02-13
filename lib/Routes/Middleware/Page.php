@@ -161,6 +161,10 @@ class Page
         $translator = new Translate($this->_container);
         $findUri = implode('/', [$request->getUri()->getHost(), $request->getUri()->getPath()]);
 
+        if (!empty($request->getUri()->getQuery())) {
+            $findUri .= '?' . $request->getUri()->getQuery();
+        }
+
         $static = $adapter->collection('routes')->findOne([
             'resource' => $findUri,
             'type' => 'simple'
