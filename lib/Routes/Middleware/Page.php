@@ -80,6 +80,11 @@ class Page
             return $next($request, $response);
         }
 
+        $redirect = $this->_findRedirect($request, $response, $adapter);
+        if ($redirect) {
+            return $redirect;
+        }
+
         if (stripos(end($segments), $this->_container->config->id_separator)) {
             $segment = array_pop($segments);
 
@@ -148,7 +153,7 @@ class Page
             return $next($request, $response);
         }
 
-        return $this->_findRedirect($request, $response, $adapter);
+        return $this->_setRedirect($request, $response, '404', 302);
     }
 
     /**
@@ -183,7 +188,7 @@ class Page
             }
         }
 
-        return $this->_setRedirect($request, $response, '404', 302);
+        return false;
     }
 
     private function _setRedirect(Request $request, Response $response, $redirect, $status = 302, $isFoundRedirect = false)
