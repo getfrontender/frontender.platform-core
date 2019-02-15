@@ -49,6 +49,7 @@ class Page
         $segments = array_filter(explode('/', $request->getUri()->getPath()));
         $uriLocale = array_shift($segments);
         $locale = $this->_container['scope']['locale'];
+        $localePrefix = $this->_container['scope']['locale_prefix'] ?? false;
 
 
         // If the first segment is partial, then let it go through.
@@ -61,7 +62,9 @@ class Page
         $requestId = false;
 
 		// Exclude homepage
-        if (empty($segments)) {
+        // This is only to be done when the uriLocale is equal to the locale_prefix of the domain.
+        // This to exclude non-root domains.
+        if (empty($segments) && (!$localePrefix || trim($uriLocale, '/') === trim($localePrefix, '/'))) {
             $page = $adapter->collection('pages.public')->findOne([
                 '$or' => [
                     ['definition.route.' . $locale => '/'],

@@ -106,6 +106,8 @@ class Site
             $host = $hosts[$index];
 
             $localeSegment = array_shift($segments);
+        } else {
+            $localeSegment = $host['locale'];
         }
 
         $locale = $host['locale'];
