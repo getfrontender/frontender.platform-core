@@ -49,7 +49,7 @@ class Page
         $segments = array_filter(explode('/', $request->getUri()->getPath()));
         $uriLocale = array_shift($segments);
         $locale = $this->_container['scope']['locale'];
-        $localePrefix = $this->_container['scope']['locale_prefix'] ?? false;
+        $localePrefix = $this->_container['scope']['locale_prefix'] ?? '';
 
 
         // If the first segment is partial, then let it go through.
@@ -64,7 +64,7 @@ class Page
 		// Exclude homepage
         // This is only to be done when the uriLocale is equal to the locale_prefix of the domain.
         // This to exclude non-root domains.
-        if (empty($segments) && (!$localePrefix || trim($uriLocale, '/') === trim($localePrefix, '/'))) {
+        if (empty($segments)) {
             $page = $adapter->collection('pages.public')->findOne([
                 '$or' => [
                     ['definition.route.' . $locale => '/'],
@@ -93,8 +93,6 @@ class Page
 
         if (count($segments)) {
             while (count($segments) > 0) {
-                var_dump(implode('/', array_merge($segments, [$templateName])));
-
                 $page = $this->_getPage(implode('/', array_merge($segments, [$templateName])), $locale, $fallbackLocale);
 
                 if (!$page) {
@@ -162,11 +160,7 @@ class Page
     private function _findRedirect(Request $request, Response $response, $adapter)
     {
         $translator = new Translate($this->_container);
-        $findUri = implode('/', [$request->getUri()->getHost(), $request->getUri()->getPath()]);
-
-        if (!empty($request->getUri()->getQuery())) {
-            $findUri .= '?' . $request->getUri()->getQuery();
-        }
+        $findUri = implode('/', [$request->getUri()->getHost(), trim($_SERVER['REQUEST_URI'], '/')]);
 
         $static = $adapter->collection('routes')->findOne([
             'resource' => $findUri,
