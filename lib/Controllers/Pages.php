@@ -81,11 +81,20 @@ class Pages extends Core
                 ]
             ],
             [
+                '$lookup' => [
+                    'from' => 'routes',
+                    'localField' => 'revision.lot',
+                    'foreignField' => 'page_lot',
+                    'as' => 'foundRoute'
+                ]
+            ],
+            [
                 '$project' => [
                     '_id' => '$_id',
                     'uuid' => '$uuid',
                     'revision' => '$revision',
                     'definition' => '$definition',
+                    'foundRoute' => '$foundRoute',
                     'sortKey' => [
                         '$cond' => [
                             'if' => [
@@ -96,6 +105,7 @@ class Pages extends Core
                         ]
                     ],
                     'states' => [
+                        // This is true when one revision in this lot is published.
                         'isPublished' => [
                             '$cond' => [
                                 'if' => [
@@ -105,6 +115,7 @@ class Pages extends Core
                                 'else' => false
                             ]
                         ],
+                        // This is true when the current revision is published.
                         'isPublic' => [
                             '$cond' => [
                                 'if' => [
@@ -117,17 +128,9 @@ class Pages extends Core
                         'isRoute' => [
                             '$cond' => [
                                 'if' => [
-                                    '$eq' => [['$type' => '$definition.template_config.model.controls.id.value'], 'string']
+                                    '$gt' => [['$size' => '$foundRoute'], 0]
                                 ],
-                                'then' => [
-                                    '$cond' => [
-                                        'if' => [
-                                            '$eq' => [['$substr' => ['$definition.template_config.model.controls.id.value', 0, 1]], '{']
-                                        ],
-                                        'then' => false,
-                                        'else' => true
-                                    ]
-                                ],
+                                'then' => true,
                                 'else' => false
                             ]
                         ],
@@ -184,6 +187,14 @@ class Pages extends Core
                 ]
             ],
             [
+                '$lookup' => [
+                    'from' => 'routes',
+                    'localField' => 'revision.lot',
+                    'foreignField' => 'page_lot',
+                    'as' => 'foundRoute'
+                ]
+            ],
+            [
                 '$project' => [
                     '_id' => '$_id',
                     'uuid' => '$uuid',
@@ -211,17 +222,9 @@ class Pages extends Core
                         'isRoute' => [
                             '$cond' => [
                                 'if' => [
-                                    '$eq' => [['$type' => '$definition.template_config.model.controls.id.value'], 'string']
+                                    '$gt' => [['$size' => '$foundRoute'], 0]
                                 ],
-                                'then' => [
-                                    '$cond' => [
-                                        'if' => [
-                                            '$eq' => [['$substr' => ['$definition.template_config.model.controls.id.value', 0, 1]], '{']
-                                        ],
-                                        'then' => false,
-                                        'else' => true
-                                    ]
-                                ],
+                                'then' => true,
                                 'else' => false
                             ]
                         ],
@@ -330,6 +333,7 @@ class Pages extends Core
                     'resource' => implode('/', [$adapterName, $modelName, $modelId]),
                     'destination' => $route,
                     'page_id' => $page_id,
+                    'page_lot' => $page->revision->lot,
                     'type' => 'landingpage',
                     'status' => 302
                 ]);
