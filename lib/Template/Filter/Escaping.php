@@ -16,8 +16,23 @@
 
 namespace Frontender\Core\Template\Filter;
 
+use Slim\Container;
+
 class Escaping extends \Twig_Extension
 {
+    public function __construct(Container $container)
+    {
+        $this->_container = $container;
+        $this->_locale = str_replace('-', '_', $container['language']->get());
+        $this->_localeMutations = [
+            $this->_locale,
+            $this->_locale . '.utf-8',
+            $this->_locale . '.UTF8',
+            $this->_locale . '.utf8',
+            $this->_locale . '.UTF-8'
+        ];
+    }
+
     public function getFilters()
     {
         return [
@@ -45,6 +60,7 @@ class Escaping extends \Twig_Extension
         }
 
         /** Thank you Joomla! **/
+        setlocale(LC_CTYPE, $this->_localeMutations);
         $string = preg_replace('~[^\pL\d]+~u', '-', $string);
         $string = iconv('UTF-8', 'us-ascii//TRANSLIT', $string);
         // Replace double byte whitespaces by single byte (East Asian languages)
