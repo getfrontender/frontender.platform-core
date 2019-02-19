@@ -169,7 +169,12 @@ class Page
 
         $static = $adapter->collection('routes')->findOne([
             'resource' => $findUri,
-            'type' => 'simple'
+            '$or' => [
+                [
+                    'type' => 'simple'
+                ],
+                ['type' => 'external']
+            ]
         ]);
 
         if ($static) {
