@@ -38,6 +38,7 @@ class Url extends \Twig_Extension
         return [
             new \Twig_SimpleFunction('current_url', [$this, 'getCurrentUrl']),
             new \Twig_SimpleFunction('is_active', [$this, 'isActiveUrl']),
+            new \Twig_SimpleFunction('is_current', [$this, 'isCurrentUrl']),
             new \Twig_SimpleFunction('translate_url', [$this, 'translateUrl'])
         ];
     }
@@ -47,18 +48,27 @@ class Url extends \Twig_Extension
         return $this->container['request']->getUri();
     }
 
-    public function isActiveUrl($route, $class)
+    public function isActiveUrl($route)
     {
         // I also have to check the domain of the current scope compaired to the domain of the delivered route.
         if (!is_string($route)) {
             if ($route->getHost() !== $this->getCurrentUrl()->getHost()) {
-                return '';
+                return false;
             }
         }
 
         $path = is_object($route) ? ltrim($route->getPath(), '/') : $route;
 
-        return $path === ltrim($this->getCurrentUrl()->getPath(), '/') ? $class : '';
+        return strpos(ltrim($this->getCurrentUrl()->getPath(), '/'), $path) === 0;
+    }
+
+    public function isCurrentUrl($route)
+    {
+        if (!is_string($route)) {
+            return $route->__toString() === $this->getCurrentUrl()->__toString();
+        }
+
+        return $route === $this->getCurrentUrl()->__toString();
     }
 
     /**
