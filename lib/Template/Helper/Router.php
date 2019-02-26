@@ -56,13 +56,12 @@ class Router extends \Twig_Extension
             $path = $path[$params['locale']] ?? $path[$fallbackLocale];
         }
 
-	    // Check if the page also has a cononical.
+        // Check if the page also has a cononical.
         try {
             $page = Adapter::getInstance()->collection('pages.public')->findOne([
                 'definition.route.' . $params['locale'] => utf8_encode($path)
             ]);
-        } catch (\Exception $e) {
-        }
+        } catch (\Exception $e) { }
 
         if ($page) {
             if (property_exists($page->definition, 'cononical') && $page->definition->cononical->{$params['locale']}) {
@@ -85,7 +84,7 @@ class Router extends \Twig_Extension
         if (count($amount) === 1) {
             // If it is a proxy, add the locale anyway.
             // We need the locale here.
-		    // Use the current domain, without any locale
+            // Use the current domain, without any locale
             return $this->modifyProxyDomain($uri, false, $path);
         } else {
             // Check the scopes for the current locale, and if it has a path.
@@ -116,9 +115,9 @@ class Router extends \Twig_Extension
     private function _getPath($params = [])
     {
         $fallbackLocale = $this->container['fallbackScope']['locale'];
+        $page = false;
 
-        if (isset($params['id'])) {
-	    	// First we will check if we can find the page.
+        if (isset($params['page'])) {
             $page = Adapter::getInstance()->collection('pages.public')->findOne([
                 '$or' => [
                     ['definition.route.' . $params['locale'] => $params['page']],
@@ -127,14 +126,17 @@ class Router extends \Twig_Extension
                     ['definition.cononical.' . $fallbackLocale => $params['page']]
                 ]
             ]);
+        }
 
+        if (isset($params['id'])) {
+            // First we will check if we can find the page.
             if ($page) {
                 $model = $page->definition->template_config->model->data->model ?? false;
                 $adapter = $page->definition->template_config->model->data->adapter ?? false;
                 $id = $params['id'];
 
                 if ($model && $adapter && $id) {
-			    	// Check if we have a redirect.
+                    // Check if we have a redirect.
                     $redirect = Adapter::getInstance()->collection('routes')->findOne([
                         'resource' => implode('/', [$adapter, $model, $id]),
                         'type' => 'landingpage'
@@ -144,11 +146,23 @@ class Router extends \Twig_Extension
                         return $redirect['destination'];
                     }
                 }
+
+                if (isset($page->definition->route)) {
+                    $route = $page->definition->route->{$params['locale']} ?? $page->definition->route->{$fallbackLocale};
+
+                    if ($route) {
+                        return trim($route, '/') . '/' . $params['slug'] . $this->container->settings->get('id_separator') . $params['id'];
+                    }
+                }
             }
 
-		    // We don't have anything else, return the build path
+            // We don't have anything else, return the build path
             return $params['page'] . '/' . $params['slug'] . $this->container->settings->get('id_separator') . $params['id'];
-        } else if (array_key_exists('page', $params) && !array_key_exists('id', $params)) {
+        } else if (isset($params['page']) && !isset($params['id'])) {
+            if ($page && isset($page->definition->route)) {
+                return $page->definition->route;
+            }
+
             return $params['page'];
         } else {
             return '/';
