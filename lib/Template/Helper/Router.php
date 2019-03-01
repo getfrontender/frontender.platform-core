@@ -115,14 +115,18 @@ class Router extends \Twig_Extension
     private function _getPath($params = [])
     {
         $fallbackLocale = $this->container['fallbackScope']['locale'];
+        $currentLocale = $this->container['scope']['locale'];
+
         $page = false;
 
         if (isset($params['page'])) {
             $page = Adapter::getInstance()->collection('pages.public')->findOne([
                 '$or' => [
                     ['definition.route.' . $params['locale'] => $params['page']],
+                    ['definition.route.' . $currentLocale => $params['page']],
                     ['definition.route.' . $fallbackLocale => $params['page']],
                     ['definition.cononical.' . $params['locale'] => $params['page']],
+                    ['definition.cononical.' . $currentLocale => $params['page']],
                     ['definition.cononical.' . $fallbackLocale => $params['page']]
                 ]
             ]);
