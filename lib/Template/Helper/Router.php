@@ -115,7 +115,7 @@ class Router extends \Twig_Extension
     private function _getPath($params = [])
     {
         $fallbackLocale = $this->container['fallbackScope']['locale'];
-        $currentLocale = $this->container['scope']['locale'];
+        $currentLocale = $this->container['scope']['locale'] ?? $fallbackLocale;
 
         $page = false;
 
