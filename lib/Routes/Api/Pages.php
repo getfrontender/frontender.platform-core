@@ -46,6 +46,15 @@ class Pages extends CoreRoute
 
         $this->app->put('/{lot_id}/revision', function (Request $request, Response $response) {
             $json = $request->getParsedBody();
+
+            if (isset($this->token->getClaim('user')->id)) {
+                $json['revision']['user']['id'] = $this->token->getClaim('user')->id;
+            }
+
+            if (isset($this->token->getClaim('user')->name)) {
+                $json['revision']['user']['name'] = $this->token->getClaim('user')->name;
+            }
+            
             $json = Revisions::add($json);
 
             return $response->withJson($json);
