@@ -89,12 +89,41 @@ class Pages extends Core
                 ]
             ],
             [
+                '$addFields' => [
+                    'lotID' => [
+                        '$toObjectId' => '$revision.lot'
+                    ]
+                ]
+            ],
+            [
+                '$lookup' => [
+                    'from' => 'lots',
+                    'localField' => 'lotID',
+                    'foreignField' => '_id',
+                    'as' => 'lot'
+                ]
+            ],
+            [
+                '$match' => [
+                    'lot.groups' => [
+                        '$in' => [
+                            array_map(function ($group) {
+                                return $group->_id->__toString();
+                            }, $filter['groups'])
+                        ]
+                    ]
+                ]
+            ],
+            [
                 '$project' => [
                     '_id' => '$_id',
                     'uuid' => '$uuid',
                     'revision' => '$revision',
                     'definition' => '$definition',
                     'foundRoute' => '$foundRoute',
+                    'lot' => [
+                        '$arrayElemAt' => ['$lot', 0]
+                    ],
                     'sortKey' => [
                         '$cond' => [
                             'if' => [
@@ -153,6 +182,7 @@ class Pages extends Core
             ],
             ['$match' => $findFilter]
         ];
+
         $total = count($this->adapter->collection($collection)->aggregate($aggrigation, [
             'allowDiskUse' => true
         ])->toArray());
@@ -168,7 +198,7 @@ class Pages extends Core
             'items' => array_map(function ($revision) {
                 $revision['_id'] = $revision['uuid'];
                 unset($revision['uuid']);
-			    // unset( $revision['sortKey'] );
+                // unset( $revision['sortKey'] );
 
                 return $revision;
             }, $revisions)
@@ -291,9 +321,9 @@ class Pages extends Core
 
         $result = $this->adapter->collection('pages.public')->insertOne($page);
 
-		// If the template_config has a model name and id set then we can create a static reroute in the system.
-		// I will append the page_id to it so we can remove it when there is an update or when we remove the public page.
-		// This only has to happen here, because I don't care about all the other pages in the system.
+        // If the template_config has a model name and id set then we can create a static reroute in the system.
+        // I will append the page_id to it so we can remove it when there is an update or when we remove the public page.
+        // This only has to happen here, because I don't care about all the other pages in the system.
 
         $modelName = array_reduce(['template_config', 'model', 'data', 'model'], function ($carry, $key) {
             if (!isset($carry[$key]) || !$carry) {

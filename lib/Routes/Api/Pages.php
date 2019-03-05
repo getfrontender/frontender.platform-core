@@ -225,7 +225,7 @@ class Pages extends CoreRoute
 
         // New url for the pages endpoint.
         $this->app->post('', function (Request $request, Response $response) use ($self) {
-            $self->isAuthorized('site-admin', $request, $response);
+            $self->isAuthorized('space-administrator', $request, $response);
 
             $filter = $request->getParsedBodyParam('filter');
             $filter = $self->appendProxyPathToFilter($filter, $request);
@@ -237,7 +237,10 @@ class Pages extends CoreRoute
                 'direction' => !empty($request->getParsedBodyParam('direction')) ? $request->getParsedBodyParam('direction') : 1,
                 'locale' => !empty($request->getParsedBodyParam('locale')) ? $request->getParsedBodyParam('locale') : 'en-GB',
                 'filter' => $filter,
-                'skip' => (int)$request->getParsedBodyParam('skip')
+                'skip' => (int)$request->getParsedBodyParam('skip'),
+                'groups' => Adapter::getInstance()->collection('groups')->find([
+                    'users' => (int)$this->token->getClaim('sub')
+                ])->toArray()
             ]);
 
             $json['items'] = Adapter::getInstance()->toJSON($json['items']);
