@@ -21,6 +21,7 @@ use Frontender\Core\DB\Adapter;
 use Frontender\Core\Routes\Helpers\CoreRoute;
 use Frontender\Core\Routes\Traits\Authorizable;
 use MongoDB\BSON\ObjectId;
+use MongoDB\BSON\UTCDateTime;
 use Slim\Http\Request;
 use Slim\Http\Response;
 use Frontender\Core\Routes\Middleware\TokenCheck;
@@ -54,7 +55,7 @@ class Pages extends CoreRoute
             if (isset($this->token->getClaim('user')->name)) {
                 $json['revision']['user']['name'] = $this->token->getClaim('user')->name;
             }
-            
+
             $json = Revisions::add($json);
 
             return $response->withJson($json);
@@ -79,7 +80,51 @@ class Pages extends CoreRoute
         });
 
         $this->app->put('', function (Request $request, Response $response) {
-            $result = Adapter::getInstance()->collection('pages')->insertOne($request->getParsedBody(), [
+            // We need to create a lot here. But we will also receive the group that is selected.
+            // For the group we need all the parents.
+            $body = $request->getParsedBody();
+            $groups = [];
+
+            if (isset($body['group'])) {
+                // I will get the groups and from there I will get the parents.
+                $groupWithParents = Adapter::getInstance()->collection('groups')->aggregate([
+                    [
+                        '$match' => [
+                            '_id' => new ObjectId($body['group'])
+                        ]
+                    ],
+                    [
+                        '$graphLookup' => [
+                            'from' => 'groups',
+                            'startWith' => '$parent_group_id',
+                            'connectFromField' => 'parent_group_id',
+                            'connectToField' => '_id',
+                            'as' => 'parents'
+                        ]
+                    ]
+                ])->toArray();
+                $groupWithParents = array_shift($groupWithParents);
+
+                $groups[] = $groupWithParents->_id;
+
+                foreach ($groupWithParents->parents as $parent) {
+                    $groups[] = $parent->_id;
+                }
+            }
+
+            $lot = Adapter::getInstance()->collection('lots')->insertOne([
+                'groups' => array_map(function ($group) {
+                    return $group->__toString();
+                }, $groups),
+                'created' => [
+                    'date' => new UTCDateTime(),
+                    'user' => $this->container->token->getClaim('user')->id
+                ]
+            ]);
+
+            $body['page']['revision']['lot'] = $lot->insertedId->__toString();
+
+            $result = Adapter::getInstance()->collection('pages')->insertOne($body['page'], [
                 'upsert' => true,
                 'returnNewDocument' => true
             ]);
