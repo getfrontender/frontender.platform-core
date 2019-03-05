@@ -52,7 +52,7 @@ class Pages extends CoreRoute
         });
 
         $this->app->put('/{lot_id}/trash', function (Request $request, Response $response) {
-			// Remove the published page, and move all revisions to the trash.
+            // Remove the published page, and move all revisions to the trash.
             \Frontender\Core\Controllers\Pages::delete($request->getAttribute('lot_id'), 'public');
             Revisions::delete($request->getAttribute('lot_id'));
 
@@ -225,6 +225,8 @@ class Pages extends CoreRoute
 
         // New url for the pages endpoint.
         $this->app->post('', function (Request $request, Response $response) use ($self) {
+            $self->isAuthorized('site-admin', $request, $response);
+
             $filter = $request->getParsedBodyParam('filter');
             $filter = $self->appendProxyPathToFilter($filter, $request);
 
@@ -274,9 +276,7 @@ class Pages extends CoreRoute
 
                 $response->getBody()->write($page->render());
                 $response = $response->withHeader('X-XSS-Protection', '0');
-            } catch (\Exception $e) {
-            } catch (\Error $e) {
-            }
+            } catch (\Exception $e) { } catch (\Error $e) { }
 
             return $response;
         });
