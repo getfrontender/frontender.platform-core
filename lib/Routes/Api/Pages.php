@@ -317,7 +317,7 @@ class Pages extends CoreRoute
 
         // New url for the pages endpoint.
         $this->app->post('', function (Request $request, Response $response) use ($self) {
-            $self->isAuthorized('space-administrator', $request, $response);
+            // $self->isAuthorized('space-administrator', $request, $response);
 
             $filter = $request->getParsedBodyParam('filter');
             $filter = $self->appendProxyPathToFilter($filter, $request);
