@@ -47,6 +47,9 @@ class Pages extends CoreRoute
 
         $this->app->put('/{lot_id}/revision', function (Request $request, Response $response) {
             $json = $request->getParsedBody();
+            $group = $json['group'];
+            $json = $json['page'];
+            $groups = [];
 
             if (isset($this->token->getClaim('user')->id)) {
                 $json['revision']['user']['id'] = $this->token->getClaim('user')->id;
@@ -54,6 +57,41 @@ class Pages extends CoreRoute
 
             if (isset($this->token->getClaim('user')->name)) {
                 $json['revision']['user']['name'] = $this->token->getClaim('user')->name;
+            }
+
+            if (isset($group)) {
+                // I will get the groups and from there I will get the parents.
+                $groupWithParents = Adapter::getInstance()->collection('groups')->aggregate([
+                    [
+                        '$match' => [
+                            '_id' => new ObjectId($body['group'])
+                        ]
+                    ],
+                    [
+                        '$graphLookup' => [
+                            'from' => 'groups',
+                            'startWith' => '$parent_group_id',
+                            'connectFromField' => 'parent_group_id',
+                            'connectToField' => '_id',
+                            'as' => 'parents'
+                        ]
+                    ]
+                ])->toArray();
+                $groupWithParents = array_shift($groupWithParents);
+
+                $groups[] = $groupWithParents->_id;
+
+                foreach ($groupWithParents->parents as $parent) {
+                    $groups[] = $parent->_id;
+                }
+
+                Adapter::getInstance()->collection('lots')->updateOne([
+                    '_id' => new ObjectId($request->getAttribute('lot_id'))
+                ], [
+                    'groups' => array_map(function ($group) {
+                        return $group->__toString();
+                    }, $groups)
+                ]);
             }
 
             $json = Revisions::add($json);
@@ -118,11 +156,11 @@ class Pages extends CoreRoute
                 }, $groups),
                 'created' => [
                     'date' => new UTCDateTime(),
-                    'user' => $this->container->token->getClaim('user')->id
+                    'user' => $this->token->getClaim('user')->id
                 ]
             ]);
 
-            $body['page']['revision']['lot'] = $lot->insertedId->__toString();
+            $body['page']['revision']['lot'] = $lot->getInsertedId()->__toString();
 
             $result = Adapter::getInstance()->collection('pages')->insertOne($body['page'], [
                 'upsert' => true,
