@@ -69,6 +69,49 @@ class Groups extends CoreRoute
         });
     }
 
+    public function registerUpdateRoutes()
+    {
+        $this->app->post('', function (Request $request, Response $response) {
+            $body = $request->getParsedBody();
+            $collection = Adapter::getInstance()->collection('groups');
+            $groups = $collection->find([
+                'users' => (int)$body['user']
+            ])->toArray();
+
+            foreach ($groups as $group) {
+                $group = Adapter::getInstance()->toJSON($group, true);
+
+                $collection->updateOne([
+                    '_id' => new ObjectId($group['_id'])
+                ], [
+                    '$set' => [
+                        'users' => array_diff($group['users'], [$body['user']])
+                    ]
+                ]);
+            }
+
+            // Get the groups that have been send.
+            foreach ($body['groups'] as $groupID) {
+                $group = $collection->findOne([
+                    '_id' => new ObjectId($groupID)
+                ]);
+
+                $group['users'][] = (int)$body['user'];
+
+                $collection->updateOne([
+                    '_id' => $group['_id']
+                ], [
+                    '$set' => [
+                        'users' => $group['users']
+                    ]
+                ]);
+            }
+
+            // Get all the groups that have the current userID in it.
+            return $response->withStatus(200);
+        });
+    }
+
     public function getGroupMiddleware()
     {
         return [
