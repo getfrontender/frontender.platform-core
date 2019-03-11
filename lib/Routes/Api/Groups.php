@@ -37,6 +37,17 @@ class Groups extends CoreRoute
 
         $self = $this;
 
+        $this->app->get('/{group_id}', function (Request $request, Response $response) {
+            $group = Adapter::getInstance()->collection('groups')->findOne([
+                '_id' => new ObjectId($request->getAttribute('group_id'))
+            ]);
+            $group = Adapter::getInstance()->toJSON($group);
+
+            return $response->withJson(
+                $group
+            );
+        });
+
         $this->app->get('', function (Request $request, Response $response) use ($self) {
             // $self->isAuthorized('space-administrator', $request, $response);
 
@@ -116,6 +127,24 @@ class Groups extends CoreRoute
             }
 
             // Get all the groups that have the current userID in it.
+            return $response->withStatus(200);
+        });
+
+        $this->app->post('/{group_id}', function (Request $request, Response $response) {
+            $body = $request->getParsedBody();
+            $group = $body['group'];
+
+            unset($group['_id']);
+            if ($group['parent_group_id'] && !($group['parent_group_id'] instanceof ObjectId)) {
+                $group['parent_group_id'] = new ObjectId($group['parent_group_id']);
+            }
+
+            Adapter::getInstance()->collection('groups')->updateOne([
+                '_id' => new ObjectId($request->getAttribute('group_id'))
+            ], [
+                '$set' => $group
+            ]);
+
             return $response->withStatus(200);
         });
     }
