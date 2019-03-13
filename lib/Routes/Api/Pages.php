@@ -64,7 +64,7 @@ class Pages extends CoreRoute
                 $groupWithParents = Adapter::getInstance()->collection('groups')->aggregate([
                     [
                         '$match' => [
-                            '_id' => new ObjectId($body['group'])
+                            '_id' => new ObjectId($group)
                         ]
                     ],
                     [
@@ -88,9 +88,11 @@ class Pages extends CoreRoute
                 Adapter::getInstance()->collection('lots')->updateOne([
                     '_id' => new ObjectId($request->getAttribute('lot_id'))
                 ], [
-                    'groups' => array_map(function ($group) {
-                        return $group->__toString();
-                    }, $groups)
+                    '$set' => [
+                        'groups' => array_map(function ($group) {
+                            return $group->__toString();
+                        }, $groups)
+                    ]
                 ]);
             }
 
