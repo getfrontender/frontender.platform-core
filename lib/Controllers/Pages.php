@@ -19,6 +19,7 @@ namespace Frontender\Core\Controllers;
 
 use MongoDB\BSON\ObjectId;
 use MongoDB\Driver\Query;
+use Frontender\Core\DB\Adapter;
 
 class Pages extends Core
 {
@@ -294,11 +295,51 @@ class Pages extends Core
 
     public function actionAdd($item, $collection = 'pages')
     {
-        unset($item['_id']);
-        $item['revision']['hash'] = md5(json_encode($item['definition']));
-        $item['devision']['date'] = gmdate('Y-m-d\TH:i:s\Z');
+        $page = $item['page'];
 
-        return $this->adapter->collection($collection)->insertOne($item);
+        if (isset($item['group'])) {
+            // I will get the groups and from there I will get the parents.
+            $groupWithParents = Adapter::getInstance()->collection('groups')->aggregate([
+                [
+                    '$match' => [
+                        '_id' => new ObjectId($item['group'])
+                    ]
+                ],
+                [
+                    '$graphLookup' => [
+                        'from' => 'groups',
+                        'startWith' => '$parent_group_id',
+                        'connectFromField' => 'parent_group_id',
+                        'connectToField' => '_id',
+                        'as' => 'parents'
+                    ]
+                ]
+            ])->toArray();
+            $groupWithParents = array_shift($groupWithParents);
+
+            $groups[] = $groupWithParents->_id;
+
+            foreach ($groupWithParents->parents as $parent) {
+                $groups[] = $parent->_id;
+            }
+
+            $lot = Adapter::getInstance()->collection('lots')->insertOne([
+                'groups' => array_map(function ($group) {
+                    return $group->__toString();
+                }, $groups),
+                'created' => [
+                    'date' => time()
+                ]
+            ]);
+
+            $page['revision']['lot'] = $lot->getInsertedId()->__toString();
+        }
+
+        unset($page['_id']);
+        $page['revision']['hash'] = md5(json_encode($page['definition']));
+        $page['devision']['date'] = gmdate('Y-m-d\TH:i:s\Z');
+
+        return $this->adapter->collection($collection)->insertOne( $page);
     }
 
     public function actionSanitize($pageJson)
