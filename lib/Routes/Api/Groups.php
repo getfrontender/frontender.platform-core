@@ -31,11 +31,41 @@ class Groups extends CoreRoute
 
     use Authorizable;
 
+    public function registerCreateRoutes()
+    {
+        $this->app->put('', function (Request $request, Response $response) {
+            // Here we will create a new group.
+            $group = $request->getParsedBodyParam('group');
+            $group['users'] = (array)$group['users'];
+
+            $group['users'] = array_map(function ($user) {
+                return (int)$user;
+            }, $group['users']);
+
+            if (isset($group['parent_group_id'])) {
+                $group['parent_group_id'] = new ObjectId($group['parent_group_id']);
+            }
+
+            Adapter::getInstance()->collection('groups')->insertOne($group);
+
+            return $response->withStatus(200);
+        });
+    }
+
     public function registerReadRoutes()
     {
         parent::registerReadRoutes();
 
         $self = $this;
+
+        $this->app->get('/user/{user_id}', function (Request $request, Response $response) {
+            $userGroups = Adapter::getInstance()->collection('groups')->find([
+                'users' => (int)$request->getAttribute('user_id')
+            ])->toArray();
+            $userGroups = Adapter::getInstance()->toJSON($userGroups, true);
+
+            return $response->withJson($userGroups);
+        });
 
         $this->app->get('/{group_id}', function (Request $request, Response $response) {
             $group = Adapter::getInstance()->collection('groups')->findOne([
@@ -137,6 +167,10 @@ class Groups extends CoreRoute
             unset($group['_id']);
             if ($group['parent_group_id'] && !($group['parent_group_id'] instanceof ObjectId)) {
                 $group['parent_group_id'] = new ObjectId($group['parent_group_id']);
+            }
+
+            if (isset($group['users'])) {
+                $group['users'] = (array)$group['users'];
             }
 
             Adapter::getInstance()->collection('groups')->updateOne([
