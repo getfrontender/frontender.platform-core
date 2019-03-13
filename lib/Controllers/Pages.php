@@ -168,7 +168,7 @@ class Pages extends Core
             [
                 '$match' => [
                     'lot.groups' => [
-                        '$all' => array_map(function ($group) {
+                        '$in' => array_map(function ($group) {
                             return $group->_id->__toString();
                         }, $filter['groups'])
                     ]
@@ -339,7 +339,7 @@ class Pages extends Core
         $page['revision']['hash'] = md5(json_encode($page['definition']));
         $page['devision']['date'] = gmdate('Y-m-d\TH:i:s\Z');
 
-        return $this->adapter->collection($collection)->insertOne( $page);
+        return $this->adapter->collection($collection)->insertOne($page);
     }
 
     public function actionSanitize($pageJson)
