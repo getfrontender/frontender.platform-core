@@ -104,17 +104,6 @@ class Pages extends Core
                 ]
             ],
             [
-                '$match' => [
-                    'lot.groups' => [
-                        '$in' => [
-                            array_map(function ($group) {
-                                return $group->_id->__toString();
-                            }, $filter['groups'])
-                        ]
-                    ]
-                ]
-            ],
-            [
                 '$project' => [
                     '_id' => '$_id',
                     'uuid' => '$uuid',
@@ -172,6 +161,15 @@ class Pages extends Core
                                 'else' => false
                             ]
                         ]
+                    ]
+                ]
+            ],
+            [
+                '$match' => [
+                    'lot.groups' => [
+                        '$all' => array_map(function ($group) {
+                            return $group->_id->__toString();
+                        }, $filter['groups'])
                     ]
                 ]
             ],
