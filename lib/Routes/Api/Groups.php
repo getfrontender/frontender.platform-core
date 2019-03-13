@@ -183,6 +183,49 @@ class Groups extends CoreRoute
         });
     }
 
+    public function registerDeleteRoutes()
+    {
+        parent::registerDeleteRoutes();
+
+        $this->app->delete('/{group_id}', function (Request $request, Response $response) {
+            $groupsToBeRemoved = [];
+            $groupsCollection = Adapter::getInstance()->collection('groups');
+            $lotsCollection = Adapter::getInstance()->collection('lots');
+
+            function getChildGroups($group, &$collection, $groupsCollection)
+            {
+                $collection[] = $group;
+
+                $children = $groupsCollection->find([
+                    'parent_group_id' => new ObjectId($group)
+                ])->toArray();
+
+                foreach ($children as $child) {
+                    getChildGroups($child->_id->__toString(), $collection, $groupsCollection);
+                }
+            };
+
+            getChildGroups($request->getAttribute('group_id'), $groupsToBeRemoved, $groupsCollection);
+
+
+            foreach ($groupsToBeRemoved as $group) {
+                // Find all the lots that belong to this group.
+                $lotsCollection->updateMany([
+                    'groups' => $group
+                ], [
+                    '$pull' => [
+                        'groups' => $group
+                    ]
+                ]);
+                $groupsCollection->deleteOne([
+                    '_id' => new ObjectId($group)
+                ]);
+            }
+
+            return $response->withStatus(204);
+        });
+    }
+
     public function getGroupMiddleware()
     {
         return [
