@@ -65,6 +65,7 @@ class Groups extends CoreRoute
             $userGroups = Adapter::getInstance()->toJSON($userGroups);
 
             $userGroups = array_map(function ($group) use ($self) {
+                $self->appendChildren($group);
                 $self->appendParents($group);
 
                 return $group;
@@ -99,23 +100,6 @@ class Groups extends CoreRoute
 
             $groupsCollection = Adapter::getInstance()->collection('groups');
 
-            function appendChildren(&$group, $groupsCollection, $self)
-            {
-                $children = $groupsCollection->find([
-                    'parent_group_id' => new ObjectId($group->_id)
-                ])->toArray();
-                $children = Adapter::getInstance()->toJSON($children);
-
-                if ($children) {
-                    $group->children = array_map(function ($group) use ($groupsCollection, $self) {
-                        appendChildren($group, $groupsCollection, $self);
-                        $self->appendParents($group);
-
-                        return $group;
-                    }, $children);
-                }
-            }
-
             if ($request->getQueryParam('user')) {
                 // I don't need to have the entire tree, Frontender will render that for us.
                 // So I only need to groups to which I am directly connected.
@@ -132,7 +116,7 @@ class Groups extends CoreRoute
                 $rootGroup = array_shift($rootGroup);
                 $rootGroup = Adapter::getInstance()->toJSON($rootGroup);
 
-                appendChildren($rootGroup, $groupsCollection, $self);
+                $self->appendChildren($rootGroup);
                 $self->appendParents($rootGroup);
             }
 
@@ -268,6 +252,24 @@ class Groups extends CoreRoute
             $group->parent = $parent;
 
             $this->appendParents($group->parent);
+        }
+    }
+
+    public function appendChildren(&$group)
+    {
+        $self = $this;
+        $children = Adapter::getInstance()->collection('groups')->find([
+            'parent_group_id' => new ObjectId($group->_id)
+        ])->toArray();
+        $children = Adapter::getInstance()->toJSON($children);
+
+        if ($children) {
+            $group->children = array_map(function ($group) use ($self) {
+                $self->appendChildren($group);
+                $self->appendParents($group);
+
+                return $group;
+            }, $children);
         }
     }
 }
