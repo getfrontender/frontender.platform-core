@@ -58,13 +58,28 @@ class Groups extends CoreRoute
 
         $self = $this;
 
-        $this->app->get('/user/{user_id}', function (Request $request, Response $response) {
+        $this->app->get('/user/{user_id}', function (Request $request, Response $response) use ($self) {
             $userGroups = Adapter::getInstance()->collection('groups')->find([
                 'users' => (int)$request->getAttribute('user_id')
             ])->toArray();
-            $userGroups = Adapter::getInstance()->toJSON($userGroups, true);
+            $userGroups = Adapter::getInstance()->toJSON($userGroups);
+
+            $userGroups = array_map(function ($group) use ($self) {
+                $self->appendParents($group);
+
+                return $group;
+            }, $userGroups);
 
             return $response->withJson($userGroups);
+        });
+
+        $this->app->get('/{group_id}/children', function (Request $request, Response $response) {
+            $groups = Adapter::getInstance()->collection('groups')->find([
+                'parent_group_id' => new ObjectId($request->getAttribute('group_id'))
+            ])->toArray();
+            $groups = Adapter::getInstance()->toJSON($groups, true);
+
+            return $response->withJson($groups);
         });
 
         $this->app->get('/{group_id}', function (Request $request, Response $response) {
@@ -105,6 +120,8 @@ class Groups extends CoreRoute
                 $rootGroup = $groupsCollection->find([
                     'users' => $request->getQueryParam('user')
                 ])->find()->toArray();
+
+                $self->appendParents($rootGroup);
             } else {
                 $rootGroup = $groupsCollection->find([
                     'parent_group_id' => ['$exists' => false]
@@ -112,6 +129,7 @@ class Groups extends CoreRoute
                 $rootGroup = array_shift($rootGroup);
 
                 appendChildren($rootGroup, $groupsCollection);
+                $self->appendParents($rootGroup);
             }
 
             return $response->withJson($rootGroup);
@@ -233,5 +251,19 @@ class Groups extends CoreRoute
                 $this->app->getContainer()
             )
         ];
+    }
+
+    private function appendParents(&$group)
+    {
+        if (isset($group->parent_group_id) && !empty($group->parent_group_id)) {
+            $parent = Adapter::getInstance()->collection('groups')->findOne([
+                '_id' => new ObjectId($group->parent_group_id)
+            ]);
+            $parent = Adapter::getInstance()->toJSON($parent);
+
+            $group->parent = $parent;
+
+            $this->appendParents($group->parent);
+        }
     }
 }
