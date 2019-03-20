@@ -59,7 +59,12 @@ class Teams extends CoreRoute
         $self = $this;
 
         $this->app->get('/user/{user_id}', function (Request $request, Response $response) use ($self) {
-            $self->isAuthorized('manage-users', $request, $response);
+            // I have to check if the user requesting the groups is the logged in user, if so I will let it pass.
+            $user = $self->app->getContainer()->get('token')->getToken()->getClaim('sub')->getValue();
+
+            if ($user != $request->getAttribute('user_id')) {
+                $self->isAuthorized('manage-users', $request, $response);
+            }
 
             $userTeams = Adapter::getInstance()->collection('teams')->find([
                 'users' => (int)$request->getAttribute('user_id')
