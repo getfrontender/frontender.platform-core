@@ -167,10 +167,10 @@ class Pages extends Core
             ],
             [
                 '$match' => [
-                    'lot.groups' => [
-                        '$in' => array_map(function ($group) {
-                            return $group->_id->__toString();
-                        }, $filter['groups'])
+                    'lot.teams' => [
+                        '$in' => array_map(function ($team) {
+                            return $team->_id->__toString();
+                        }, $filter['teams'])
                     ]
                 ]
             ],
@@ -297,36 +297,36 @@ class Pages extends Core
     {
         $page = $item['page'];
 
-        if (isset($item['group'])) {
-            // I will get the groups and from there I will get the parents.
-            $groupWithParents = Adapter::getInstance()->collection('groups')->aggregate([
+        if (isset($item['team'])) {
+            // I will get the teams and from there I will get the parents.
+            $teamWithParents = Adapter::getInstance()->collection('teams')->aggregate([
                 [
                     '$match' => [
-                        '_id' => new ObjectId($item['group'])
+                        '_id' => new ObjectId($item['team'])
                     ]
                 ],
                 [
                     '$graphLookup' => [
-                        'from' => 'groups',
-                        'startWith' => '$parent_group_id',
-                        'connectFromField' => 'parent_group_id',
+                        'from' => 'teams',
+                        'startWith' => '$parent_team_id',
+                        'connectFromField' => 'parent_team_id',
                         'connectToField' => '_id',
                         'as' => 'parents'
                     ]
                 ]
             ])->toArray();
-            $groupWithParents = array_shift($groupWithParents);
+            $teamWithParents = array_shift($teamWithParents);
 
-            $groups[] = $groupWithParents->_id;
+            $teams[] = $teamWithParents->_id;
 
-            foreach ($groupWithParents->parents as $parent) {
-                $groups[] = $parent->_id;
+            foreach ($teamWithParents->parents as $parent) {
+                $teams[] = $parent->_id;
             }
 
             $lot = Adapter::getInstance()->collection('lots')->insertOne([
-                'groups' => array_map(function ($group) {
-                    return $group->__toString();
-                }, $groups),
+                'teams' => array_map(function ($team) {
+                    return $team->__toString();
+                }, $teams),
                 'created' => [
                     'date' => time()
                 ]

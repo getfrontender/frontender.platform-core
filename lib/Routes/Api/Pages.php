@@ -47,9 +47,9 @@ class Pages extends CoreRoute
 
         $this->app->put('/{lot_id}/revision', function (Request $request, Response $response) {
             $json = $request->getParsedBody();
-            $group = $json['group'];
+            $team = $json['team'];
             $json = $json['page'];
-            $groups = [];
+            $teams = [];
 
             if (isset($this->token->getClaim('user')->id)) {
                 $json['revision']['user']['id'] = $this->token->getClaim('user')->id;
@@ -60,16 +60,16 @@ class Pages extends CoreRoute
             }
 
             if (isset($group)) {
-                // I will get the groups and from there I will get the parents.
-                $groupWithParents = Adapter::getInstance()->collection('groups')->aggregate([
+                // I will get the teams and from there I will get the parents.
+                $teamWithParents = Adapter::getInstance()->collection('teams')->aggregate([
                     [
                         '$match' => [
-                            '_id' => new ObjectId($group)
+                            '_id' => new ObjectId($team)
                         ]
                     ],
                     [
                         '$graphLookup' => [
-                            'from' => 'groups',
+                            'from' => 'teams',
                             'startWith' => '$parent_group_id',
                             'connectFromField' => 'parent_group_id',
                             'connectToField' => '_id',
@@ -77,21 +77,21 @@ class Pages extends CoreRoute
                         ]
                     ]
                 ])->toArray();
-                $groupWithParents = array_shift($groupWithParents);
+                $teamWithParents = array_shift($teamWithParents);
 
-                $groups[] = $groupWithParents->_id;
+                $teams[] = $teamWithParents->_id;
 
-                foreach ($groupWithParents->parents as $parent) {
-                    $groups[] = $parent->_id;
+                foreach ($teamWithParents->parents as $parent) {
+                    $teams[] = $parent->_id;
                 }
 
                 Adapter::getInstance()->collection('lots')->updateOne([
                     '_id' => new ObjectId($request->getAttribute('lot_id'))
                 ], [
                     '$set' => [
-                        'groups' => array_map(function ($group) {
+                        'teams' => array_map(function ($team) {
                             return $group->__toString();
-                        }, $groups)
+                        }, $teams)
                     ]
                 ]);
             }
@@ -123,11 +123,11 @@ class Pages extends CoreRoute
             // We need to create a lot here. But we will also receive the group that is selected.
             // For the group we need all the parents.
             $body = $request->getParsedBody();
-            $groups = [];
+            $teams = [];
 
             if (isset($body['group'])) {
-                // I will get the groups and from there I will get the parents.
-                $groupWithParents = Adapter::getInstance()->collection('groups')->aggregate([
+                // I will get the teams and from there I will get the parents.
+                $teamWithParents = Adapter::getInstance()->collection('teams')->aggregate([
                     [
                         '$match' => [
                             '_id' => new ObjectId($body['group'])
@@ -135,7 +135,7 @@ class Pages extends CoreRoute
                     ],
                     [
                         '$graphLookup' => [
-                            'from' => 'groups',
+                            'from' => 'teams',
                             'startWith' => '$parent_group_id',
                             'connectFromField' => 'parent_group_id',
                             'connectToField' => '_id',
@@ -143,19 +143,19 @@ class Pages extends CoreRoute
                         ]
                     ]
                 ])->toArray();
-                $groupWithParents = array_shift($groupWithParents);
+                $groupWithParents = array_shift($teamWithParents);
 
-                $groups[] = $groupWithParents->_id;
+                $teams[] = $teamWithParents->_id;
 
-                foreach ($groupWithParents->parents as $parent) {
-                    $groups[] = $parent->_id;
+                foreach ($teamWithParents->parents as $parent) {
+                    $teams[] = $parent->_id;
                 }
             }
 
             $lot = Adapter::getInstance()->collection('lots')->insertOne([
-                'groups' => array_map(function ($group) {
+                'teams' => array_map(function ($group) {
                     return $group->__toString();
-                }, $groups),
+                }, $teams),
                 'created' => [
                     'date' => new UTCDateTime(),
                     'user' => $this->token->getClaim('user')->id
@@ -332,7 +332,7 @@ class Pages extends CoreRoute
                 'locale' => !empty($request->getParsedBodyParam('locale')) ? $request->getParsedBodyParam('locale') : 'en-GB',
                 'filter' => $filter,
                 'skip' => (int)$request->getParsedBodyParam('skip'),
-                'groups' => Adapter::getInstance()->collection('groups')->find([
+                'teams' => Adapter::getInstance()->collection('teams')->find([
                     'users' => (int)$this->token->getClaim('sub')
                 ])->toArray()
             ]);
