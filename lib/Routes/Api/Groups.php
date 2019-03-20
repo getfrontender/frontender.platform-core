@@ -136,6 +136,10 @@ class Groups extends CoreRoute
             foreach ($groups as $group) {
                 $group = Adapter::getInstance()->toJSON($group, true);
 
+                if (isset($group['users'])) {
+                    $group['users'] = (array)$group['users'];
+                }
+
                 $collection->updateOne([
                     '_id' => new ObjectId($group['_id'])
                 ], [
