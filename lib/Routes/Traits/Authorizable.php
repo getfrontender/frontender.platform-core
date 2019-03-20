@@ -25,7 +25,7 @@ use Frontender\Core\Routes\Exceptions\Unauthorized;
 
 trait Authorizable
 {
-    public function isAuthorized(string $roleRequired, Request $request, Response $response): void
+    public function isAuthorized(string $requiredPermission, Request $request, Response $response): void
     {
         // We will specify which role is required for this action.
         // If the role isn't found in the current roles (for this site)
@@ -39,14 +39,10 @@ trait Authorizable
         $settings = array_shift($settings);
         $site_id = $settings->site_id;
         $token = $this->app->getContainer()['token'];
-        $roles = $token->getClaim('roles');
-        $rolesSites = array_flip(array_column($roles, 'site_id'));
+        $permissions = $token->getClaim('permissions');
 
-        if (isset($rolesSites[$site_id])) {
-            $index = $rolesSites[$site_id];
-            $roles = array_column((array)$roles[$index]->roles, 'role_slug');
-
-            $allowed = in_array($roleRequired, $roles);
+        if ($token->getClaim('site_id') == $site_id) {
+            $allowed = in_array($requiredPermission, $permissions);
         }
 
         if (!$allowed) {

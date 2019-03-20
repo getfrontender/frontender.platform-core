@@ -96,7 +96,7 @@ class Teams extends CoreRoute
         });
 
         $this->app->get('', function (Request $request, Response $response) use ($self) {
-            // $self->isAuthorized('space-administrator', $request, $response);
+            $self->isAuthorized('manage-users', $request, $response);
 
             $teamsCollection = Adapter::getInstance()->collection('teams');
 
@@ -236,7 +236,7 @@ class Teams extends CoreRoute
         });
     }
 
-    public function getteamMiddleware()
+    public function getGroupMiddleware()
     {
         return [
             new TokenCheck(
