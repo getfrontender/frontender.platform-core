@@ -293,9 +293,13 @@ class Pages extends Core
         return $data;
     }
 
-    public function actionAdd($item, $collection = 'pages')
+    public function actionAdd($page, $collection = 'pages')
     {
-        $page = $item['page'];
+        if (!isset($page['team'])) {
+            // We need to retreive the first team, this is always the team that is the Root.
+            $team = Adapter::getInstance()->collection('teams')->findOne();
+            $page['team'] = $team['_id']->__toString();
+        }
 
         if (isset($page['team'])) {
             $team = $page['team'];
