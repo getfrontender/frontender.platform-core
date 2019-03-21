@@ -63,7 +63,7 @@ class Teams extends CoreRoute
             $user = $self->app->getContainer()->get('token')->getToken()->getClaim('sub')->getValue();
 
             if ($user != $request->getAttribute('user_id')) {
-                $self->isAuthorized('manage-users', $request, $response);
+                $response = $self->isAuthorized('manage-users', $request, $response);
             }
 
             $userTeams = Adapter::getInstance()->collection('teams')->find([
@@ -82,7 +82,7 @@ class Teams extends CoreRoute
         });
 
         $this->app->get('/{team_id}/children', function (Request $request, Response $response) use ($self) {
-            $self->isAuthorized('manage-users', $request, $response);
+            $response = $self->isAuthorized('manage-users', $request, $response);
 
             $teams = Adapter::getInstance()->collection('teams')->find([
                 'parent_team_id' => new ObjectId($request->getAttribute('team_id'))
@@ -93,7 +93,7 @@ class Teams extends CoreRoute
         });
 
         $this->app->get('/{team_id}', function (Request $request, Response $response) use ($self) {
-            $self->isAuthorized('manage-users', $request, $response);
+            $response = $self->isAuthorized('manage-users', $request, $response);
 
             $team = Adapter::getInstance()->collection('teams')->findOne([
                 '_id' => new ObjectId($request->getAttribute('team_id'))
@@ -107,7 +107,7 @@ class Teams extends CoreRoute
         });
 
         $this->app->get('', function (Request $request, Response $response) use ($self) {
-            $self->isAuthorized('manage-users', $request, $response);
+            $response = $self->isAuthorized('manage-users', $request, $response);
 
             $teamsCollection = Adapter::getInstance()->collection('teams');
 
@@ -140,7 +140,7 @@ class Teams extends CoreRoute
         $self = $this;
 
         $this->app->post('', function (Request $request, Response $response) use ($self) {
-            $self->isAuthorized('manage-users', $request, $response);
+            $response = $self->isAuthorized('manage-users', $request, $response);
 
             $body = $request->getParsedBody();
             $collection = Adapter::getInstance()->collection('teams');
@@ -186,7 +186,7 @@ class Teams extends CoreRoute
         });
 
         $this->app->post('/{team_id}', function (Request $request, Response $response) use ($self) {
-            $self->isAuthorized('manage-users', $request, $response);
+            $response = $self->isAuthorized('manage-users', $request, $response);
 
             $body = $request->getParsedBody();
             $team = $body['team'];
@@ -217,7 +217,7 @@ class Teams extends CoreRoute
         $self = $this;
 
         $this->app->delete('/{team_id}', function (Request $request, Response $response) use ($self) {
-            $self->isAuthorized('manage-users', $request, $response);
+            $response = $self->isAuthorized('manage-users', $request, $response);
 
             $teamsToBeRemoved = [];
             $teamsCollection = Adapter::getInstance()->collection('teams');

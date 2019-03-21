@@ -25,12 +25,8 @@ use Frontender\Core\Routes\Exceptions\Unauthorized;
 
 trait Authorizable
 {
-    public function isAuthorized(string $requiredPermission, Request $request, Response $response): void
+    public function isAuthorized(string $requiredPermission, Request $request, Response &$response): Response
     {
-        // We will specify which role is required for this action.
-        // If the role isn't found in the current roles (for this site)
-        // then we will not allow the action.
-
         // By default we will not allow the action.
         $allowed = false;
 
@@ -39,14 +35,41 @@ trait Authorizable
         $settings = array_shift($settings);
         $site_id = $settings->site_id;
         $token = $this->app->getContainer()['token'];
-        $permissions = $token->getClaim('permissions');
 
-        if ($token->getClaim('site_id') == $site_id) {
-            $allowed = in_array($requiredPermission, $permissions);
+        if ($token->getClaim('site_id') != $site_id) {
+            try {
+                $client = new \GuzzleHttp\Client();
+                $res = $client->get('http://manager.getfrontender.com/api/users/index.php?id=' . $token->getClaim('sub') . '&site=' . $site_id, [
+                    'headers' => [
+                        'X-Token' => $request->getHeader('X-Token')[0]
+                    ]
+                ]);
+
+                $token = $res->getHeader('X-Token');
+
+                if ($token) {
+                    $token = $token[0];
+                }
+
+                // I know not best practice.
+                $response = $response->withAddedHeader('X-Token', $token);
+                $token = Tokenize::getInstance()->parse($token);
+            } catch (\Exception $e) {
+                echo $e->getMessage();
+                die();
+            } catch (\Error $e) {
+                echo $e->getMessage();
+                die();
+            }
         }
+
+        $permissions = $token->getClaim('permissions');
+        $allowed = in_array($requiredPermission, $permissions);
 
         if (!$allowed) {
             throw new Unauthorized($request, $response);
         }
+
+        return $response;
     }
 }

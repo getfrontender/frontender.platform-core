@@ -43,7 +43,7 @@ class Sites extends CoreRoute
         });
 
         $this->app->get('/reset_settings', function (Request $request, Response $response) use ($self) {
-            $self->isAuthorized('manage-site-settings', $request, $response);
+            $response = $self->isAuthorized('manage-site-settings', $request, $response);
 
             $client = new \GuzzleHttp\Client();
             $res = $client->get('http://manager.getfrontender.com/api/sites/?id=' . $request->getQueryParam('site_id'), [
@@ -73,7 +73,7 @@ class Sites extends CoreRoute
         $self = $this;
 
         $this->app->post('/settings', function (Request $request, Response $response) use ($self) {
-            $self->isAuthorized('manage-site-settings', $request, $response);
+            $response = $self->isAuthorized('manage-site-settings', $request, $response);
 
             $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
             $setting = array_shift($settings);
