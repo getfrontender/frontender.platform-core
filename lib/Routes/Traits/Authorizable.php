@@ -48,12 +48,9 @@ trait Authorizable
                 $token = $res->getHeader('X-Token');
 
                 if ($token) {
-                    $token = $token[0];
+                    $response = $response->withAddedHeader('X-Token', $token[0]);
+                    $token = Tokenize::getInstance()->parse($token[0]);
                 }
-
-                // I know not best practice.
-                $response = $response->withAddedHeader('X-Token', $token);
-                $token = Tokenize::getInstance()->parse($token);
             } catch (\Exception $e) {
                 echo $e->getMessage();
                 die();
