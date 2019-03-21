@@ -297,12 +297,15 @@ class Pages extends Core
     {
         $page = $item['page'];
 
-        if (isset($item['team'])) {
+        if (isset($page['team'])) {
+            $team = $page['team'];
+            unset($page['team']);
+
             // I will get the teams and from there I will get the parents.
             $teamWithParents = Adapter::getInstance()->collection('teams')->aggregate([
                 [
                     '$match' => [
-                        '_id' => new ObjectId($item['team'])
+                        '_id' => new ObjectId($team)
                     ]
                 ],
                 [

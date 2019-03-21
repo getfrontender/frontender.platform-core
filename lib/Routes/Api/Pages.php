@@ -47,9 +47,12 @@ class Pages extends CoreRoute
 
         $this->app->put('/{lot_id}/revision', function (Request $request, Response $response) {
             $json = $request->getParsedBody();
-            $team = $json['team'];
-            $json = $json['page'];
             $teams = [];
+
+            if (isset($json['team'])) {
+                $team = $json['team'];
+                unset($json['team']);
+            }
 
             if (isset($this->token->getClaim('user')->id)) {
                 $json['revision']['user']['id'] = $this->token->getClaim('user')->id;
@@ -59,7 +62,7 @@ class Pages extends CoreRoute
                 $json['revision']['user']['name'] = $this->token->getClaim('user')->name;
             }
 
-            if (isset($group)) {
+            if (isset($team)) {
                 // I will get the teams and from there I will get the parents.
                 $teamWithParents = Adapter::getInstance()->collection('teams')->aggregate([
                     [
@@ -70,8 +73,8 @@ class Pages extends CoreRoute
                     [
                         '$graphLookup' => [
                             'from' => 'teams',
-                            'startWith' => '$parent_group_id',
-                            'connectFromField' => 'parent_group_id',
+                            'startWith' => '$parent_team_id',
+                            'connectFromField' => 'parent_team_id',
                             'connectToField' => '_id',
                             'as' => 'parents'
                         ]
@@ -90,7 +93,7 @@ class Pages extends CoreRoute
                 ], [
                     '$set' => [
                         'teams' => array_map(function ($team) {
-                            return $group->__toString();
+                            return $team->__toString();
                         }, $teams)
                     ]
                 ]);
