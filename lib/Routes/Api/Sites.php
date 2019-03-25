@@ -46,7 +46,7 @@ class Sites extends CoreRoute
             $response = $self->isAuthorized('manage-site-settings', $request, $response);
 
             $client = new \GuzzleHttp\Client();
-            $res = $client->get('http://manager.getfrontender.com/api/sites/?id=' . $request->getQueryParam('site_id'), [
+            $res = $client->get($this->config->fem_host . '/api/sites/?id=' . $request->getQueryParam('site_id'), [
                 'headers' => [
                     'X-Token' => $request->getHeader('X-Token')
                 ]

@@ -39,7 +39,7 @@ trait Authorizable
         if ($token->getClaim('site_id') != $site_id) {
             try {
                 $client = new \GuzzleHttp\Client();
-                $res = $client->get('http://manager.getfrontender.com/api/users/index.php?id=' . $token->getClaim('sub') . '&site=' . $site_id, [
+                $res = $client->get($this->app->getContainer()->config->fem_host . '/api/users/index.php?id=' . $token->getClaim('sub') . '&site=' . $site_id, [
                     'headers' => [
                         'X-Token' => $request->getHeader('X-Token')[0]
                     ]
