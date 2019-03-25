@@ -42,8 +42,8 @@ class Teams extends CoreRoute
                 return (int)$user;
             }, $team['users']);
 
-            if (isset($team['parent_teams_id'])) {
-                $team['parent_teams_id'] = new ObjectId($team['parent_team_id']);
+            if (isset($team['parent_team_id'])) {
+                $team['parent_team_id'] = new ObjectId($team['parent_team_id']);
             }
 
             Adapter::getInstance()->collection('teams')->insertOne($team);
@@ -238,6 +238,14 @@ class Teams extends CoreRoute
 
             getChildteams($request->getAttribute('team_id'), $teamsToBeRemoved, $teamsCollection);
 
+            // Get the original team.
+            $team = Adapter::getInstance()->collection('teams')->findOne([
+                '_id' => new ObjectId($request->getAttribute('team_id'))
+            ]);
+
+            if (!isset($team->parent_team_id) || empty($team->parent_team_id)) {
+                return $response->withStatus(200);
+            }
 
             foreach ($teamsToBeRemoved as $team) {
                 // Find all the lots that belong to this team.
