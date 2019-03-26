@@ -213,10 +213,12 @@ class Teams extends CoreRoute
                     '_id' => new ObjectId($team)
                 ], [
                     '$push' => [
-                        'users' => (int)$request->getAttribute('user_id')
+                        'users' => (int)$userID
                     ]
                 ]);
             }
+
+            return $response->withStatus(200);
         });
 
         $this->app->post('/{team_id}', function (Request $request, Response $response) use ($self) {

@@ -51,13 +51,7 @@ trait Authorizable
                     $response = $response->withAddedHeader('X-Token', $token[0]);
                     $token = Tokenize::getInstance()->parse($token[0]);
                 }
-            } catch (\Exception $e) {
-                echo $e->getMessage();
-                die();
-            } catch (\Error $e) {
-                echo $e->getMessage();
-                die();
-            }
+            } catch (\Exception $e) { } catch (\Error $e) { }
         }
 
         $permissions = $token->getClaim('permissions');
