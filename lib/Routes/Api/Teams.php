@@ -165,7 +165,7 @@ class Teams extends CoreRoute
             }
 
             // Get the teams that have been send.
-            foreach ($body['teams'] as $teamID) {
+            foreach ($body['team'] as $teamID) {
                 $team = $collection->findOne([
                     '_id' => new ObjectId($teamID)
                 ]);
@@ -176,13 +176,47 @@ class Teams extends CoreRoute
                     '_id' => $team['_id']
                 ], [
                     '$set' => [
-                        'users' => $team['users']
+                        'users' => (array)$team['users']
                     ]
                 ]);
             }
 
             // Get all the teams that have the current userID in it.
             return $response->withStatus(200);
+        });
+
+        $this->app->post('/user/{user_id}', function (Request $request, Response $response) use ($self) {
+            $user = $self->app->getContainer()->get('token')->getToken()->getClaim('sub')->getValue();
+            $userID = $request->getAttribute('user_id');
+
+            if ($user != $userID) {
+                $response = $self->isAuthorized('manage-users', $request, $response);
+            }
+
+            $teams = $request->getParsedBodyParam('team');
+
+            if (!is_array($teams)) {
+                $teams = [$teams];
+            }
+
+            Adapter::getInstance()->collection('teams')->updateMany([
+                'users' => (int)$userID
+            ], [
+                '$pull' => [
+                    'users' => (int)$userID
+                ]
+            ]);
+
+            // Get all the teams
+            foreach ($teams as $team) {
+                Adapter::getInstance()->collection('teams')->updateOne([
+                    '_id' => new ObjectId($team)
+                ], [
+                    '$push' => [
+                        'users' => (int)$request->getAttribute('user_id')
+                    ]
+                ]);
+            }
         });
 
         $this->app->post('/{team_id}', function (Request $request, Response $response) use ($self) {

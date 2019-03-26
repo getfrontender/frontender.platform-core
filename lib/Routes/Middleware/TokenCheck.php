@@ -61,9 +61,13 @@ class TokenCheck
         }
 
         $response = $next($request, $response);
+        $query = $request->getQueryParams();
 
-        $token->setExpiration(time() + 1800);
-
-        return $response->withHeader($this->_headerName, Tokenize::getInstance()->build($token));
+        if(!isset($query['token']) || $query['token'] === 'true') {
+            $token->setExpiration(time() + 1800);
+            return $response->withHeader($this->_headerName, Tokenize::getInstance()->build($token));
+        } else {
+            return $response;
+        }
     }
 }
