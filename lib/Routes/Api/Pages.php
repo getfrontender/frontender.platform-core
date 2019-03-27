@@ -199,7 +199,10 @@ class Pages extends CoreRoute
                 'direction' => !empty($request->getQueryParam('direction')) ? $request->getQueryParam('direction') : 1,
                 'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB',
                 'filter' => $filter,
-                'skip' => (int)$request->getQueryParam('skip')
+                'skip' => (int)$request->getQueryParam('skip'),
+                'teams' => Adapter::getInstance()->collection('teams')->find([
+                    'users' => (int)$this->token->getClaim('sub')
+                ])->toArray()
             ]);
 
             $json['items'] = Adapter::getInstance()->toJSON($json['items']);
@@ -213,7 +216,10 @@ class Pages extends CoreRoute
                     'collection' => 'public',
                     'sort' => !empty($request->getQueryParam('sort')) ? $request->getQueryParam('sort') : 'definition.name',
                     'direction' => !empty($request->getQueryParam('direction')) ? $request->getQueryParam('direction') : 1,
-                    'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB'
+                    'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB',
+                    'teams' => Adapter::getInstance()->collection('teams')->find([
+                        'users' => (int)$this->token->getClaim('sub')
+                    ])->toArray()
                 ]);
                 $json = Adapter::getInstance()->toJSON($json['items']);
             } catch (\Exception $e) {
@@ -306,7 +312,10 @@ class Pages extends CoreRoute
                     'lot' => $request->getAttribute('lot_id'),
                     'sort' => !empty($request->getQueryParam('sort')) ? $request->getQueryParam('sort') : 'definition.name',
                     'direction' => !empty($request->getQueryParam('direction')) ? $request->getQueryParam('direction') : 1,
-                    'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB'
+                    'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB',
+                    'teams' => Adapter::getInstance()->collection('teams')->find([
+                        'users' => (int)$this->token->getClaim('sub')
+                    ])->toArray()
                 ])
             );
 
