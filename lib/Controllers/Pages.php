@@ -19,6 +19,7 @@ namespace Frontender\Core\Controllers;
 
 use MongoDB\BSON\ObjectId;
 use MongoDB\Driver\Query;
+use Frontender\Core\DB\Adapter;
 
 class Pages extends Core
 {
@@ -89,12 +90,30 @@ class Pages extends Core
                 ]
             ],
             [
+                '$addFields' => [
+                    'lotID' => [
+                        '$toObjectId' => '$revision.lot'
+                    ]
+                ]
+            ],
+            [
+                '$lookup' => [
+                    'from' => 'lots',
+                    'localField' => 'lotID',
+                    'foreignField' => '_id',
+                    'as' => 'lot'
+                ]
+            ],
+            [
                 '$project' => [
                     '_id' => '$_id',
                     'uuid' => '$uuid',
                     'revision' => '$revision',
                     'definition' => '$definition',
                     'foundRoute' => '$foundRoute',
+                    'lot' => [
+                        '$arrayElemAt' => ['$lot', 0]
+                    ],
                     'sortKey' => [
                         '$cond' => [
                             'if' => [
@@ -147,12 +166,22 @@ class Pages extends Core
                 ]
             ],
             [
+                '$match' => [
+                    'lot.teams' => [
+                        '$in' => array_map(function ($team) {
+                            return $team->_id->__toString();
+                        }, $filter['teams'])
+                    ]
+                ]
+            ],
+            [
                 '$sort' => [
                     'sortKey' => (int)$filter['direction']
                 ]
             ],
             ['$match' => $findFilter]
         ];
+
         $total = count($this->adapter->collection($collection)->aggregate($aggrigation, [
             'allowDiskUse' => true
         ])->toArray());
@@ -168,7 +197,7 @@ class Pages extends Core
             'items' => array_map(function ($revision) {
                 $revision['_id'] = $revision['uuid'];
                 unset($revision['uuid']);
-			    // unset( $revision['sortKey'] );
+                // unset( $revision['sortKey'] );
 
                 return $revision;
             }, $revisions)
@@ -264,13 +293,60 @@ class Pages extends Core
         return $data;
     }
 
-    public function actionAdd($item, $collection = 'pages')
+    public function actionAdd($page, $collection = 'pages')
     {
-        unset($item['_id']);
-        $item['revision']['hash'] = md5(json_encode($item['definition']));
-        $item['devision']['date'] = gmdate('Y-m-d\TH:i:s\Z');
+        if (!isset($page['team'])) {
+            // We need to retreive the first team, this is always the team that is the Root.
+            $team = Adapter::getInstance()->collection('teams')->findOne();
+            $page['team'] = $team['_id']->__toString();
+        }
 
-        return $this->adapter->collection($collection)->insertOne($item);
+        if (isset($page['team'])) {
+            $team = $page['team'];
+            unset($page['team']);
+
+            // I will get the teams and from there I will get the parents.
+            $teamWithParents = Adapter::getInstance()->collection('teams')->aggregate([
+                [
+                    '$match' => [
+                        '_id' => new ObjectId($team)
+                    ]
+                ],
+                [
+                    '$graphLookup' => [
+                        'from' => 'teams',
+                        'startWith' => '$parent_team_id',
+                        'connectFromField' => 'parent_team_id',
+                        'connectToField' => '_id',
+                        'as' => 'parents'
+                    ]
+                ]
+            ])->toArray();
+            $teamWithParents = array_shift($teamWithParents);
+
+            $teams[] = $teamWithParents->_id;
+
+            foreach ($teamWithParents->parents as $parent) {
+                $teams[] = $parent->_id;
+            }
+
+            $lot = Adapter::getInstance()->collection('lots')->insertOne([
+                'teams' => array_map(function ($team) {
+                    return $team->__toString();
+                }, $teams),
+                'created' => [
+                    'date' => time()
+                ]
+            ]);
+
+            $page['revision']['lot'] = $lot->getInsertedId()->__toString();
+        }
+
+        unset($page['_id']);
+        $page['revision']['hash'] = md5(json_encode($page['definition']));
+        $page['devision']['date'] = gmdate('Y-m-d\TH:i:s\Z');
+
+        return $this->adapter->collection($collection)->insertOne($page);
     }
 
     public function actionSanitize($pageJson)
@@ -291,9 +367,9 @@ class Pages extends Core
 
         $result = $this->adapter->collection('pages.public')->insertOne($page);
 
-		// If the template_config has a model name and id set then we can create a static reroute in the system.
-		// I will append the page_id to it so we can remove it when there is an update or when we remove the public page.
-		// This only has to happen here, because I don't care about all the other pages in the system.
+        // If the template_config has a model name and id set then we can create a static reroute in the system.
+        // I will append the page_id to it so we can remove it when there is an update or when we remove the public page.
+        // This only has to happen here, because I don't care about all the other pages in the system.
 
         $modelName = array_reduce(['template_config', 'model', 'data', 'model'], function ($carry, $key) {
             if (!isset($carry[$key]) || !$carry) {

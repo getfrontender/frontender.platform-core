@@ -27,9 +27,13 @@ class Sites extends CoreRoute
 {
     protected $group = '/api/sites';
 
+    use Authorizable;
+
     public function registerReadRoutes()
     {
         parent::registerReadRoutes();
+
+        $self = $this;
 
         $this->app->get('/settings', function (Request $request, Response $response) {
             $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
@@ -38,9 +42,11 @@ class Sites extends CoreRoute
             return $response->withJson($setting ?? new \stdClass());
         });
 
-        $this->app->get('/reset_settings', function (Request $request, Response $response) {
+        $this->app->get('/reset_settings', function (Request $request, Response $response) use ($self) {
+            $response = $self->isAuthorized('manage-site-settings', $request, $response);
+
             $client = new \GuzzleHttp\Client();
-            $res = $client->get('http://manager.getfrontender.com/api/sites/?id=' . $request->getQueryParam('site_id'), [
+            $res = $client->get($this->config->fem_host . '/api/sites/?id=' . $request->getQueryParam('site_id'), [
                 'headers' => [
                     'X-Token' => $request->getHeader('X-Token')
                 ]
@@ -64,7 +70,11 @@ class Sites extends CoreRoute
     {
         parent::registerUpdateRoutes();
 
-        $this->app->post('/settings', function (Request $request, Response $response) {
+        $self = $this;
+
+        $this->app->post('/settings', function (Request $request, Response $response) use ($self) {
+            $response = $self->isAuthorized('manage-site-settings', $request, $response);
+
             $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
             $setting = array_shift($settings);
             $data = $request->getParsedBody();

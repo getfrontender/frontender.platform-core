@@ -50,7 +50,7 @@ class TokenCheck
         }
 
         $this->_container['token'] = $token;
-        
+
         // Check if our site is in the token. If not we have an issue.
         if (in_array($request->getUri()->getHost(), $token->getClaim('domains')) === false) {
             return $response
@@ -61,9 +61,13 @@ class TokenCheck
         }
 
         $response = $next($request, $response);
+        $query = $request->getQueryParams();
 
-        $token->setExpiration(time() + 1800);
-
-        return $response->withHeader($this->_headerName, Tokenize::getInstance()->build($token));
+        if(!isset($query['token']) || $query['token'] === 'true') {
+            $token->setExpiration(time() + 1800);
+            return $response->withHeader($this->_headerName, Tokenize::getInstance()->build($token));
+        } else {
+            return $response;
+        }
     }
 }
