@@ -17,6 +17,7 @@
 namespace Frontender\Core\Wrappers;
 
 use Doctrine\Common\Inflector\Inflector;
+use Frontender\Core\Template\Filter\Translate;
 
 class Model extends Core implements \Countable
 {
@@ -25,18 +26,20 @@ class Model extends Core implements \Countable
 
     public function __construct($model, $container)
     {
+        $translator = new Translate($container);
+
         if (is_array($model) && isset($model['data'])) {
             $modelData = $model['data'];
             unset($model['data']);
 
-            $adapter = $modelData['adapter'];
-            $name = $modelData['model'];
+            $adapter = $translator->translate($modelData['adapter']);
+            $name = $translator->translate($modelData['model']);
 
             if (isset($modelData['id'])) {
-                $model['id'] = $modelData['id'];
+                $model['id'] = $translator->translate($modelData['id']);
             }
 
-			// The rest are states.
+            // The rest are states.
             $model['language'] = $model['language'] ?? $container->language->get();
             $model_class = 'Prototype\\Model\\' . $adapter . '\\' . ucfirst($name) . 'Model';
             $instance = new $model_class($container);
@@ -57,7 +60,7 @@ class Model extends Core implements \Countable
         $data = $this->fetch();
 
         if (isset($data[0])) {
-        return $data[0]->offsetExists($offset);
+            return $data[0]->offsetExists($offset);
         }
 
         return false;
@@ -89,7 +92,7 @@ class Model extends Core implements \Countable
         return $this->fetch();
     }
 
-    private function fetch() : array
+    private function fetch(): array
     {
         if ($this->data === null) {
             $this->data = $this->model->fetch();
