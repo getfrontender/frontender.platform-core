@@ -195,9 +195,9 @@ class Pages extends CoreRoute
             $json = \Frontender\Core\Controllers\Pages::browse([
                 'collection' => $request->getQueryParam('collection'),
                 'lot' => $request->getQueryParam('lot'),
-                'sort' => !empty($request->getQueryParam('sort')) ? $request->getQueryParam('sort') : 'definition.name',
-                'direction' => !empty($request->getQueryParam('direction')) ? $request->getQueryParam('direction') : 1,
-                'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB',
+                'sort' => !empty($request->getQueryParam('sort')) ?$request->getQueryParam('sort') : 'definition.name',
+                'direction' => !empty($request->getQueryParam('direction')) ?$request->getQueryParam('direction') : 1,
+                'locale' => !empty($request->getQueryParam('locale')) ?$request->getQueryParam('locale') : 'en-GB',
                 'filter' => $filter,
                 'skip' => (int)$request->getQueryParam('skip'),
                 'teams' => Adapter::getInstance()->collection('teams')->find([
@@ -214,9 +214,9 @@ class Pages extends CoreRoute
             try {
                 $json = \Frontender\Core\Controllers\Pages::browse([
                     'collection' => 'public',
-                    'sort' => !empty($request->getQueryParam('sort')) ? $request->getQueryParam('sort') : 'definition.name',
-                    'direction' => !empty($request->getQueryParam('direction')) ? $request->getQueryParam('direction') : 1,
-                    'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB',
+                    'sort' => !empty($request->getQueryParam('sort')) ?$request->getQueryParam('sort') : 'definition.name',
+                    'direction' => !empty($request->getQueryParam('direction')) ?$request->getQueryParam('direction') : 1,
+                    'locale' => !empty($request->getQueryParam('locale')) ?$request->getQueryParam('locale') : 'en-GB',
                     'teams' => Adapter::getInstance()->collection('teams')->find([
                         'users' => (int)$this->token->getClaim('sub')
                     ])->toArray()
@@ -310,9 +310,9 @@ class Pages extends CoreRoute
                 \Frontender\Core\Controllers\Pages::browse([
                     'collection' => 'trash',
                     'lot' => $request->getAttribute('lot_id'),
-                    'sort' => !empty($request->getQueryParam('sort')) ? $request->getQueryParam('sort') : 'definition.name',
-                    'direction' => !empty($request->getQueryParam('direction')) ? $request->getQueryParam('direction') : 1,
-                    'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB',
+                    'sort' => !empty($request->getQueryParam('sort')) ?$request->getQueryParam('sort') : 'definition.name',
+                    'direction' => !empty($request->getQueryParam('direction')) ?$request->getQueryParam('direction') : 1,
+                    'locale' => !empty($request->getQueryParam('locale')) ?$request->getQueryParam('locale') : 'en-GB',
                     'teams' => Adapter::getInstance()->collection('teams')->find([
                         'users' => (int)$this->token->getClaim('sub')
                     ])->toArray()
@@ -339,9 +339,9 @@ class Pages extends CoreRoute
             $json = \Frontender\Core\Controllers\Pages::browse([
                 'collection' => $request->getParsedBodyParam('collection'),
                 'lot' => $request->getParsedBodyParam('lot'),
-                'sort' => !empty($request->getParsedBodyParam('sort')) ? $request->getParsedBodyParam('sort') : 'definition.name',
-                'direction' => !empty($request->getParsedBodyParam('direction')) ? $request->getParsedBodyParam('direction') : 1,
-                'locale' => !empty($request->getParsedBodyParam('locale')) ? $request->getParsedBodyParam('locale') : 'en-GB',
+                'sort' => !empty($request->getParsedBodyParam('sort')) ?$request->getParsedBodyParam('sort') : 'definition.name',
+                'direction' => !empty($request->getParsedBodyParam('direction')) ?$request->getParsedBodyParam('direction') : 1,
+                'locale' => !empty($request->getParsedBodyParam('locale')) ?$request->getParsedBodyParam('locale') : 'en-GB',
                 'filter' => $filter,
                 'skip' => (int)$request->getParsedBodyParam('skip'),
                 'teams' => Adapter::getInstance()->collection('teams')->find([
@@ -433,38 +433,33 @@ class Pages extends CoreRoute
             return $scope->domain === $uri->getHost() && $scope->locale === $locale;
         });
         $scope = array_shift($scopes);
+        $newFilter = [];
 
-        if (isset($scope->proxy_path)) {
-            // If there is an $or in the filter, we have a query, else we don't and apply the normal filter.
+        if (isset($filter) && !empty($filter)) {
             if (isset($filter['$or'])) {
-                $routeFilter = null;
-
-                foreach ($filter['$or'] as $key => &$filterItem) {
-                    $firstKey = array_keys($filterItem);
-                    $firstKey = array_shift($firstKey);
-
-                    if ($firstKey === 'definition.route.' . $locale) {
-                        $routeFilter = &$filterItem[$firstKey];
-                        break;
-                    }
-                }
-
-                if ($routeFilter) {
-                    // Prepend the proxy path to the regex.
-                    $path = ltrim($scope->proxy_path, '/');
-                    $routeFilter['$regex'] = implode('/', [$path, $routeFilter['$regex']]);
-                }
+                $newFilter = $filter;
             } else {
-                // Append a filter.
-                $filter = [
-                    'definition.route.' . $locale => [
-                        '$regex' => ltrim($scope->proxy_path, '/') . '.*',
+                $newFilter = ['$or' => []];
+                foreach ($filter as $key => $value) {
+                    $key = 'definition.' . $key . '.' . $locale;
+                    $value = [
+                        '$regex' => '.*' . $value . '.*',
                         '$options' => 'i'
-                    ]
+                    ];
+
+                    $newFilter['$or'][] = [$key => $value];
+                }
+            }
+
+            if (isset($scope->proxy_path)) {
+                // A separate filter for the route will be added next to the '$or' filter.
+                $newFilter['definition.route.' . $locale] = [
+                    '$regex' => '^' . $scope->proxy_path . '.*',
+                    '$options' => 'i'
                 ];
             }
         }
 
-        return $filter;
+        return $newFilter;
     }
 }
