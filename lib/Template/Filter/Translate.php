@@ -52,7 +52,7 @@ class Translate extends \Twig_Extension
     /**
      * @param {String/ Array/ Object} $text The text to translate.
      */
-    public function translate($text, $languages = array())
+    public function translate($text, $languages = array(), $returnOriginal = false)
     {
         $locale = $this->_locale;
         if ($languages) {
@@ -62,7 +62,7 @@ class Translate extends \Twig_Extension
         }
 
         if (is_array($text) || is_object($text)) {
-		    // We always want an array.
+            // We always want an array.
             $text = (array)$text;
 
             if (array_key_exists($locale, $text) && !empty($text[$locale])) {
@@ -75,10 +75,14 @@ class Translate extends \Twig_Extension
                 return $text[$this->_fallback];
             }
 
+            if ($returnOriginal) {
+                return $text;
+            }
+
             return '';
         }
 
-	    // No translation found
+        // No translation found
         return $this->_debug ? '??' . $text . '??' : $text;
     }
 

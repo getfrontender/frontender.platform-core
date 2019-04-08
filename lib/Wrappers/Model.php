@@ -32,11 +32,11 @@ class Model extends Core implements \Countable
             $modelData = $model['data'];
             unset($model['data']);
 
-            $adapter = $translator->translate($modelData['adapter']);
-            $name = $translator->translate($modelData['model']);
+            $adapter = $translator->translate($modelData['adapter'], array(), true);
+            $name = $translator->translate($modelData['model'], array(), true);
 
             if (isset($modelData['id'])) {
-                $model['id'] = $translator->translate($modelData['id']);
+                $model['id'] = $translator->translate($modelData['id'], array(), true);
             }
 
             // The rest are states.
