@@ -112,7 +112,7 @@ class Site
 
         $locale = $host['locale'];
         $path = implode('/', $segments);
-        $proxies = array_filter($settings['scopes'], function ($scope) use ($path, $locale) {
+        $proxies = array_filter($settings['scopes'], function ($scope) use ($path, $locale, $host) {
             if (!isset($scope['proxy_path'])) {
                 return false;
             }
@@ -121,12 +121,14 @@ class Site
                 return false;
             }
 
-            $regexString = trim($scope['proxy_path'], '/');
+            $pathPrefix = isset($host['proxy_path']) && !empty($host['proxy_path']) ? $host['proxy_path'] : '';
+            $regexString = trim($pathPrefix . $scope['proxy_path'], '/');
             $regexString = str_replace('/', '\/', $regexString);
             $regexString = '/^' . $regexString . '$|^' . $regexString . '\/.*$/i';
 
             return preg_match($regexString, $path, $matches) === 1;
         });
+        
         $proxies = array_values(array_filter($proxies));
 
         if (!empty($proxies)) {
