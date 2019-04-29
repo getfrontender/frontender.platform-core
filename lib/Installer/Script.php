@@ -21,15 +21,10 @@ use Composer\Script\Event;
 class Script
 {
     public static function createProjectCmd() {
-
-    }
-
-    public static function installCmd() {
-
+        // Check if we can find an install.json (name can be changed.)
     }
 
     public static function installProject(Event $event) {
-        die('Hello World');
         echo '<pre>';
             print_r($event->getArguments());
         echo '</pre>';
