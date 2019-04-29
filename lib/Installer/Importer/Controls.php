@@ -14,7 +14,6 @@ class Controls extends Generic
         ]);
 
         foreach ($controls as $control) {
-            // $path = $control->getRelative();
             $definition = json_decode($control->getContents());
             $identifier = str_replace('.' . $control->getExtension(), '', $control->getRelativePathname());
 
@@ -28,7 +27,7 @@ class Controls extends Generic
 
             $controlsCollection->insertOne([
                 'revision' => [
-                    'lot' => $lot->getInsertedId(),
+                    'lot' => $lot->getInsertedId()->__toString(),
                     'date' => date('c'),
                     'hash' => md5($control->getContents())
                 ],
