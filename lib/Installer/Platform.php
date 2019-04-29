@@ -7,6 +7,8 @@ use Frontender\Core\DB\Adapter;
 
 class Platform extends Base
 {
+    public static $core_repo_url = 'https://github.com/DipityBV/frontender.core-controls/archive/master.zip';
+
     public static function install($event)
     {
         $currentPath = getcwd();
@@ -32,14 +34,14 @@ class Platform extends Base
             $installData = json_decode(file_get_contents($installFilePath), true);
         }
 
-        self::writeLn('Install file found, checking contents!', 'green');
+        self::writeLn('Install file found, checking contents!', 'blue');
 
         if (!self::checkInstallFile($installData)) {
             self::writeLn('Errors have occured, please consult the console for details!', 'red');
             exit;
         }
 
-        self::writeLn('Install file is correct, installing all elements!', 'green');
+        self::writeLn('Install file is correct, installing all elements!', 'blue');
 
         // Create the .env file with the data and use it.
         $success = self::writeEnvFile([
@@ -51,23 +53,58 @@ class Platform extends Base
             self::writeLn('Errors have occured, please consult the console for details!', 'red');
             exit;
         } else {
-            self::writeLn('.env file is created.');
+            self::writeLn('.env file is created.', 'blue');
+        }
+
+        self::writeLn('Downloading core controls.', 'blue');
+        $tempFile = self::getTempPath('tmp_frontender_zip');
+        $tempDir = self::getTempPath('tmp_frontender_install', true);
+        $adapter = Adapter::getInstance();
+
+        // Download zip file to temp file.
+        file_put_contents($tempFile, file_get_contents(self::$core_repo_url));
+        self::writeLn('Core controls downloaded, installing…', 'blue');
+        $zip = new \ZipArchive();
+
+        if ($zip->open($tempFile)) {
+            $zip->extractTo($tempDir);
+            $zip->close();
         }
 
         // Create a new site team.
-        Adapter::getInstance()->collection('teams')->drop();
-        Adapter::getInstance()->collection('teams')->insertOne([
+        $adapter->collection('teams')->drop();
+        $adapter->collection('teams')->insertOne([
             'name' => 'Site'
+        ]);
+
+        $adapter->collection('settings')->insertOne([
+            'name' => $installData['project_name'] ?? null,
+            'scopes' => [[
+                'protocol' => 'http',
+                'domain' => $installData['domain'],
+                'locale' => $installData['locale'],
+                'locale_prefix' => substr($installData['locale'], 0, 2)
+            ]]
         ]);
 
         // We can now upload all the data to the database, the connection is ready etc.
         // We have to check the db directory for all the imports.
-        self::importMongoFiles(dirname(__DIR__, 2) . '/core/db');
+        if (!self::importMongoFiles($tempDir . '/frontender.core-controls-master/db')) {
+            self::writeLn('Errors where encountered while importing the core information, please contact a developer!', 'red');
+            exit;
+        }
+
+        self::writeLn('Everyhing is installed successfully, have fun using Frontender!', 'green');
     }
 
     protected static function checkPHPDependencies()
     {
         $success = true;
+
+        if (!extension_loaded('zip')) {
+            $success = false;
+            self::writeLn('Zip extension is not installed', 'red');
+        }
 
         // Check if MongoDB is installed.
         if (!extension_loaded('mongodb')) {
