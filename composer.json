@@ -2,28 +2,27 @@
     "name": "frontender/platform-core",
     "description": "Core of the frontender platform",
     "require": {
+        "coduo/php-humanizer": "^2.0",
+        "doctrine/inflector": "^1.1",
+        "erusev/parsedown": "^1.6.3",
         "guzzlehttp/guzzle": "^6.3",
-        "twig/twig": "~2.1",
+        "kevinrob/guzzle-cache-middleware": "^1.5",
+        "lcobucci/jwt": "^3.2",
+        "league/flysystem": "^1.0",
+        "mongodb/mongodb": "^1.4",
+        "phpmailer/phpmailer": "^5.2",
+        "ralouphie/mimey": "^1.0",
         "slim/slim": "^3.0",
         "slim/twig-view": "^2.2",
-        "vlucas/phpdotenv": "^2.4",
-        "kevinrob/guzzle-cache-middleware": "^1.5",
-        "league/flysystem": "^1.0",
         "symfony/filesystem": "^3.2",
-        "doctrine/inflector": "^1.1",
-        "symfony/translation": "3.2.4",
-        "ralouphie/mimey": "^1.0",
         "symfony/finder": "^3.2",
-        "erusev/parsedown": "^1.6.3",
-        "coduo/php-humanizer": "^2.0",
-        "phpmailer/phpmailer": "^5.2",
-        "lcobucci/jwt": "^3.2",
-        "kevinlebrun/colors.php": "^1.0",
-        "mongodb/mongodb": "^1.4"
+        "symfony/translation": "3.2.4",
+        "twig/twig": "~2.1",
+        "vlucas/phpdotenv": "^2.4"
     },
     "autoload": {
         "psr-4": {
-            "Frontender\\Core\\": "lib/"
+            "Frontender\\Core\\": "lib\\"
         }
     }
 }
