@@ -2,11 +2,10 @@
 
 namespace Frontender\Core\Installer;
 
-use Colors\Color;
-use Frontender\Core\DB\Adapter;
 use MongoDB\Client;
+use Frontender\Core\DB\Adapter;
 
-class Platform
+class Platform extends Base
 {
     public static function install($event)
     {
@@ -14,6 +13,16 @@ class Platform
         $installFile = 'install.json';
         $installFilePath = $currentPath . '/' . $installFile;
         $installData = null;
+
+        // I will call another autoload so sub-functions are also included.
+        // This can be done because we have a post function.
+        require_once getcwd() . '/vendor/autoload.php';
+
+        if (!self::checkPHPDependencies()) {
+            self::writeLn('Some dependencies aren\'t installed, please consult the console for more details.', 'red');
+            self::writeLn('Please fix these issues before continuing', 'red');
+            exit;
+        }
 
         // Check if we can find the file.
         if (!file_exists($installFilePath)) {
@@ -41,9 +50,37 @@ class Platform
         if (!$success) {
             self::writeLn('Errors have occured, please consult the console for details!', 'red');
             exit;
+        } else {
+            self::writeLn('.env file is created.');
         }
 
+        // Create a new site team.
+        Adapter::getInstance()->collection('teams')->drop();
+        Adapter::getInstance()->collection('teams')->insertOne([
+            'name' => 'Site'
+        ]);
+
         // We can now upload all the data to the database, the connection is ready etc.
+        // We have to check the db directory for all the imports.
+        self::importMongoFiles(dirname(__DIR__, 2) . '/core/db');
+    }
+
+    protected static function checkPHPDependencies()
+    {
+        $success = true;
+
+        // Check if MongoDB is installed.
+        if (!extension_loaded('mongodb')) {
+            $success = false;
+            self::writeLn('MongoDB extension is not installed', 'red');
+        }
+
+        if (version_compare(PHP_VERSION, '7.1.0', '<')) {
+            $success = false;
+            self::writeLn('PHP version must be 7.1+', 'red');
+        }
+
+        return $success;
     }
 
     protected static function checkInstallFile($data): bool
@@ -113,7 +150,7 @@ class Platform
             $dotEnvHandle = fopen($dotEnvPath, 'w');
 
             foreach ($data as $key => $value) {
-                fwrite($dotEnvHandle, strtoupper($key) . '="' . $value . '"');
+                fwrite($dotEnvHandle, strtoupper($key) . '="' . $value . '"' . "\r\n");
 
                 // Load the data into the $_ENV.
                 $_ENV[strtolower($key)] = $_ENV[$key] = $value;
@@ -131,17 +168,5 @@ class Platform
         }
 
         return true;
-    }
-
-    private static function writeLn(string $line, ...$args): void
-    {
-        $color = new Color();
-        $line = $color($line);
-
-        foreach ($args as $arg) {
-            $line = $line->{$arg};
-        }
-
-        echo $line . PHP_EOL;
     }
 }
