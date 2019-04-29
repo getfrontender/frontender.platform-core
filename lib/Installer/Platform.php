@@ -1,0 +1,147 @@
+<?php
+
+namespace Frontender\Core\Installer;
+
+use Colors\Color;
+use Frontender\Core\DB\Adapter;
+use MongoDB\Client;
+
+class Platform
+{
+    public static function install($event)
+    {
+        $currentPath = getcwd();
+        $installFile = 'install.json';
+        $installFilePath = $currentPath . '/' . $installFile;
+        $installData = null;
+
+        // Check if we can find the file.
+        if (!file_exists($installFilePath)) {
+            self::writeLn('Install file isn\'t found, please create this one according to documentation', 'red');
+            exit;
+        } else {
+            $installData = json_decode(file_get_contents($installFilePath), true);
+        }
+
+        self::writeLn('Install file found, checking contents!', 'green');
+
+        if (!self::checkInstallFile($installData)) {
+            self::writeLn('Errors have occured, please consult the console for details!', 'red');
+            exit;
+        }
+
+        self::writeLn('Install file is correct, installing all elements!', 'green');
+
+        // Create the .env file with the data and use it.
+        $success = self::writeEnvFile([
+            'MONGO_HOST' => $installData['mongo_host'],
+            'MONGO_DB' => $installData['mongo_dbname']
+        ]);
+
+        if (!$success) {
+            self::writeLn('Errors have occured, please consult the console for details!', 'red');
+            exit;
+        }
+
+        // We can now upload all the data to the database, the connection is ready etc.
+    }
+
+    protected static function checkInstallFile($data): bool
+    {
+        $success = true;
+
+        if (version_compare(PHP_VERSION, '7.1.0', "<")) {
+            $success = false;
+            self::writeLn('PHP version must be at least 7.1.0', 'red');
+        }
+
+        /*******************************/
+        /** MongoDB information check **/
+        /*******************************/
+        if (isset($data['mongo_host']) && isset($data['mongo_dbname'])) {
+            if (empty($data['mongo_host'])) {
+                $success = false;
+                self::writeLn('mongo_host is empty, please check this value!', 'red');
+            } else if (empty($data['mongo_dbname'])) {
+                $success = false;
+                self::writeLn('mongo_dbname is empty, please check this value!', 'red');
+            } else {
+                // Everything seems ok at first glance, not we will check the real connection.
+                try {
+                    new Client($data['mongo_host']);
+                } catch (\Exception $e) {
+                    $success = false;
+                    self::writeLn('A MongoDB connection couldn\'t be made, please check your connection string.', 'red');
+                }
+            }
+        } else {
+            $success = false;
+            self::writeLn('MongoDB configuration is missing information, please check.', 'red');
+        }
+
+        /*******************************/
+        /** Locale information check  **/
+        /*******************************/
+        if (!isset($data['locale']) || empty($data['locale']) || strlen($data['locale']) !== 5 || strpos($data['locale'], '-') === false) {
+            $success = false;
+            self::writeLn('Locale isn\'t set according to RFC5646 notation.', 'red');
+        }
+
+        /*******************************/
+        /** Domain information check  **/
+        /*******************************/
+        if (!isset($data['domain']) || empty($data['domain'])) {
+            $success = false;
+            self::writeLn('Domain isn\'t set, please set a domain on which you want to host Frontender', 'red');
+        }
+
+        return $success;
+    }
+
+    protected static function writeEnvFile($data, $installPath = null): bool
+    {
+        try {
+            $dotEnvPath = ($installPath ?: getcwd()) . '/.env';
+            $data = array_merge([
+                'ENV' => 'development',
+                'FEP_TOKEN_HEADER' => 'X-Token',
+                'FEP_TOKEN_SECRET' => '6da5c8fb4a1874872b6e785287f50409.b27cac074cc5c17f83c7c9e8071002e3.f4158e1f03c61b625252d3657877d3f9'
+            ], $data);
+
+            // Create the file in the current directory, this depends on where the item is installed.
+            // We can maybe get this from the event.
+            $dotEnvHandle = fopen($dotEnvPath, 'w');
+
+            foreach ($data as $key => $value) {
+                fwrite($dotEnvHandle, strtoupper($key) . '="' . $value . '"');
+
+                // Load the data into the $_ENV.
+                $_ENV[strtolower($key)] = $_ENV[$key] = $value;
+            }
+
+            fclose($dotEnvHandle);
+        } catch (\Exception $e) {
+            self::writeLn($e->getMessage(), 'red');
+
+            return false;
+        } catch (\Error $e) {
+            self::writeLn($e->getMessage(), 'red');
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private static function writeLn(string $line, ...$args): void
+    {
+        $color = new Color();
+        $line = $color($line);
+
+        foreach ($args as $arg) {
+            $line = $line->{$arg};
+        }
+
+        echo $line . PHP_EOL;
+    }
+}
