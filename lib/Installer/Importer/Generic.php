@@ -14,6 +14,14 @@ class Generic
         $this->adapter = Adapter::getInstance();
     }
 
+    public function getSettings()
+    {
+        $settings = $this->adapter->collection('settings')->find()->toArray();
+        $settings = array_shift($settings);
+
+        return $this->adapter->toJSON($settings, true);
+    }
+
     protected function getFiles($path)
     {
         $finder = new Finder();

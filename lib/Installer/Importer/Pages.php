@@ -7,6 +7,54 @@ class Pages extends Generic
     public function import($collection, $path)
     {
         $pages = $this->getFiles($path);
-        
+        $settings = $this->getSettings();
+        $localeList = array_map(function ($scope) {
+            return $scope['locale'];
+        }, $settings['scopes']);
+        $defaultLocale = $localeList[0];
+        $teams = $this->adapter->collection('teams')->find()->toArray();
+        $teams = $this->adapter->toJSON($teams, true);
+        $team = array_shift($teams);
+
+        $lotsCollection = $this->adapter->collection('lots');
+        $pagesCollection = $this->adapter->collection('pages');
+        $pagesPublicCollection = $this->adapter->collection('pages.public');
+
+        foreach ($pages as $page) {
+            $page = json_decode($page->getContents(), true);
+
+            if (isset($page['route']) && is_string($page['route'])) {
+                // The route is a string, so we need to translate.
+                $page['route'] = [
+                    $defaultLocale => $page['route']
+                ];
+            }
+
+            $pagesCollection->deleteMany([
+                'definition.route.' . $defaultLocale => $page['route'][$defaultLocale]
+            ]);
+            $pagesPublicCollection->deleteMany([
+                'definition.route.' . $defaultLocale => $page['route'][$defaultLocale]
+            ]);
+
+            $lot = $lotsCollection->insertOne([
+                'teams' => [$team['_id']]
+            ]);
+
+            $newPage = [
+                'revision' => [
+                    'hash' => md5(json_encode($page)),
+                    'lot' => $lot->getInsertedId()->__toString(),
+                    'date' => date('c'),
+                    'user' => []
+                ],
+                'definition' => $page
+            ];
+
+            $this->adapter->collection('pages')->insertOne($newPage);
+            $this->adapter->collection('pages.public')->insertOne($newPage);
+        }
+
+        return true;
     }
 }
