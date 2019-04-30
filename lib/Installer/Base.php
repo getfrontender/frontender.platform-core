@@ -38,17 +38,38 @@ class Base
         return $tempFile;
     }
 
+    protected static function findPathByDirName($directory, $path)
+    {
+        $finder = new Finder();
+        $directories = $finder->directories()->in($path)->name($directory);
+        if (!$directories->count()) {
+            return false;
+        }
+
+        $directories = iterator_to_array($directories);
+        $directory = array_shift($directories);
+        return $directory->getRealPath();
+    }
+
     protected static function importMongoFiles($baseDir): bool
     {
+        // We have to find the DB directory.
+        // in the base dir because this is where all the imports will be.
+        $dbDir = self::findPathByDirName('db', $baseDir);
+        $success = true;
+        $finder = new Finder();
+
+        if (!$dbDir) {
+            return false;
+        }
+
         // We will provide a base directory, this will give us the initial entry for the import,
         // After that we can use glob to get the files that we want to import, this will only be JSON files!
         // The folders in the baseDir will be the collections created.
         // For some collections we will have custom importers, for the others we will just import everything as is.
-        $success = true;
 
         try {
-            $finder = new Finder();
-            $directories = $finder->directories()->in($baseDir)->depth('0');
+            $directories = $finder->directories()->in($dbDir)->depth('0');
 
             foreach ($directories as $directory) {
                 $path = $directory->getRealPath();
@@ -77,8 +98,10 @@ class Base
                 }
             }
         } catch (\Exception $e) {
+            echo $e->getMessage();
             return false;
         } catch (\Error $e) {
+            echo $e->getMessage();
             return false;
         }
 

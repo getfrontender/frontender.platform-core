@@ -4,12 +4,13 @@ namespace Frontender\Core\Installer;
 
 use MongoDB\Client;
 use Frontender\Core\DB\Adapter;
+use Composer\Script\Event;
 
 class Platform extends Base
 {
     public static $core_repo_url = 'https://github.com/DipityBV/frontender.core-controls/archive/master.zip';
 
-    public static function install($event)
+    public static function install(Event $event)
     {
         $currentPath = getcwd();
         $installFile = 'install.json';
@@ -69,6 +70,9 @@ class Platform extends Base
         if ($zip->open($tempFile)) {
             $zip->extractTo($tempDir);
             $zip->close();
+        } else {
+            self::writeLn('Something went wrong when installing the core controls, please contact a developer', 'red');
+            exit;
         }
 
         // Create a new site team.
@@ -89,7 +93,7 @@ class Platform extends Base
 
         // We can now upload all the data to the database, the connection is ready etc.
         // We have to check the db directory for all the imports.
-        if (!self::importMongoFiles($tempDir . '/frontender.core-controls-master/db')) {
+        if (!self::importMongoFiles($tempDir)) {
             self::writeLn('Errors where encountered while importing the core information, please contact a developer!', 'red');
             exit;
         }
