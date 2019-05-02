@@ -82,6 +82,10 @@ class Translate extends \Twig_Extension
             return '';
         }
 
+        if ($returnOriginal) {
+            return $text;
+        }
+
         // No translation found
         return $this->_debug ? '??' . $text . '??' : $text;
     }
