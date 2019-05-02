@@ -16,27 +16,24 @@
 
 namespace Frontender\Core\Template\Engine;
 
-use Frontender\Core\Object\Object;
-
 use Slim\Container;
+use Frontender\Core\Object\AbstractObject;
 
-abstract class AbstractFactory extends Object
+abstract class AbstractFactory extends AbstractObject
 {
     public function __construct(Container $container)
     {
         parent::__construct($container);
 
-//        $this->populateEngines();
+        //        $this->populateEngines();
     }
 
     public function populateEngines()
-    {
-
-    }
+    { }
 
     public function createEngine($path)
     {
-//        $pathinfo = pathinfo($path);
+        //        $pathinfo = pathinfo($path);
 
         $engine_class = '\\Frontender\\Core\\Template\\Engine\\TwigEngine';
 

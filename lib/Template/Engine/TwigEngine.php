@@ -17,10 +17,7 @@
 
 namespace Frontender\Core\Template\Engine;
 
-use Frontender\Core\Object\Object;
-
 use Frontender\Core\Template\Engine\Twig\Environment;
-use Frontender\Core\Template\Engine\Twig\Loader;
 use Frontender\Core\Template\Filter\Date;
 use Frontender\Core\Template\Filter\Escaping;
 use Frontender\Core\Template\Filter\Filter;
@@ -35,12 +32,12 @@ use Frontender\Core\Template\Helper\Router;
 use Frontender\Core\Template\Filter\Asset;
 use Frontender\Core\Template\Helper\Url;
 use Slim\Container;
-use Slim\Views\Twig;
 use Slim\Views\TwigExtension;
 use Symfony\Component\Finder\Finder;
 use Frontender\Core\Template\Helper\Template;
+use Frontender\Core\Object\AbstractObject;
 
-class TwigEngine extends Object implements EngineInterface
+class TwigEngine extends AbstractObject implements EngineInterface
 {
     protected $engine;
 
@@ -63,7 +60,7 @@ class TwigEngine extends Object implements EngineInterface
 
         $this->engine->addExtension(new TwigExtension($container['router'], $container['settings']['base_path']));
 
-	    // Register the core filters
+        // Register the core filters
         $this->engine->addExtension(new Date($container));
         $this->engine->addExtension(new Escaping($container));
         $this->engine->addExtension(new Asset($container));
@@ -76,7 +73,7 @@ class TwigEngine extends Object implements EngineInterface
         $this->engine->addExtension(new Translate($container));
 
         // Add custom extension for the engine.
-	    // Auto bind all helpers
+        // Auto bind all helpers
         $finder = new Finder();
         $finder
             ->ignoreUnreadableDirs()
@@ -90,7 +87,7 @@ class TwigEngine extends Object implements EngineInterface
             $this->engine->addExtension(new $class($container));
         }
 
-	    // Register the core helpers
+        // Register the core helpers
         $this->engine->addExtension(new Router($container));
         $this->engine->addExtension(new HashedPath($container));
         $this->engine->addExtension(new Url($container));

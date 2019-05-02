@@ -16,7 +16,7 @@
 
 namespace Frontender\Core\Object;
 
-class Object implements HandlableInterface
+class AbstractObject implements HandlableInterface
 {
     use ServiceTrait;
 

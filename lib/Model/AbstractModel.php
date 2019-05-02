@@ -2,7 +2,9 @@
 
 namespace Frontender\Core\Model;
 
-class AbstractModel implements \ArrayAccess
+use Frontender\Core\Object\AbstractObject;
+
+class AbstractModel extends AbstractObject implements \ArrayAccess
 {
     protected $adapter;
     protected $name;
@@ -10,11 +12,6 @@ class AbstractModel implements \ArrayAccess
     protected $container;
 
     private $state;
-
-    public function __construct(Container $container)
-    {
-        $this->container = $container;
-    }
 
     public function getAdapter()
     {
@@ -76,5 +73,64 @@ class AbstractModel implements \ArrayAccess
     public function fetch()
     {
         throw new Error('Fetch should be overwritten');
+    }
+
+    public function setData($data = [])
+    {
+        $this->data = $data;
+
+        return $this;
+    }
+
+    public function offsetGet($offset)
+    {
+        if (!$this->offsetExists($offset)) {
+            return false;
+        }
+
+        $method = 'getProperty' . ucfirst($offset);
+        if (is_callable([$this, $method])) {
+            if (isset($this->cached[$offset])) {
+                return $this->cached[$offset];
+            }
+
+            $this->cached[$offset] = $this->{$method}();
+
+            return $this->cached[$offset];
+        } else if (isset($this->data[$offset])) {
+            return $this->data[$offset];
+        }
+
+        return false;
+    }
+
+    public function offsetSet($offset, $value)
+    {
+        // Check if we have a set method.
+        $method = 'setProperty' . ucfirst($offset);
+        if (is_callable([$this, $method])) {
+            $this->{$method}($value);
+        } else if ($this->offsetExists($offset)) {
+            $this->data[$offset] = $value;
+        }
+    }
+
+    public function offsetExists($offset)
+    {
+        $method = 'getProperty' . ucfirst($offset);
+        if (is_callable([$this, $method])) {
+            return true;
+        } else if (isset($this->data[$offset])) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function offsetUnset($offset)
+    {
+        if ($this->offsetExists($offset)) {
+            unset($this->data[$offset]);
+        }
     }
 }

@@ -16,21 +16,18 @@
 
 namespace Frontender\Core\Page;
 
-use Doctrine\Common\Inflector\Inflector;
-use Prototype\Model\AbstractModel;
 use Frontender\Core\Object\MapperTrait;
-use Frontender\Core\Object\Object;
 use Frontender\Core\Parameters\ParametersTrait;
 use Frontender\Core\Template\Template;
 use Frontender\Core\Wrappers;
-
 use Slim\Container;
 use Slim\Http\Request;
 use Frontender\Core\DB\Adapter;
 use MongoDB\BSON\ObjectId;
 use Frontender\Core\Controllers\Pages;
+use Frontender\Core\Object\AbstractObject;
 
-class DefaultPage extends Object
+class DefaultPage extends AbstractObject
 {
     use ParametersTrait;
     use MapperTrait;
@@ -52,7 +49,7 @@ class DefaultPage extends Object
         $this->template = new Template($container);
     }
 
-    public function getName() : string
+    public function getName(): string
     {
         return $this->name;
     }
@@ -64,7 +61,7 @@ class DefaultPage extends Object
         return $this;
     }
 
-    public function getRequest() : Request
+    public function getRequest(): Request
     {
         return $this->request;
     }
@@ -89,7 +86,7 @@ class DefaultPage extends Object
     }
 
     // TODO: Allow for flexiable injection!
-    public function getLocale() : string
+    public function getLocale(): string
     {
         return $this->container->language->get();
     }
@@ -107,11 +104,11 @@ class DefaultPage extends Object
 
     private function getId()
     {
-	    // Check if we have a frontender request, if so return the post id, else return null;
+        // Check if we have a frontender request, if so return the post id, else return null;
         $parameters = $this->getParameters();
         $id = $this->parameters['default']['id'] ?? 'unexisting-id';
 
-	    // Needed to get things from nested values.
+        // Needed to get things from nested values.
         if (strpos($id, '.') !== false) {
             $parts = explode('.', $id);
             $id = array_reduce($parts, function ($carry, $item) {
@@ -131,7 +128,7 @@ class DefaultPage extends Object
         return is_object($form) ? $form->value : $form['value'];
     }
 
-    public function render(array $data = array()) : string
+    public function render(array $data = array()): string
     {
         $this->parseData();
 

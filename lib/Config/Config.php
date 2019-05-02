@@ -34,9 +34,12 @@ class Config
          * Load application configuration
          */
         $files = [
-            '/environment.php',
-            '/environments/' . $this->env . '.php'
+            '/environment.php'
         ];
+
+        if (isset($this->env)) {
+            $files[] = '/environments/' . $this->env . '.php';
+        }
 
         foreach ($files as $file) {
             if (file_exists(ROOT_PATH . '/config/' . $file)) {
