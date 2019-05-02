@@ -26,8 +26,8 @@ class Config
             $env->overload();
         }
 
-        foreach(array_keys($_ENV) as $key) {
-        	$this->{strtolower($key)} = $_ENV[$key];
+        foreach (array_keys($_ENV) as $key) {
+            $this->{strtolower($key)} = $_ENV[$key];
         }
 
         /**
@@ -62,6 +62,6 @@ class Config
 
     public function toArray()
     {
-        return ['settings' => (array) $this];
+        return ['settings' => (array)$this];
     }
 }
