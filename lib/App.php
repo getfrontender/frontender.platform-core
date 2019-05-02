@@ -50,8 +50,10 @@ class App
     public function getApp()
     {
         if ($this->appInstance === null) {
-            $config = $this->getConfig();
-            $this->appInstance = new \Slim\App($config->toArray());
+            $config = $this->getConfig()->toArray();
+            $config['determineRouteBeforeAppMiddleware'] = true;
+
+            $this->appInstance = new \Slim\App($config);
         }
 
         return $this->appInstance;
@@ -158,9 +160,7 @@ class App
 
                 new $class($this);
             }
-        } catch (\Error $e) {
-        } catch (\Exception $e) {
-        }
+        } catch (\Error $e) { } catch (\Exception $e) { }
 
         return $this;
     }
