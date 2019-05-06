@@ -25,6 +25,7 @@ use MongoDB\BSON\UTCDateTime;
 use Slim\Http\Request;
 use Slim\Http\Response;
 use Frontender\Core\Routes\Middleware\TokenCheck;
+use Frontender\Core\Routes\Middleware\ApiLocale;
 
 class Pages extends CoreRoute
 {
@@ -117,7 +118,7 @@ class Pages extends CoreRoute
                 \Frontender\Core\Controllers\Pages::read($request->getAttribute('page_id'))
             );
 
-            \Frontender\Core\Controllers\Pages::publish($page);
+            \Frontender\Core\Controllers\Pages::publish($page, $this);
 
             return $response->withStatus(200);
         });
@@ -195,9 +196,9 @@ class Pages extends CoreRoute
             $json = \Frontender\Core\Controllers\Pages::browse([
                 'collection' => $request->getQueryParam('collection'),
                 'lot' => $request->getQueryParam('lot'),
-                'sort' => !empty($request->getQueryParam('sort')) ?$request->getQueryParam('sort') : 'definition.name',
-                'direction' => !empty($request->getQueryParam('direction')) ?$request->getQueryParam('direction') : 1,
-                'locale' => !empty($request->getQueryParam('locale')) ?$request->getQueryParam('locale') : 'en-GB',
+                'sort' => !empty($request->getQueryParam('sort')) ? $request->getQueryParam('sort') : 'definition.name',
+                'direction' => !empty($request->getQueryParam('direction')) ? $request->getQueryParam('direction') : 1,
+                'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB',
                 'filter' => $filter,
                 'skip' => (int)$request->getQueryParam('skip'),
                 'teams' => Adapter::getInstance()->collection('teams')->find([
@@ -214,9 +215,9 @@ class Pages extends CoreRoute
             try {
                 $json = \Frontender\Core\Controllers\Pages::browse([
                     'collection' => 'public',
-                    'sort' => !empty($request->getQueryParam('sort')) ?$request->getQueryParam('sort') : 'definition.name',
-                    'direction' => !empty($request->getQueryParam('direction')) ?$request->getQueryParam('direction') : 1,
-                    'locale' => !empty($request->getQueryParam('locale')) ?$request->getQueryParam('locale') : 'en-GB',
+                    'sort' => !empty($request->getQueryParam('sort')) ? $request->getQueryParam('sort') : 'definition.name',
+                    'direction' => !empty($request->getQueryParam('direction')) ? $request->getQueryParam('direction') : 1,
+                    'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB',
                     'teams' => Adapter::getInstance()->collection('teams')->find([
                         'users' => (int)$this->token->getClaim('sub')
                     ])->toArray()
@@ -310,9 +311,9 @@ class Pages extends CoreRoute
                 \Frontender\Core\Controllers\Pages::browse([
                     'collection' => 'trash',
                     'lot' => $request->getAttribute('lot_id'),
-                    'sort' => !empty($request->getQueryParam('sort')) ?$request->getQueryParam('sort') : 'definition.name',
-                    'direction' => !empty($request->getQueryParam('direction')) ?$request->getQueryParam('direction') : 1,
-                    'locale' => !empty($request->getQueryParam('locale')) ?$request->getQueryParam('locale') : 'en-GB',
+                    'sort' => !empty($request->getQueryParam('sort')) ? $request->getQueryParam('sort') : 'definition.name',
+                    'direction' => !empty($request->getQueryParam('direction')) ? $request->getQueryParam('direction') : 1,
+                    'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB',
                     'teams' => Adapter::getInstance()->collection('teams')->find([
                         'users' => (int)$this->token->getClaim('sub')
                     ])->toArray()
@@ -339,9 +340,9 @@ class Pages extends CoreRoute
             $json = \Frontender\Core\Controllers\Pages::browse([
                 'collection' => $request->getParsedBodyParam('collection'),
                 'lot' => $request->getParsedBodyParam('lot'),
-                'sort' => !empty($request->getParsedBodyParam('sort')) ?$request->getParsedBodyParam('sort') : 'definition.name',
-                'direction' => !empty($request->getParsedBodyParam('direction')) ?$request->getParsedBodyParam('direction') : 1,
-                'locale' => !empty($request->getParsedBodyParam('locale')) ?$request->getParsedBodyParam('locale') : 'en-GB',
+                'sort' => !empty($request->getParsedBodyParam('sort')) ? $request->getParsedBodyParam('sort') : 'definition.name',
+                'direction' => !empty($request->getParsedBodyParam('direction')) ? $request->getParsedBodyParam('direction') : 1,
+                'locale' => !empty($request->getParsedBodyParam('locale')) ? $request->getParsedBodyParam('locale') : 'en-GB',
                 'filter' => $filter,
                 'skip' => (int)$request->getParsedBodyParam('skip'),
                 'teams' => Adapter::getInstance()->collection('teams')->find([
@@ -418,7 +419,8 @@ class Pages extends CoreRoute
                         '/api/pages/{page_id}/preview'
                     ]
                 ]
-            )
+            ),
+            new ApiLocale($this->app->getContainer())
         ];
     }
 

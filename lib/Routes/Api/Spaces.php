@@ -19,6 +19,7 @@ namespace Frontender\Core\Routes\Api;
 use Frontender\Core\Routes\Helpers\CoreRoute;
 use Frontender\Core\Routes\Traits\Authorizable;
 use Frontender\Core\Routes\Middleware\TokenCheck;
+use Frontender\Core\Routes\Middleware\ApiLocale;
 
 class Spaces extends CoreRoute {
 	protected $group = '/api/spaces';
@@ -29,7 +30,8 @@ class Spaces extends CoreRoute {
 		return [
 			new TokenCheck(
 				$this->app->getContainer()
-			)
+			),
+            new ApiLocale($this->app->getContainer())
 		];
 	}
 }

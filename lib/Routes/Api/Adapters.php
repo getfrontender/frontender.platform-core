@@ -23,6 +23,7 @@ use Slim\Http\Response;
 use Symfony\Component\Finder\Finder;
 use Frontender\Core\Routes\Middleware\TokenCheck;
 use Frontender\Core\DB\Adapter;
+use Frontender\Core\Routes\Middleware\ApiLocale;
 
 class Adapters extends CoreRoute
 {
@@ -43,7 +44,7 @@ class Adapters extends CoreRoute
             $adapters = [];
 
             foreach ($files as $file) {
-				// Lets get all the available models.
+                // Lets get all the available models.
                 $modelFinder = new Finder();
                 $models = $modelFinder->files()->name('*.json')->in($file->getPathName());
                 $adapter = [
@@ -65,7 +66,7 @@ class Adapters extends CoreRoute
         });
 
         $this->app->get('/models/{adapter}', function (Request $request, Response $response) use ($modelPath) {
-			// Get all the models and send them back.
+            // Get all the models and send them back.
             $finder = new Finder();
             $files = $finder->files()->name('*.php')->in($modelPath . '/' . $request->getAttribute('adapter'));
             $models = [];
@@ -105,7 +106,7 @@ class Adapters extends CoreRoute
         });
 
         $this->app->get('/content/{adapter}/{model:.*}', function (Request $request, Response $response) use ($config) {
-			// We have an autoload for it.
+            // We have an autoload for it.
             // We also have to support namespaced models.
             $modelParts = explode('/', $request->getAttribute('model'));
             $modelParts = array_map(function ($item) {
@@ -152,7 +153,8 @@ class Adapters extends CoreRoute
         return [
             new TokenCheck(
                 $this->app->getContainer()
-            )
+            ),
+            new ApiLocale($this->app->getContainer())
         ];
     }
 }

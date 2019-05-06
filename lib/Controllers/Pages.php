@@ -20,6 +20,7 @@ namespace Frontender\Core\Controllers;
 use MongoDB\BSON\ObjectId;
 use MongoDB\Driver\Query;
 use Frontender\Core\DB\Adapter;
+use Frontender\Core\Template\Filter\Translate;
 
 class Pages extends Core
 {
@@ -356,7 +357,7 @@ class Pages extends Core
         return $pageJson;
     }
 
-    public function actionPublish($page)
+    public function actionPublish($page, $container)
     {
         unset($page->_id);
 
@@ -396,7 +397,12 @@ class Pages extends Core
         if ($adapterName && $modelName && $modelId && ($page->definition['route'] || $page->defintion['cononical'])) {
             if (strpos(trim($modelId), '{') === false) {
                 // We prefer the cononical
+
+                $translator = new Translate($container);
                 $route = $page->definition['route'] ?? $page->definition['cononical'];
+                $adapterName = $translator->translate($adapterName, [], true);
+                $modelName = $translator->translate($modelName, [], true);
+                $modelId = $translator->translate($modelId, [], true);
 
                 $page_id = '';
                 try {
@@ -404,6 +410,10 @@ class Pages extends Core
                 } catch (\Error $e) {
                     $page_id = $result->_id->__toString();
                 }
+
+                error_log(print_r($adapterName, 1));
+                error_log(print_r($modelName, 1));
+                error_log(print_r($modelId, 1));
 
                 $this->adapter->collection('routes')->insertOne([
                     'resource' => implode('/', [$adapterName, $modelName, $modelId]),

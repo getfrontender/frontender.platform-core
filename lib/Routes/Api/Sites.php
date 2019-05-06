@@ -22,6 +22,7 @@ use Frontender\Core\Routes\Traits\Authorizable;
 use Slim\Http\Request;
 use Slim\Http\Response;
 use Frontender\Core\Routes\Middleware\TokenCheck;
+use Frontender\Core\Routes\Middleware\ApiLocale;
 
 class Sites extends CoreRoute
 {
@@ -93,7 +94,8 @@ class Sites extends CoreRoute
         return [
             new TokenCheck(
                 $this->app->getContainer()
-            )
+            ),
+            new ApiLocale($this->app->getContainer())
         ];
     }
 }
