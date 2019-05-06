@@ -411,10 +411,6 @@ class Pages extends Core
                     $page_id = $result->_id->__toString();
                 }
 
-                error_log(print_r($adapterName, 1));
-                error_log(print_r($modelName, 1));
-                error_log(print_r($modelId, 1));
-
                 $this->adapter->collection('routes')->insertOne([
                     'resource' => implode('/', [$adapterName, $modelName, $modelId]),
                     'destination' => $route,

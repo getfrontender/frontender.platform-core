@@ -21,6 +21,7 @@ use Frontender\Core\DB\Adapter;
 use Slim\Container;
 use Slim\Http\Uri;
 use Doctrine\Common\Inflector\Inflector;
+use Frontender\Core\Template\Filter\Translate;
 
 class Router extends \Twig_Extension
 {
@@ -135,9 +136,14 @@ class Router extends \Twig_Extension
         if (isset($params['id'])) {
             // First we will check if we can find the page.
             if ($page) {
+                $translator = new Translate($this->container);
                 $model = $page->definition->template_config->model->data->model ?? false;
                 $adapter = $page->definition->template_config->model->data->adapter ?? false;
                 $id = $params['id'];
+
+                $model = $translator->translate($model, [], true);
+                $adapter = $translator->translate($adapter, [], true);
+                $id = $translator->translate($id, [], true);
 
                 if ($model && $adapter && $id) {
                     // Check if we have a redirect.
