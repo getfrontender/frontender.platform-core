@@ -21,16 +21,21 @@ class Platform extends Base
         // This can be done because we have a post function.
         require_once getcwd() . '/vendor/autoload.php';
 
+        if (self::isInstalled()) {
+            self::writeLn('Your project seems to be installed already.', 'green');
+            return 0;
+        }
+
         if (!self::checkPHPDependencies()) {
             self::writeLn('Some dependencies aren\'t installed, please consult the console for more details.', 'red');
             self::writeLn('Please fix these issues before continuing', 'red');
-            exit;
+            return 0;
         }
 
         // Check if we can find the file.
         if (!file_exists($installFilePath)) {
             self::writeLn('Install file isn\'t found, please create this one according to documentation', 'red');
-            exit;
+            return 0;
         } else {
             $installData = json_decode(file_get_contents($installFilePath), true);
         }
@@ -39,7 +44,7 @@ class Platform extends Base
 
         if (!self::checkInstallFile($installData)) {
             self::writeLn('Errors have occured, please consult the console for details!', 'red');
-            exit;
+            return 0;
         }
 
         self::writeLn('Install file is correct, installing all elements!', 'blue');
@@ -52,7 +57,7 @@ class Platform extends Base
 
         if (!$success) {
             self::writeLn('Errors have occured, please consult the console for details!', 'red');
-            exit;
+            return 0;
         } else {
             self::writeLn('.env file is created.', 'blue');
         }
@@ -72,7 +77,7 @@ class Platform extends Base
             $zip->close();
         } else {
             self::writeLn('Something went wrong when installing the core controls, please contact a developer', 'red');
-            exit;
+            return 0;
         }
 
         // Create a new site team.
@@ -95,10 +100,11 @@ class Platform extends Base
         // We have to check the db directory for all the imports.
         if (!self::importMongoFiles($tempDir)) {
             self::writeLn('Errors where encountered while importing the core information, please contact a developer!', 'red');
-            exit;
+            return 0;
         }
 
         self::writeLn('Everyhing is installed successfully, have fun using Frontender!', 'green');
+        return 0;
     }
 
     protected static function checkPHPDependencies()
@@ -174,6 +180,19 @@ class Platform extends Base
         }
 
         return $success;
+    }
+
+    private static function isInstalled()
+    {
+        $root = getcwd();
+        $lockFile = $root . '/composer.lock';
+        $dotEnvFile = $root . '/.env';
+
+        if (!file_exists($lockFile)) {
+            return false;
+        }
+
+        return file_exists($dotEnvFile);
     }
 
     protected static function writeEnvFile($data, $installPath = null): bool
