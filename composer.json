@@ -22,7 +22,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Frontender\\Core\\": "lib\\"
+            "Frontender\\Core\\": "lib/"
         }
     }
 }
