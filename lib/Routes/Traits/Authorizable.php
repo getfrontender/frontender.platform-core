@@ -33,10 +33,11 @@ trait Authorizable
         // Get the site ID.
         $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
         $settings = array_shift($settings);
-        $site_id = $settings->site_id;
         $token = $this->app->getContainer()['token'];
 
-        if ($token->getClaim('site_id') != $site_id) {
+        if (isset($settings->site_id) && $token->getClaim('site_id') != $settings->site_id) {
+            $site_id = $settings->site_id;
+
             try {
                 $client = new \GuzzleHttp\Client();
                 $res = $client->get($this->app->getContainer()->config->fem_host . '/api/users/index.php?id=' . $token->getClaim('sub') . '&site=' . $site_id, [
