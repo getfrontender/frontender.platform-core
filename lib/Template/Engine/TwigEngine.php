@@ -74,17 +74,19 @@ class TwigEngine extends AbstractObject implements EngineInterface
 
         // Add custom extension for the engine.
         // Auto bind all helpers
-        $finder = new Finder();
-        $finder
-            ->ignoreUnreadableDirs()
-            ->files()
-            ->in(ROOT_PATH . '/lib/Template/Filter/')
-            ->name('*.php')
-            ->sortByName();
+        if (file_exists(ROOT_PATH . '/lib/Template/Filter')) {
+            $finder = new Finder();
+            $finder
+                ->ignoreUnreadableDirs()
+                ->files()
+                ->in(ROOT_PATH . '/lib/Template/Filter/')
+                ->name('*.php')
+                ->sortByName();
 
-        foreach ($finder as $file) {
-            $class = 'Prototype\\Template\\Filter\\' . $file->getBasename('.' . $file->getExtension());
-            $this->engine->addExtension(new $class($container));
+            foreach ($finder as $file) {
+                $class = 'Prototype\\Template\\Filter\\' . $file->getBasename('.' . $file->getExtension());
+                $this->engine->addExtension(new $class($container));
+            }
         }
 
         // Register the core helpers
@@ -93,16 +95,19 @@ class TwigEngine extends AbstractObject implements EngineInterface
         $this->engine->addExtension(new Url($container));
         $this->engine->addExtension(new Template($container));
 
-        $finder = new Finder();
-        $finder
-            ->ignoreUnreadableDirs()
-            ->files()
-            ->in(ROOT_PATH . '/lib/Template/Helper/')
-            ->name('*.php')
-            ->sortByName();
-        foreach ($finder as $file) {
-            $class = 'Prototype\\Template\\Helper\\' . $file->getBasename('.' . $file->getExtension());
-            $this->engine->addExtension(new $class($container));
+        if (file_exists(ROOT_PATH . '/lib/Template/Helper')) {
+            $finder = new Finder();
+            $finder
+                ->ignoreUnreadableDirs()
+                ->files()
+                ->in(ROOT_PATH . '/lib/Template/Helper/')
+                ->name('*.php')
+                ->sortByName();
+
+            foreach ($finder as $file) {
+                $class = 'Prototype\\Template\\Helper\\' . $file->getBasename('.' . $file->getExtension());
+                $this->engine->addExtension(new $class($container));
+            }
         }
     }
 
