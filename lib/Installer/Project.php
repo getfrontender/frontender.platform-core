@@ -54,6 +54,7 @@ class Project extends Base
         self::importMongoFiles($tempDir);
         self::importPublicFiles($tempDir);
         self::importProjectFiles($tempDir);
+        self::importLibFiles($tempDir);
 
         self::writeLn('Project has been imported!', 'green');
     }
@@ -95,6 +96,31 @@ class Project extends Base
 
             foreach ($files as $file) {
                 $newFilePath = getcwd() . '/project/' . $directory->getFileName() . '/' .  $file->getRelativePath();
+
+                @mkdir($newFilePath, 0777, true);
+                @rename($file->getRealPath(), $newFilePath . '/' . $file->getFileName());
+            }
+        }
+
+        return true;
+    }
+
+    public static function importLibFiles(string $dir): bool
+    {
+        $libDir = self::findPathByDirName('lib', $dir);
+        $finder = new Finder();
+
+        if (!$libDir) {
+            return false;
+        }
+
+        $directories = $finder->directories()->in($libDir)->notName('db')->depth(0);
+        foreach ($directories as $directory) {
+            $filesFinder = new Finder();
+            $files = $filesFinder->files()->in($directory->getRealPath());
+
+            foreach ($files as $file) {
+                $newFilePath = getcwd() . '/lib/' . $directory->getFileName() . '/' .  $file->getRelativePath();
 
                 @mkdir($newFilePath, 0777, true);
                 @rename($file->getRealPath(), $newFilePath . '/' . $file->getFileName());
