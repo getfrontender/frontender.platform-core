@@ -91,14 +91,18 @@ class Project extends Base
 
         $directories = $finder->directories()->in($projectDir)->notName('db')->depth(0);
         foreach ($directories as $directory) {
-            $filesFinder = new Finder();
-            $files = $filesFinder->files()->in($directory->getRealPath());
+            if($directory->getFileName() === 'adapters') {
+                self::importAdapters($directory->getRealPath());
+            } else {
+                $filesFinder = new Finder();
+                $files = $filesFinder->files()->in($directory->getRealPath());
 
-            foreach ($files as $file) {
-                $newFilePath = getcwd() . '/project/' . $directory->getFileName() . '/' .  $file->getRelativePath();
+                foreach ($files as $file) {
+                    $newFilePath = getcwd() . '/project/' . $directory->getFileName() . '/' .  $file->getRelativePath();
 
-                @mkdir($newFilePath, 0777, true);
-                @rename($file->getRealPath(), $newFilePath . '/' . $file->getFileName());
+                    @mkdir($newFilePath, 0777, true);
+                    @rename($file->getRealPath(), $newFilePath . '/' . $file->getFileName());
+                }
             }
         }
 
@@ -128,5 +132,39 @@ class Project extends Base
         }
 
         return true;
+    }
+
+    public static function importAdapters(string $directory):bool {
+        $filesFinder = new Finder();
+        $files = $filesFinder->files()->in($directory);
+
+        // Find all the composer.json files and merge them into one.
+        self::updateComposerJson($directory);
+
+        foreach ($files as $file) {
+            $newFilePath = getcwd() . '/lib/Model/' . $file->getRelativePath();
+
+            @mkdir($newFilePath, 0777, true);
+            @rename($file->getRealPath(), $newFilePath . '/' . $file->getFileName());
+        }
+
+        return true;
+    }
+
+    private static function updateComposerJson(string $directory): void {
+        $filesFinder = new Finder();
+        $composerFiles = $filesFinder->files()->in($directory)->name('composer\.json');
+        $composerJSON = json_decode(file_get_contents(getcwd() . '/composer.json'), true);
+
+        foreach($composerFiles as $file) {
+            // Merge all the elements of the contents.
+            $contents = json_decode($file->getContents(), true);
+
+            foreach($contents as $key => $value) {
+                $composerJSON[$key] = array_merge($composerJSON[$key], $value);
+            }
+        }
+
+        file_put_contents(getcwd() . '/composer.json', json_encode($composerJSON));
     }
 }
