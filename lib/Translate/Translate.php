@@ -19,6 +19,7 @@ use Symfony\Component\Translation\Translator;
 use Symfony\Component\Translation\MessageSelector;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Frontender\Core\DB\Adapter;
+use Symfony\Component\Finder\Finder;
 
 class Translate
 {
@@ -44,7 +45,12 @@ class Translate
 
         // Add the files.
         foreach ($setting->scopes as $scope) {
-            $this->_translator->addResource('yml', $translations_path . $scope->locale . '.yml', $scope->locale);
+            $finder = new Finder();
+            $translationFiles = $finder->files()->in($translations_path)->name($scope->locale . '.yml');
+
+            foreach ($translationFiles as $file) {
+                $this->_translator->addResource('yml', $file->getRealPath(), $scope->locale);
+            }
         }
 
         $this->_language = $language;
