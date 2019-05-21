@@ -41,7 +41,7 @@ class Model extends Core implements \Countable
 
             // The rest are states.
             $model['language'] = $model['language'] ?? $container->language->get();
-            $model_class = 'Prototype\\Model\\' . $adapter . '\\' . ucfirst($name) . 'Model';
+            $model_class = 'Frontender\\Platform\\Model\\' . $adapter . '\\' . ucfirst($name) . 'Model';
             $instance = new $model_class($container);
 
             $instance->setState($model);

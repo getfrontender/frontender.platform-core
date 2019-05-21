@@ -114,7 +114,7 @@ class Adapters extends CoreRoute
             }, $modelParts);
             $modelName = implode('\\', $modelParts);
 
-            $classname = '\\Prototype\\Model\\' . $request->getAttribute('adapter') . '\\' . $modelName . 'Model';
+            $classname = '\\Frontender\\Platform\\Model\\' . $request->getAttribute('adapter') . '\\' . $modelName . 'Model';
             $model = new $classname($config);
             $model->setState($request->getQueryParams());
             $items = $model->fetch();

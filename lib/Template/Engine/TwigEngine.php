@@ -84,7 +84,7 @@ class TwigEngine extends AbstractObject implements EngineInterface
                 ->sortByName();
 
             foreach ($finder as $file) {
-                $class = 'Prototype\\Template\\Filter\\' . $file->getBasename('.' . $file->getExtension());
+                $class = 'Frontender\\Platform\\Template\\Filter\\' . $file->getBasename('.' . $file->getExtension());
                 $this->engine->addExtension(new $class($container));
             }
         }
@@ -105,7 +105,7 @@ class TwigEngine extends AbstractObject implements EngineInterface
                 ->sortByName();
 
             foreach ($finder as $file) {
-                $class = 'Prototype\\Template\\Helper\\' . $file->getBasename('.' . $file->getExtension());
+                $class = 'Frontender\\Platform\\Template\\Helper\\' . $file->getBasename('.' . $file->getExtension());
                 $this->engine->addExtension(new $class($container));
             }
         }

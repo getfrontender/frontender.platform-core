@@ -156,7 +156,7 @@ class App
                 $namespace = str_replace(DIRECTORY_SEPARATOR, '\\', $file->getRelativePath());
 
                 $name = str_replace('.php', '', $file->getBasename());
-                $class = 'Prototype\\Routes\\Api\\' . $namespace . '\\' . $name;
+                $class = 'Frontender\\Platform\\Routes\\Api\\' . ($namespace ? $namespace . '\\' : '') . $name;
 
                 new $class($this);
             }
