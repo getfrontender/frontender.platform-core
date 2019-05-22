@@ -52,6 +52,10 @@ class Pages extends Generic
             ];
 
             $this->adapter->collection('pages')->insertOne($newPage);
+
+            // I have to sanitize the page for public here.
+            $newPage['definition'] = \Frontender\Core\Controllers\Pages::sanitize($newPage['definition']);
+
             $this->adapter->collection('pages.public')->insertOne($newPage);
         }
 
