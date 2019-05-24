@@ -14,11 +14,18 @@ class Blueprints extends Generic
 
         foreach ($blueprints as $blueprint) {
             $pathParts = explode('/', $blueprint->getRelativePath());
+            $identifier = str_replace('.' . $blueprint->getExtension(), '', $blueprint->getRelativePathname());
             $type = array_shift($pathParts);
 
             $lot = $lotsCollection->insertOne([
                 'teams' => [$team['_id']]
             ]);
+
+            $this->adapter->collection($collection)->deleteMany([
+                'identifier' => $identifier
+            ]);
+
+            // There is no identifier here, I add them for the uniqueness, and so we can keep a record.
 
             $this->adapter->collection($collection)->insertOne([
                 'revision' => [
@@ -27,7 +34,8 @@ class Blueprints extends Generic
                     'date' => date('c'),
                     'lot' => $lot->getInsertedId()->__toString()
                 ],
-                'definition' => json_decode($blueprint->getContents())
+                'definition' => json_decode($blueprint->getContents()),
+                'identifier' => $identifier
             ]);
         }
 
