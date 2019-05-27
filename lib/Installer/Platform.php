@@ -26,12 +26,6 @@ class Platform extends Base
             return 0;
         }
 
-        if (!self::checkPHPDependencies()) {
-            self::writeLn('Some dependencies aren\'t installed, please consult the console for more details.', 'red');
-            self::writeLn('Please fix these issues before continuing', 'red');
-            return 0;
-        }
-
         // Check if we can find the file.
         if (!file_exists($installFilePath)) {
             self::writeLn('Install file isn\'t found, please create this one according to documentation', 'red');
@@ -105,29 +99,6 @@ class Platform extends Base
 
         self::writeLn('Everyhing is installed successfully, have fun using Frontender!', 'green');
         return 0;
-    }
-
-    protected static function checkPHPDependencies()
-    {
-        $success = true;
-
-        if (!extension_loaded('zip')) {
-            $success = false;
-            self::writeLn('Zip extension is not installed', 'red');
-        }
-
-        // Check if MongoDB is installed.
-        if (!extension_loaded('mongodb')) {
-            $success = false;
-            self::writeLn('MongoDB extension is not installed', 'red');
-        }
-
-        if (version_compare(PHP_VERSION, '7.1.0', '<')) {
-            $success = false;
-            self::writeLn('PHP version must be 7.1+', 'red');
-        }
-
-        return $success;
     }
 
     protected static function checkInstallFile($data): bool
