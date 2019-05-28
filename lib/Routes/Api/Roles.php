@@ -24,7 +24,11 @@ class Roles extends CoreRoute
             ])->toArray();
             $userRoles = Adapter::getInstance()->toJSON($userRoles);
 
-            return $response->withJson($userRoles);
+            return $response->withJson(array_map(function ($role) {
+                unset($role->users);
+
+                return $role;
+            }, $userRoles));
         });
     }
 
