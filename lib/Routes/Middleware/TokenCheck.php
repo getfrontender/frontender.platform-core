@@ -51,15 +51,6 @@ class TokenCheck
 
         $this->_container['token'] = $token;
 
-        // Check if our site is in the token. If not we have an issue.
-        if (in_array($request->getUri()->getHost(), $token->getClaim('domains')) === false) {
-            return $response
-                ->withStatus(400)
-                ->withJson([
-                    'error' => 'Domain not supported'
-                ]);
-        }
-
         $response = $next($request, $response);
         $query = $request->getQueryParams();
 
