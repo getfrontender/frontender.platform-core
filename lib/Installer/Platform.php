@@ -5,6 +5,9 @@ namespace Frontender\Core\Installer;
 use MongoDB\Client;
 use Frontender\Core\DB\Adapter;
 use Composer\Script\Event;
+use Frontender\Core\Utils\Manager;
+
+defined('ROOT_PATH') || define('ROOT_PATH', getcwd());
 
 class Platform extends Base
 {
@@ -46,7 +49,8 @@ class Platform extends Base
         // Create the .env file with the data and use it.
         $success = self::writeEnvFile([
             'MONGO_HOST' => $installData['mongo_host'],
-            'MONGO_DB' => $installData['mongo_dbname']
+            'MONGO_DB' => $installData['mongo_dbname'],
+            'FEP_TOKEN_SECRET' => $installData['token']
         ]);
 
         if (!$success) {
@@ -54,6 +58,13 @@ class Platform extends Base
             return 0;
         } else {
             self::writeLn('.env file is created.', 'blue');
+        }
+
+        if (!self::importSiteSettings($installData)) {
+            self::writeLn('Site data could not be imported, do you have the right token?', 'red');
+            return 0;
+        } else {
+            self::writeLn('Site data is imported.', 'blue');
         }
 
         self::writeLn('Downloading core controls.', 'blue');
@@ -74,22 +85,6 @@ class Platform extends Base
             return 0;
         }
 
-        // Create a new site team.
-        $adapter->collection('teams')->drop();
-        $adapter->collection('teams')->insertOne([
-            'name' => 'Site'
-        ]);
-
-        $adapter->collection('settings')->insertOne([
-            'name' => $installData['project_name'] ?? null,
-            'scopes' => [[
-                'protocol' => 'http',
-                'domain' => $installData['domain'],
-                'locale' => $installData['locale'],
-                'locale_prefix' => substr($installData['locale'], 0, 2)
-            ]]
-        ]);
-
         // We can now upload all the data to the database, the connection is ready etc.
         // We have to check the db directory for all the imports.
         if (!self::importMongoFiles($tempDir)) {
@@ -105,9 +100,10 @@ class Platform extends Base
     {
         $success = true;
 
-        if (version_compare(PHP_VERSION, '7.1.0', "<")) {
+        if (!isset($data['token'])) {
             $success = false;
-            self::writeLn('PHP version must be at least 7.1.0', 'red');
+            self::writeLn('No installation token found, please add this token.', 'red');
+            self::writeLn('This token is given after the site is registred.', 'red');
         }
 
         /*******************************/
@@ -134,22 +130,6 @@ class Platform extends Base
             self::writeLn('MongoDB configuration is missing information, please check.', 'red');
         }
 
-        /*******************************/
-        /** Locale information check  **/
-        /*******************************/
-        if (!isset($data['locale']) || empty($data['locale']) || strlen($data['locale']) !== 5 || strpos($data['locale'], '-') === false) {
-            $success = false;
-            self::writeLn('Locale isn\'t set according to RFC5646 notation.', 'red');
-        }
-
-        /*******************************/
-        /** Domain information check  **/
-        /*******************************/
-        if (!isset($data['domain']) || empty($data['domain'])) {
-            $success = false;
-            self::writeLn('Domain isn\'t set, please set a domain on which you want to host Frontender', 'red');
-        }
-
         return $success;
     }
 
@@ -171,9 +151,8 @@ class Platform extends Base
         try {
             $dotEnvPath = ($installPath ?: getcwd()) . '/.env';
             $data = array_merge([
-                'ENV' => 'development',
-                'FEP_TOKEN_HEADER' => 'X-Token',
-                'FEP_TOKEN_SECRET' => ''
+                'ENV' => 'production',
+                'FEP_TOKEN_HEADER' => 'X-Token'
             ], $data);
 
             // Create the file in the current directory, this depends on where the item is installed.
@@ -199,5 +178,44 @@ class Platform extends Base
         }
 
         return true;
+    }
+
+    protected static function importSiteSettings($installData): bool
+    {
+        // We now know that the token exists.
+        try {
+            $response = Manager::getInstance()->post('sites/import', [
+                'json' => [
+                    'import_token' => bin2hex(base64_encode($installData['token']))
+                ]
+            ]);
+            $contents = json_decode($response->getBody()->getContents());
+            $adapter = Adapter::getInstance();
+
+            if ($contents->status !== 'success') {
+                return false;
+            }
+
+            // Create a new site team.
+            $adapter->collection('teams')->drop();
+            $adapter->collection('teams')->insertOne([
+                'name' => 'Site',
+                'users' => array_map(function ($id) {
+                    return (int)$id;
+                }, $contents->data->managers)
+            ]);
+
+            $adapter->collection('settings')->drop();
+            $adapter->collection('settings')->insertOne([
+                'site_id' => $contents->data->site_id,
+                'scopes' => $contents->data->scopes
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        } catch (\Error $e) {
+            return false;
+        }
     }
 }
