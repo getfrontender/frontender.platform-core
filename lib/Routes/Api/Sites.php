@@ -24,7 +24,6 @@ use Slim\Http\Response;
 use Frontender\Core\Routes\Middleware\TokenCheck;
 use Frontender\Core\Routes\Middleware\ApiLocale;
 use Frontender\Core\Utils\Manager;
-use Frontender\Core\Routes\Helpers\Tokenize;
 
 class Sites extends CoreRoute
 {
@@ -43,6 +42,34 @@ class Sites extends CoreRoute
             $setting = Adapter::getInstance()->toJSON(array_shift($settings));
 
             return $response->withJson($setting ?? new \stdClass());
+        });
+
+        $this->app->get('/users', function (Request $request, Response $response) use ($self) {
+            $self->isAuthorized('manage-users', $request, $response);
+
+            try {
+                $manager = Manager::getInstance();
+                $manager->setToken($this->token);
+                $resp = $manager->get('sites/users');
+
+                $contents = json_decode($resp->getBody()->getContents());
+
+                if ($contents->status !== 'success') {
+                    return $response->withStatus(422);
+                }
+
+                return $response->withJson($contents->data);
+            } catch (\Exception $e) {
+                if (method_exists($e, 'getResponse') && method_exists($e, 'hasResponse') && $e->hasResponse()) {
+                    $resp = $e->getResponse();
+
+                    return $response->withStatus(
+                        $resp->getStatusCode()
+                    );
+                }
+
+                return $response->withStatus(403);
+            }
         });
 
         $this->app->get('/reset_settings', function (Request $request, Response $response) use ($self) {
@@ -81,29 +108,9 @@ class Sites extends CoreRoute
             // First post the data to the manager.
             // The manager will tell us what to do.
             try {
-                $token = clone $this->token;
-                $roles = Adapter::getInstance()->collection('roles')->find([
-                    'users' => (int)$token->getClaim('sub')
-                ])->toArray();
-                $roles = Adapter::getInstance()->toJSON($roles);
-                $permissions = array_map(function ($role) {
-                    return $role->permissions;
-                }, $roles);
-                $permissions = array_reduce($permissions, function ($carry, $values) {
-                    return array_merge($carry, $values);
-                }, []);
-                $permissions = array_unique($permissions);
-                $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-                $setting = array_shift($settings);
-
-                $token->set('permissions', $permissions);
-
+                Manager::getInstance()->setToken($this->token);
                 $resp = Manager::getInstance()->patch('sites/settings', [
-                    'json' => $request->getParsedBody(),
-                    'headers' => [
-                        'X-Token' => Tokenize::getInstance()->build($token)->__toString(),
-                        'X-Site-ID' => $setting->site_id
-                    ]
+                    'json' => $request->getParsedBody()
                 ]);
 
                 $contents = json_decode($resp->getBody()->getContents());
@@ -111,7 +118,6 @@ class Sites extends CoreRoute
                 if ($contents->status !== 'success') {
                     return $response->withStatus(422);
                 }
-
 
                 // The contents will only contain the scopes that are allowed by the manager.
                 // But we will also need to save the preview settings.
