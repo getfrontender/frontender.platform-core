@@ -25,11 +25,21 @@ class Blueprints extends Generic
                 'identifier' => $identifier
             ]);
 
-            // There is no identifier here, I add them for the uniqueness, and so we can keep a record.
+
+            // Check if we have a thumbnail file.
+            $thumbnail = '';
+            $thumbnail_path = sprintf('%s/%s.png', $blueprint->getRealPath(), $blueprint->getFileName());
+
+            if (file_exists($thumbnail_path)) {
+                $thumbnail = 'data:image/png;base64,' . base64_encode(file_get_contents($thumbnail_path));
+            }
 
             $this->adapter->collection($collection)->insertOne([
                 'revision' => [
                     'hash' => md5($blueprint->getContents()),
+                    'thumbnail' => [
+                        'en-GB' => $thumbnail
+                    ],
                     'type' => $type,
                     'date' => date('c'),
                     'lot' => $lot->getInsertedId()->__toString()

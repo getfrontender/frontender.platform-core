@@ -21,6 +21,7 @@ class Pages extends Generic
         $pagesPublicCollection = $this->adapter->collection('pages.public');
 
         foreach ($pages as $page) {
+            $pageObject = $page;
             $page = json_decode($page->getContents(), true);
 
             if (isset($page['route']) && is_string($page['route'])) {
@@ -41,9 +42,19 @@ class Pages extends Generic
                 'teams' => [$team['_id']]
             ]);
 
+            $thumbnail = '';
+            $thumbnail_path = sprintf('%s/%s.png', $pageObject->getRealPath(), $pageObject->getFileName());
+
+            if (file_exists($thumbnail_path)) {
+                $thumbnail = 'data:image/png;base64,' . base64_encode(file_get_contents($thumbnail_path));
+            }
+
             $newPage = [
                 'revision' => [
                     'hash' => md5(json_encode($page)),
+                    'thumbnail' => [
+                        'en-GB' => $thumbnail
+                    ],
                     'lot' => $lot->getInsertedId()->__toString(),
                     'date' => date('c'),
                     'user' => []
