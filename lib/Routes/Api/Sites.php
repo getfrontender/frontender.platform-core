@@ -23,6 +23,8 @@ use Slim\Http\Request;
 use Slim\Http\Response;
 use Frontender\Core\Routes\Middleware\TokenCheck;
 use Frontender\Core\Routes\Middleware\ApiLocale;
+use Frontender\Core\Utils\Manager;
+use Frontender\Core\Routes\Helpers\Tokenize;
 
 class Sites extends CoreRoute
 {
@@ -76,16 +78,66 @@ class Sites extends CoreRoute
         $this->app->post('/settings', function (Request $request, Response $response) use ($self) {
             $response = $self->isAuthorized('manage-site-settings', $request, $response);
 
-            $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-            $setting = array_shift($settings);
-            $data = $request->getParsedBody();
-            unset($data['_id']);
+            // First post the data to the manager.
+            // The manager will tell us what to do.
+            try {
+                $token = clone $this->token;
+                $roles = Adapter::getInstance()->collection('roles')->find([
+                    'users' => (int)$token->getClaim('sub')
+                ])->toArray();
+                $roles = Adapter::getInstance()->toJSON($roles);
+                $permissions = array_map(function ($role) {
+                    return $role->permissions;
+                }, $roles);
+                $permissions = array_reduce($permissions, function ($carry, $values) {
+                    return array_merge($carry, $values);
+                }, []);
+                $permissions = array_unique($permissions);
+                $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
+                $setting = array_shift($settings);
 
-            Adapter::getInstance()->collection('settings')->findOneAndReplace([
-                '_id' => $setting->_id
-            ], $data);
+                $token->set('permissions', $permissions);
 
-            return $response->withStatus(200);
+                $resp = Manager::getInstance()->patch('sites/settings', [
+                    'json' => $request->getParsedBody(),
+                    'headers' => [
+                        'X-Token' => Tokenize::getInstance()->build($token)->__toString(),
+                        'X-Site-ID' => $setting->site_id
+                    ]
+                ]);
+
+                $contents = json_decode($resp->getBody()->getContents());
+
+                if ($contents->status !== 'success') {
+                    return $response->withStatus(422);
+                }
+
+
+                // The contents will only contain the scopes that are allowed by the manager.
+                // But we will also need to save the preview settings.
+                $data = $request->getParsedBody();
+                unset($data['_id']);
+
+                Adapter::getInstance()->collection('settings')->findOneAndUpdate([
+                    '_id' => $setting->_id
+                ], [
+                    '$set' => [
+                        'scopes' => $contents->data
+                    ]
+                ]);
+
+                return $response->withStatus(200);
+            } catch (\Exception $e) {
+                if (method_exists($e, 'getResponse') && method_exists($e, 'hasResponse') && $e->hasResponse()) {
+                    $resp = $e->getResponse();
+
+                    return $response->withStatus(
+                        $resp->getStatusCode()
+                    );
+                }
+
+                return $response->withStatus(403);
+            }
         });
     }
 
