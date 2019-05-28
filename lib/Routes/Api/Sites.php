@@ -37,11 +37,47 @@ class Sites extends CoreRoute
 
         $self = $this;
 
-        $this->app->get('/settings', function (Request $request, Response $response) {
-            $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-            $setting = Adapter::getInstance()->toJSON(array_shift($settings));
+        $this->app->get('/settings', function (Request $request, Response $response) use ($self) {
+            $self->isAuthorized('manage-site-settings', $request, $response);
 
-            return $response->withJson($setting ?? new \stdClass());
+            try {
+                $manager = Manager::getInstance();
+                $manager->setToken($this->token);
+                $resp = $manager->get('sites/settings');
+
+                $contents = json_decode($resp->getBody()->getContents());
+
+                if ($contents->status !== 'success') {
+                    return $response->withStatus(422);
+                }
+
+                // Reset the settings, gnagnagna.
+                $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
+                $settings = Adapter::getInstance()->toJSON($settings);
+                $settings = array_shift($settings);
+
+                Adapter::getInstance()->collection('settings')->findOneAndUpdate([
+                    '_id' => $setting->_id
+                ], [
+                    '$set' => [
+                        'scopes' => $contents->data->scopes
+                    ]
+                ]);
+
+                $contents->data->preview_settings = $settings->preview_settings;
+
+                return $response->withJson($contents->data);
+            } catch (\Exception $e) {
+                if (method_exists($e, 'getResponse') && method_exists($e, 'hasResponse') && $e->hasResponse()) {
+                    $resp = $e->getResponse();
+
+                    return $response->withStatus(
+                        $resp->getStatusCode()
+                    );
+                }
+
+                return $response->withStatus(403);
+            }
         });
 
         $this->app->get('/users', function (Request $request, Response $response) use ($self) {
