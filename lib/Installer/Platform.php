@@ -173,7 +173,7 @@ class Platform extends Base
             $data = array_merge([
                 'ENV' => 'development',
                 'FEP_TOKEN_HEADER' => 'X-Token',
-                'FEP_TOKEN_SECRET' => '6da5c8fb4a1874872b6e785287f50409.b27cac074cc5c17f83c7c9e8071002e3.f4158e1f03c61b625252d3657877d3f9'
+                'FEP_TOKEN_SECRET' => ''
             ], $data);
 
             // Create the file in the current directory, this depends on where the item is installed.
