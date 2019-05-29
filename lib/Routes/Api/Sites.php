@@ -179,11 +179,6 @@ class Sites extends CoreRoute
                 if (method_exists($e, 'getResponse') && method_exists($e, 'hasResponse') && $e->hasResponse()) {
                     $resp = $e->getResponse();
 
-                    echo '<pre>';
-                    print_r($resp->getBody()->getContents());
-                    echo '</pre>';
-                    die();
-
                     return $response->withStatus(
                         $resp->getStatusCode()
                     );
