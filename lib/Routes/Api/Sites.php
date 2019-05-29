@@ -57,14 +57,16 @@ class Sites extends CoreRoute
                 $settings = array_shift($settings);
 
                 Adapter::getInstance()->collection('settings')->findOneAndUpdate([
-                    '_id' => $setting->_id
+                    '_id' => $settings->_id
                 ], [
                     '$set' => [
                         'scopes' => $contents->data->scopes
                     ]
                 ]);
 
-                $contents->data->preview_settings = $settings->preview_settings;
+                if (isset($settings->preview_settings)) {
+                    $contents->data->preview_settings = $settings->preview_settings;
+                }
 
                 return $response->withJson($contents->data);
             } catch (\Exception $e) {
