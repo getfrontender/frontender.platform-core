@@ -29,7 +29,7 @@ class Pages extends Core
         $collection = isset($filter['collection']) ? 'pages.' . $filter['collection'] : 'pages';
         $findFilter = new \stdClass();
         $skip = 0;
-        $limit = $filter['limit'];
+        $limit = isset($filter['limit']) ? $filter['limit'] : 8;
 
         if (isset($filter['skip'])) {
             $skip = $filter['skip'];
