@@ -160,13 +160,17 @@ class Sites extends CoreRoute
                 // The contents will only contain the scopes that are allowed by the manager.
                 // But we will also need to save the preview settings.
                 $data = $request->getParsedBody();
+                $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
+                $settings = array_shift($settings);
+
                 unset($data['_id']);
 
                 Adapter::getInstance()->collection('settings')->findOneAndUpdate([
-                    '_id' => $setting->_id
+                    '_id' => $settings->_id
                 ], [
                     '$set' => [
-                        'scopes' => $contents->data
+                        'scopes' => $contents->data,
+                        'languages' => $request->getParsedBodyParam('languages')
                     ]
                 ]);
 
@@ -175,12 +179,17 @@ class Sites extends CoreRoute
                 if (method_exists($e, 'getResponse') && method_exists($e, 'hasResponse') && $e->hasResponse()) {
                     $resp = $e->getResponse();
 
+                    echo '<pre>';
+                    print_r($resp->getBody()->getContents());
+                    echo '</pre>';
+                    die();
+
                     return $response->withStatus(
                         $resp->getStatusCode()
                     );
                 }
 
-                return $response->withStatus(403);
+                return $response->withStatus(422);
             }
         });
     }
