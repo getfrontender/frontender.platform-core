@@ -29,6 +29,7 @@ class Pages extends Core
         $collection = isset($filter['collection']) ? 'pages.' . $filter['collection'] : 'pages';
         $findFilter = new \stdClass();
         $skip = 0;
+        $limit = $filter['limit'];
 
         if (isset($filter['skip'])) {
             $skip = $filter['skip'];
@@ -187,8 +188,10 @@ class Pages extends Core
             'allowDiskUse' => true
         ])->toArray());
 
-        $aggrigation[] = ['$limit' => 8 + $skip];
-        $aggrigation[] = ['$skip' => $skip];
+        if ((int)$limit) {
+            $aggrigation[] = ['$limit' => $limit + $skip];
+            $aggrigation[] = ['$skip' => $skip];
+        }
         $revisions = $this->adapter->collection($collection)->aggregate($aggrigation, [
             'allowDiskUse' => true
         ])->toArray();

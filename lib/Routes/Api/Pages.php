@@ -218,6 +218,7 @@ class Pages extends CoreRoute
                     'sort' => !empty($request->getQueryParam('sort')) ? $request->getQueryParam('sort') : 'definition.name',
                     'direction' => !empty($request->getQueryParam('direction')) ? $request->getQueryParam('direction') : 1,
                     'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB',
+                    'limit' => !$request->getQueryParam('limit') ? $request->getQueryParam('limit') : 8,
                     'teams' => Adapter::getInstance()->collection('teams')->find([
                         'users' => (int)$this->token->getClaim('sub')
                     ])->toArray()
