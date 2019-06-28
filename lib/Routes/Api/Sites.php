@@ -68,6 +68,10 @@ class Sites extends CoreRoute
                     $contents->data->preview_settings = $settings->preview_settings;
                 }
 
+                if (isset($settings->languages)) {
+                    $contents->data->languages = $settings->languages;
+                }
+
                 return $response->withJson($contents->data);
             } catch (\Exception $e) {
                 if (method_exists($e, 'getResponse') && method_exists($e, 'hasResponse') && $e->hasResponse()) {
