@@ -33,21 +33,24 @@ class Thumbnail extends CoreRoute
 
         $this->app->get('/homepage', function(Request $req, Response $res) {
             $homepage = '/'; // TODO: Retrieve this from the config.
+            $locale = $this->language->get();
+            $settings = Adapter::getInstance()->toJSON(Adapter::getInstance()->collection('settings')->find()->toArray(), true);
+            $settings = array_shift($settings);
+            $scope = array_shift($settings['scopes']);
+
+            if(!$locale) {
+                $locale = $scope['locale'];
+            }
 
             $page = Adapter::getInstance()->collection('pages.public')->findOne([
-                'definition.route.' . $this->language->get() => $homepage
+                'definition.route.' . $locale => $homepage
             ]);
 
-            if(!isset($page->revision->thumbnail->{$this->language->get()})) {
+            if(!isset($page->revision->thumbnail->{$locale})) {
                 return $res->withStatus(404);
             }
 
-            $thumbnail = $page->revision->thumbnail->{$this->language->get()};
-            $part = explode(':', $thumbnail)[1];
-            [$mimetype, $base64Image] = explode(';base64,', $part);
-
-            $res->getBody()->write(base64_decode($base64Image));
-            return $res->withHeader('Content-Type', $mimetype);
+            return $res->getBody()->write($page->revision->thumbnail->{$locale});
         });
     }
 
