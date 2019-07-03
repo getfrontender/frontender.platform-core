@@ -32,7 +32,8 @@ class Markdown extends \Twig_Extension
     public function getFilters()
     {
         return [
-            new \Twig_Filter('markdown', [$this, 'parseMarkdown'])
+            new \Twig_Filter('markdown', [$this, 'parseMarkdown']),
+            new \Twig_Filter('md', [$this, 'parseMarkdown'])
         ];
     }
 
