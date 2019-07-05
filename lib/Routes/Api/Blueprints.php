@@ -65,7 +65,8 @@ class Blueprints extends CoreRoute
 
         $this->app->post('/preview', function (Request $request, Response $response) {
             $data = $request->getParsedBody();
-            $blueprint = json_decode($data['data'], true);
+            $blueprint = json_decode(urldecode($data['data']), true);
+
             $page = [
                 'template' => 'layouts/global.html.twig',
                 'containers' => [

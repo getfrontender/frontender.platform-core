@@ -375,7 +375,7 @@ class Pages extends CoreRoute
 
         $this->app->post('/{page_id}/preview', function (Request $request, Response $response) {
             $body = $request->getParsedBody();
-            $json = json_decode($body['data'], true);
+            $json = json_decode(urldecode($body['data']), true);
             $json = \Frontender\Core\Controllers\Pages::sanitize($json['definition']);
 
             try {
