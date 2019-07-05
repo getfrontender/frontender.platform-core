@@ -175,6 +175,12 @@ class Router extends \Twig_Extension
 
     private function modifyProxyDomain(Uri $uri, $locale, $path)
     {
+        $currentScope = $this->container->scope;
+
+        if($currentScope) {
+            $uri = $uri->withScheme($currentScope['protocol']);
+        }
+
         // If anything of a proxy domain is in here, we will remove that part and add the domain.
         $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
         $settings = Adapter::getInstance()->toJson($settings, true);
@@ -209,7 +215,8 @@ class Router extends \Twig_Extension
             $domain = array_shift($domains);
             $tempProxyPath = ltrim($domain['proxy_path'], '/');
             $path = ltrim(preg_replace('/' . $tempProxyPath . '/', '', $path, 1), '/');
-            $uri = $uri->withHost($domain['domain']);
+            $uri = $uri->withHost($domain['domain'])
+                ->withScheme($domain['protocol']);
         } else {
             // We have to reset the host to the "default".
             $domains = array_filter($setting['scopes'], function ($scope) use ($locale) {
@@ -230,7 +237,8 @@ class Router extends \Twig_Extension
                 $domain = array_shift($domains);
 
                 if (isset($domain['domain'])) {
-                    $uri = $uri->withHost($domain['domain']);
+                    $uri = $uri->withHost($domain['domain'])
+                        ->withScheme($domain['protocol']);
                 }
             }
         }
