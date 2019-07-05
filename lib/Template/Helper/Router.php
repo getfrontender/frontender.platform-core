@@ -175,9 +175,8 @@ class Router extends \Twig_Extension
 
     private function modifyProxyDomain(Uri $uri, $locale, $path)
     {
-        $currentScope = $this->container->scope;
-
-        if($currentScope) {
+        if($this->container->has('scope')) {
+            $currentScope = $this->container->scope;
             $uri = $uri->withScheme($currentScope['protocol']);
         }
 
