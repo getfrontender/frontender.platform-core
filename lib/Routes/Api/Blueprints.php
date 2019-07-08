@@ -68,7 +68,7 @@ class Blueprints extends CoreRoute
             $blueprint = json_decode(urldecode($data['data']), true);
 
             $page = [
-                'template' => 'layouts/global.html.twig',
+                'template' => $data['template'] ?? 'layouts/global.html.twig',
                 'containers' => [
                     $blueprint['definition']
                 ]
