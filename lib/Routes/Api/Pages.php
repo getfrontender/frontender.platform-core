@@ -444,11 +444,13 @@ class Pages extends CoreRoute
             } else {
                 $newFilter = ['$or' => []];
                 foreach ($filter as $key => $value) {
-                    $key = 'definition.' . $key . '.' . $locale;
-                    $value = [
-                        '$regex' => '.*' . $value . '.*',
-                        '$options' => 'i'
-                    ];
+                    if(strpos($key, 'states') === false) {
+                        $key = 'definition.' . $key . '.' . $locale;
+                        $value = [
+                            '$regex' => '.*' . $value . '.*',
+                            '$options' => 'i'
+                        ];
+                    }
 
                     $newFilter['$or'][] = [$key => $value];
                 }
