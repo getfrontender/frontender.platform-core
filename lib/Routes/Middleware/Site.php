@@ -25,6 +25,7 @@ use Slim\Http\Response;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 use Frontender\Core\Routes\Exceptions\NotImplemented;
+use Frontender\Core\Utils\Scopes;
 
 /**
  * The Sitable middleware is the heart of the multi-site functionality.
@@ -47,20 +48,18 @@ class Site
     public function __invoke(Request $request, Response $response, $next)
     {
         $router = $this->_container->get('router');
-        $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-        $settings = array_shift($settings);
+        $scopes = Scopes::get();
 
-        if (!$settings) {
+        if (!$scopes) {
             throw new NotFoundException($request, $response);
         }
 
-        $settings = Adapter::getInstance()->toJSON($settings, true);
         $host = $request->getUri()->getHost();
         $path = $request->getUri()->getPath();
         $segments = array_filter(explode('/', $path));
         $segments = array_values($segments);
 
-        $hosts = array_filter($settings['scopes'], function ($scope) use ($host) {
+        $hosts = array_filter($scopes, function ($scope) use ($host) {
             return $scope['domain'] == $host;
         });
         $hosts = array_map(function ($host) {
@@ -73,7 +72,7 @@ class Site
         $hosts = array_values($hosts);
 
         if (strpos($request->getUri()->getPath(), '/api') === 0) {
-            $this->_container['fallbackScope'] = $settings['scopes'][0];
+            $this->_container['fallbackScope'] = $scopes[0];
             return $next($request, $response);
         }
 
@@ -112,7 +111,7 @@ class Site
 
         $locale = $host['locale'];
         $path = implode('/', $segments);
-        $proxies = array_filter($settings['scopes'], function ($scope) use ($path, $locale, $host) {
+        $proxies = array_filter($scopes, function ($scope) use ($path, $locale, $host) {
             if (!isset($scope['proxy_path'])) {
                 return false;
             }
@@ -163,7 +162,7 @@ class Site
         // Before we will continue through the system, we will set the current scope.
         // This is required elsewere.
         $this->_container['scope'] = $host;
-        $this->_container['fallbackScope'] = $settings['scopes'][0];
+        $this->_container['fallbackScope'] = $scopes[0];
         $this->_container->language->set($locale);
 
         return $next($request, $response);

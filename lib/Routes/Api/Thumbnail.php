@@ -22,6 +22,7 @@ use Slim\Http\Request;
 use Slim\Http\Response;
 use Frontender\Core\DB\Adapter;
 use Frontender\Core\Routes\Middleware\ApiLocale;
+use Frontender\Core\Utils\Scopes;
 
 class Thumbnail extends CoreRoute
 {
@@ -34,9 +35,8 @@ class Thumbnail extends CoreRoute
         $this->app->get('/homepage', function(Request $req, Response $res) {
             $homepage = '/'; // TODO: Retrieve this from the config.
             $locale = $this->language->get();
-            $settings = Adapter::getInstance()->toJSON(Adapter::getInstance()->collection('settings')->find()->toArray(), true);
-            $settings = array_shift($settings);
-            $scope = array_shift($settings['scopes']);
+            $scopes = Scopes::get();
+            $scope = array_shift($scopes);
 
             if(!$locale) {
                 $locale = $scope['locale'];

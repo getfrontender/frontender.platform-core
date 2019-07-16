@@ -22,6 +22,7 @@ use Slim\Container;
 use Slim\Http\Uri;
 use Doctrine\Common\Inflector\Inflector;
 use Frontender\Core\Template\Filter\Translate;
+use Frontender\Core\Utils\Scopes;
 
 class Router extends \Twig_Extension
 {
@@ -70,14 +71,13 @@ class Router extends \Twig_Extension
             }
         }
 
-        $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-        $setting = Adapter::getInstance()->toJSON(array_shift($settings), true);
+        $scopes = Scopes::get();
         $uri = $this->container->get('request')->getUri();
         $domain = $uri->getHost();
         $amount = 0;
 
-        if (isset($setting['scopes'])) {
-            $amount = array_filter($setting['scopes'], function ($scope) use ($domain) {
+        if (isset($scopes)) {
+            $amount = array_filter($scopes, function ($scope) use ($domain) {
                 return $scope['domain'] === $domain;
             });
         }
@@ -182,11 +182,9 @@ class Router extends \Twig_Extension
     private function modifyProxyDomain(Uri $uri, $locale, $path)
     {
         // If anything of a proxy domain is in here, we will remove that part and add the domain.
-        $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-        $settings = Adapter::getInstance()->toJson($settings, true);
-        $setting = array_shift($settings);
+        $scopes = Scopes::get();
 
-        $domains = array_filter($setting['scopes'], function ($scope) use ($locale, $path) {
+        $domains = array_filter($scopes, function ($scope) use ($locale, $path) {
             if (in_array('proxy_path', array_keys($scope))) {
                 $tempLocale = str_replace('/', '', $scope['locale_prefix']);
                 $tempPath = ltrim($path, '/');
@@ -218,7 +216,7 @@ class Router extends \Twig_Extension
             $uri = $uri->withHost($domain['domain']);
         } else {
             // We have to reset the host to the "default".
-            $domains = array_filter($setting['scopes'], function ($scope) use ($locale) {
+            $domains = array_filter($scopes, function ($scope) use ($locale) {
                 // We have to find the same locale, and one that doesn't have a proxy_path.
                 $tempLocale = str_replace('/', '', $scope['locale_prefix'] ?? '');
                 if ($locale && $tempLocale != $locale) {

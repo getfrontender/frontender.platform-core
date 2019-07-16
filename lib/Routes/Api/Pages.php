@@ -26,6 +26,7 @@ use Slim\Http\Request;
 use Slim\Http\Response;
 use Frontender\Core\Routes\Middleware\TokenCheck;
 use Frontender\Core\Routes\Middleware\ApiLocale;
+use Frontender\Core\Utils\Scopes;
 
 class Pages extends CoreRoute
 {
@@ -429,11 +430,8 @@ class Pages extends CoreRoute
     {
         $uri = $request->getUri();
         $locale = $request->getQueryParam('locale') ?? 'en-GB';
-        $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-        $settings = Adapter::getInstance()->toJSON($settings);
-        $settings = array_shift($settings);
-        $scopes = array_filter($settings->scopes, function ($scope) use ($uri, $locale) {
-            return $scope->domain === $uri->getHost() && $scope->locale === $locale;
+        $scopes = array_filter(Scopes::get(), function ($scope) use ($uri, $locale) {
+            return $scope['domain'] === $uri->getHost() && $scope['locale'] === $locale;
         });
         $scope = array_shift($scopes);
         $newFilter = [];
