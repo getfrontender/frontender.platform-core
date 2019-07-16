@@ -155,6 +155,11 @@ class Sites extends CoreRoute
                     'json' => $request->getParsedBody()
                 ]);
 
+                echo '<pre>';
+                    print_r($resp->getBody()->getContents());
+                echo '</pre>';
+                die();
+
                 $contents = json_decode($resp->getBody()->getContents());
 
                 if ($contents->status !== 'success') {
