@@ -6,21 +6,27 @@ use Frontender\Core\DB\Adapter;
 
 class Scopes
 {
-    public static function get() {
-        $settings = Adapter::getInstance()
-            ->toJSON(
-                Adapter::getInstance()
-                ->collection('settings')
-                ->find()
-                ->toArray()
-            , true);
+    protected static $scopes;
 
-        if(!$settings) {
-            return false;
+    public static function get() {
+        if(!self::$scopes) {
+            $settings = Adapter::getInstance()
+                ->toJSON(
+                    Adapter::getInstance()
+                    ->collection('settings')
+                    ->find()
+                    ->toArray()
+                , true);
+
+            if(!$settings) {
+                return false;
+            }
+
+            $settings = array_shift($settings);
+            self::$scopes = self::parse($settings['scopes']);
         }
 
-        $settings = array_shift($settings);
-        return self::parse($settings['scopes']);
+        return self::$scopes;
     }
 
     public static function parse($scopes) {
