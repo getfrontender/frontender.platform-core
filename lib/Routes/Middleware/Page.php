@@ -123,8 +123,15 @@ class Page
             }
 
             if ($requestId) {
+                $adapterName = $translator->translate($page->definition->template_config->model->data->adapter);
+                $model = $translator->translate($page->definition->template_config->model->data->model);
+
                 $redirect = $adapter->collection('routes')->findOne([
-                    'resource' => implode('/', [$page->definition->template_config->model->data->adapter, $page->definition->template_config->model->data->model, $requestId]),
+                    '$or' => [
+                        ['resource.' . $locale => implode('/', [$adapterName, $model, $requestId])],
+                        ['resource.' . $fallbackLocale => implode('/', [$adapterName, $model, $requestId])],
+                        ['resource' => implode('/', [$adapterName, $model, $requestId])]
+                    ],
                     'type' => 'landingpage'
                 ]);
 

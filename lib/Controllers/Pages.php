@@ -398,7 +398,14 @@ class Pages extends Core
         }, $page->definition);
 
         if ($adapterName && $modelName && $modelId && ($page->definition['route'] || $page->defintion['cononical'])) {
-            if (strpos(trim($modelId), '{') === false) {
+            $settings = $this->adapter->collection('settings')->find()->toArray();
+            $settings = $this->adapter->toJSON($settings, true);
+            $settings = array_shift($settings);
+            $fallbackLocale = $settings['scopes'][0]['locale'];
+
+            // Check if any of our ids is a dynamic id, 
+
+            if (is_array($modelId) || strpos(trim($modelId), '{') === false) {
                 // We prefer the cononical
 
                 $translator = new Translate($container);
@@ -414,8 +421,42 @@ class Pages extends Core
                     $page_id = $result->_id->__toString();
                 }
 
+                // If the modelID is an array we will cast the translatable objects to the resource id.
+                $resource = implode('/', [$adapterName, $modelName, $modelId]);
+                if(is_array($modelId)) {
+                    $resource = [];
+
+                    foreach($modelId as $lang => $id) {
+                        if(is_array($adapterName)) {
+                            $adapter = array_reduce([$lang, $fallbackLocale], function($carry, $locale) {
+                                if(is_string($carry) || !isset($carry[$locale])) {
+                                    return $carry;
+                                }
+
+                                return $carry[$locale];
+                            }, $adapterName);
+                        } else {
+                            $adapter = $adapterName;
+                        }
+
+                        if(is_array($modelName)) {
+                            $model = array_reduce([$lang, $fallbackLocale], function($carry, $locale) {
+                                if(is_string($carry) || !isset($carry[$locale])) {
+                                    return $carry;
+                                }
+
+                                return $carry[$locale];
+                            }, $modelName);
+                        } else {
+                            $model = $modelName;
+                        }
+
+                        $resource[$lang] = implode('/', [$adapter, $model, $id]);
+                    }
+                }
+
                 $this->adapter->collection('routes')->insertOne([
-                    'resource' => implode('/', [$adapterName, $modelName, $modelId]),
+                    'resource' => $resource,
                     'destination' => $route,
                     'page_id' => $page_id,
                     'page_lot' => $page->revision->lot,
