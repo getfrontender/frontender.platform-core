@@ -54,6 +54,14 @@ class Site
             throw new NotFoundException($request, $response);
         }
 
+        /**
+         * Define the kind of scopes that we have.
+         * The first group by default is the default group, the rest are for the proxy scopes.
+         */
+        $scopesGroups = Scopes::getGroups();
+        $defaultScopes = Scopes::parse([array_shift($scopesGroups)]);
+        $proxyScopes = count($scopesGroups) ? Scopes::parse($scopesGroups) : [];
+
         $host = $request->getUri()->getHost();
         $path = $request->getUri()->getPath();
         $segments = array_filter(explode('/', $path));
@@ -109,10 +117,19 @@ class Site
             $localeSegment = $host['locale'];
         }
 
+        $domains = array_map(function($scope) {
+            return $scope['domain'];
+        }, $hosts);
+        $proxyScopes = array_filter($proxyScopes, function($scope) use($domains) {
+            // Check if the domain is in a proxy scope.
+            // If so we know that we need to replace the path on the inside of the system.
+            return in_array($scope['domain'], $domains);
+        });
+
         $locale = $host['locale'];
         $path = implode('/', $segments);
-        $proxies = array_filter($scopes, function ($scope) use ($path, $locale, $host) {
-            if (!isset($scope['proxy_path'])) {
+        $proxies = array_filter($proxyScopes, function ($scope) use ($path, $locale, $host) {
+            if (!isset($scope['path'])) {
                 return false;
             }
 
@@ -120,8 +137,8 @@ class Site
                 return false;
             }
 
-            $pathPrefix = isset($host['proxy_path']) && !empty($host['proxy_path']) ? $host['proxy_path'] : '';
-            $regexString = trim($pathPrefix . $scope['proxy_path'], '/');
+            $pathPrefix = isset($host['path']) && !empty($host['path']) ? $host['path'] : '';
+            $regexString = trim($pathPrefix . $scope['path'], '/');
             $regexString = str_replace('/', '\/', $regexString);
             $regexString = '/^' . $regexString . '$|^' . $regexString . '\/.*$/i';
 
@@ -132,7 +149,7 @@ class Site
 
         if (!empty($proxies)) {
             $proxy = $proxies[0];
-            $path = preg_replace('/^' . trim($proxy['proxy_path'], '/') . '/i', '', $path, 1);
+            $path = preg_replace('/^' . trim($proxy['path'], '/') . '/i', '', $path, 1);
             $path = [$proxy['locale_prefix'], $path];
             $path = array_map(function ($segment) {
                 return trim($segment, '/');
@@ -146,8 +163,8 @@ class Site
             );
         }
 
-        if (isset($host['proxy_path'])) {
-            array_unshift($segments, trim($host['proxy_path'], '/'));
+        if (isset($host['path'])) {
+            array_unshift($segments, trim($host['path'], '/'));
         }
 
         if (isset($localeSegment)) {
@@ -162,7 +179,7 @@ class Site
         // Before we will continue through the system, we will set the current scope.
         // This is required elsewere.
         $this->_container['scope'] = $host;
-        $this->_container['fallbackScope'] = $scopes[0];
+        $this->_container['fallbackScope'] = $defaultScopes[0];
         $this->_container->language->set($locale);
 
         return $next($request, $response);

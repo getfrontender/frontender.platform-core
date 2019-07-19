@@ -7,6 +7,7 @@ use Frontender\Core\DB\Adapter;
 class Scopes
 {
     protected static $scopes;
+    protected static $groups;
 
     public static function get() {
         if(!self::$scopes) {
@@ -27,6 +28,27 @@ class Scopes
         }
 
         return self::$scopes;
+    }
+
+    public static function getGroups() {
+        if(!self::$groups) {
+            $settings = Adapter::getInstance()
+                ->toJSON(
+                    Adapter::getInstance()
+                    ->collection('settings')
+                    ->find()
+                    ->toArray()
+                , true);
+
+            if(!$settings) {
+                return false;
+            }
+
+            $settings = array_shift($settings);
+            self::$groups = $settings['scopes'];
+        }
+
+        return self::$groups;
     }
 
     public static function parse($scopes) {
