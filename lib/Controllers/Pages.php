@@ -20,6 +20,7 @@ namespace Frontender\Core\Controllers;
 use MongoDB\BSON\ObjectId;
 use MongoDB\Driver\Query;
 use Frontender\Core\DB\Adapter;
+use Frontender\Core\Utils\Scopes;
 use Frontender\Core\Template\Filter\Translate;
 
 class Pages extends Core
@@ -158,7 +159,7 @@ class Pages extends Core
                         'isRoot' => [
                             '$cond' => [
                                 'if' => [
-                                    '$eq' => ['$definition.route.' . $filter['locale'], '/']
+                                    '$in' => ['$definition.route.' . $_GET['locale'], $this->_getHomepagePaths()]
                                 ],
                                 'then' => true,
                                 'else' => false
@@ -264,7 +265,7 @@ class Pages extends Core
                         'isRoot' => [
                             '$cond' => [
                                 'if' => [
-                                    '$eq' => ['$definition.route.' . $_GET['locale'], '/']
+                                    '$in' => ['$definition.route.' . $_GET['locale'], $this->_getHomepagePaths()]
                                 ],
                                 'then' => true,
                                 'else' => false
@@ -448,6 +449,15 @@ class Pages extends Core
         }
 
         return true;
+    }
+
+    private function _getHomepagePaths()
+    {
+        $scopes = Scopes::getGroups();
+
+        return array_map(function($scope) {
+            return $scope['path'];
+        }, $scopes);
     }
 
     private function _sanitizeConfig(&$container)
