@@ -55,8 +55,8 @@ class Template extends \Twig_Extension
         $proxyPath = null;
         $basePath = $this->container->settings['template']['path'];
 
-        if ($scope && isset($scope['proxy_path']) && !empty($scope['proxy_path'])) {
-            $proxyPath = $scope['proxy_path'];
+        if ($scope && isset($scope['path']) && !empty($scope['path'])) {
+            $proxyPath = $scope['path'];
         }
 
         $path = $this->_joinPaths($templatePath, $proxyPath, $fileName . '.' . $format . '.twig');
