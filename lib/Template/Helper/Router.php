@@ -73,48 +73,7 @@ class Router extends \Twig_Extension
         }
 
         // Add domain and protocol
-        return $this->buildRoute($uri, $params['locale'], $path);
-
-        $scopes = Scopes::get();
-        $uri = $this->container->get('request')->getUri();
-        $domain = $uri->getHost();
-        $amount = 0;
-
-        if (isset($scopes)) {
-            $amount = array_filter($scopes, function ($scope) use ($domain) {
-                return $scope['domain'] === $domain;
-            });
-        }
-
-        if (count($amount) === 1) {
-            // If it is a proxy, add the locale anyway.
-            // We need the locale here.
-            // Use the current domain, without any locale
-            return $this->modifyProxyDomain($uri, false, $path);
-        } else {
-            // Check the scopes for the current locale, and if it has a path.
-            $scopes = array_filter($amount, function ($scope) use ($params) {
-                return $scope['locale'] === $params['locale'];
-            });
-
-            if (count($scopes) === 1) {
-                $scope = array_shift($scopes);
-                $localePartial = $scope['locale_prefix'] ?? $scope['locale'];
-                $localePartial = str_replace('/', '', $localePartial);
-
-                return $this->modifyProxyDomain(
-                    $uri,
-                    $localePartial,
-                    $path
-                );
-            }
-
-            return $this->modifyProxyDomain(
-                $uri,
-                $params['locale'],
-                $path
-            );
-        }
+        return $this->buildRoute($uri, $params['locale'], $path, isset($params['scope']) && $params['scope']);
     }
 
     private function _getPath($params = [])
@@ -191,10 +150,10 @@ class Router extends \Twig_Extension
      * 
      * Then the protocol and domain is added to the route, and redirected.
      */
-    public function buildRoute(Uri $uri, $requestedLocale, $path)
+    public function buildRoute(Uri $uri, $requestedLocale, $path, $useCurrentScope = false)
     {
         // If the current domain is the same locale, and has a path match it is ok to use it.
-        $fallbackScope = $this->container->get('fallbackScope');
+        $fallbackScope = $useCurrentScope ? $this->container->get('scope') : $this->container->get('fallbackScope');
         $scopesGroups = Scopes::getGroups();
         // Shift off the first (default) group.
         array_shift($scopesGroups);
