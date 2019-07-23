@@ -52,6 +52,23 @@ class Thumbnail extends CoreRoute
 
             return $res->getBody()->write($page->revision->thumbnail->{$locale});
         });
+
+        $this->app->get('/{base64_page}', function(Request $request, Response $response) {
+            list($locale, $homepage) = explode('#', \base64_decode($request->getAttribute('base64_page')));
+
+            $page = Adapter::getInstance()->collection('pages.public')->findOne([
+                'definition.route.' . $locale => $homepage
+            ]);
+
+            if(!isset($page->revision->thumbnail->{$locale})) {
+                return $response->withStatus(404);
+            }
+
+            $response->write(base64_decode(str_replace('data:image/png;base64,', '', $page->revision->thumbnail->{$locale})));
+            return $response->withHeader('Content-Type', 'image/png');
+
+            // return $response->getBody()->write($page->revision->thumbnail->{$locale});
+        });
     }
 
     public function getGroupMiddleware()
