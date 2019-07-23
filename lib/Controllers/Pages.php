@@ -27,6 +27,8 @@ class Pages extends Core
 {
     public function actionBrowse($filter = [])
     {
+        $scopes = Scopes::get();
+        $fallbackScope = array_shift($scopes);
         $collection = isset($filter['collection']) ? 'pages.' . $filter['collection'] : 'pages';
         $findFilter = new \stdClass();
         $skip = 0;
@@ -159,7 +161,10 @@ class Pages extends Core
                         'isRoot' => [
                             '$cond' => [
                                 'if' => [
-                                    '$in' => ['$definition.route.' . $_GET['locale'], $this->_getHomepagePaths()]
+                                    '$or' => [
+                                        ['$in' => ['$definition.route.' . $_GET['locale'], $this->_getHomepagePaths()]],
+                                        ['$in' => ['$definition.route.' . $fallbackScope['locale'], $this->_getHomepagePaths()]]
+                                    ]
                                 ],
                                 'then' => true,
                                 'else' => false
@@ -211,6 +216,9 @@ class Pages extends Core
 
     public function actionRead($id)
     {
+        $scopes = Scopes::get();
+        $fallbackScope = array_shift($scopes);
+
         $revisions = $this->adapter->collection('pages')->aggregate([
             [
                 '$lookup' => [
@@ -265,7 +273,10 @@ class Pages extends Core
                         'isRoot' => [
                             '$cond' => [
                                 'if' => [
-                                    '$in' => ['$definition.route.' . $_GET['locale'], $this->_getHomepagePaths()]
+                                    '$or' => [
+                                        ['$in' => ['$definition.route.' . $_GET['locale'], $this->_getHomepagePaths()]],
+                                        ['$in' => ['$definition.route.' . $fallbackScope['locale'], $this->_getHomepagePaths()]]
+                                    ]
                                 ],
                                 'then' => true,
                                 'else' => false
