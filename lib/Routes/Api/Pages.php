@@ -371,6 +371,14 @@ class Pages extends CoreRoute
                 '$set' => $data
             ]);
 
+            // Update the pages published based on lot and hash id.
+            Adapter::getInstance()->collection('pages.public')->updateOne([
+                'revision.lot' => $data['revision']['lot'],
+                'revision.hash' => $data['revision']['hash']
+            ], [
+                '$set' => $data
+            ]);
+
             return $response->withStatus(200);
         });
 
