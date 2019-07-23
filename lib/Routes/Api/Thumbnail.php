@@ -54,17 +54,22 @@ class Thumbnail extends CoreRoute
         });
 
         $this->app->get('/{base64_page}', function(Request $request, Response $response) {
+            $scopes = Scopes::get();
+            $fallbackScope = $scopes[0];
             list($locale, $homepage) = explode('#', \base64_decode($request->getAttribute('base64_page')));
 
             $page = Adapter::getInstance()->collection('pages.public')->findOne([
-                'definition.route.' . $locale => $homepage
+                '$or' => [
+                    ['definition.route.' . $locale => $homepage],
+                    ['definition.route.' . $fallbackScope['locale'] => $homepage]
+                ]
             ]);
 
-            if(!isset($page->revision->thumbnail->{$locale})) {
+            if(!isset($page->revision->thumbnail->{$locale}) && !isset($page->revision->thumbnail->{$fallbackScope['locale']})) {
                 return $response->withStatus(404);
             }
 
-            $response->write(base64_decode(str_replace('data:image/png;base64,', '', $page->revision->thumbnail->{$locale})));
+            $response->write(base64_decode(str_replace('data:image/png;base64,', '', $page->revision->thumbnail->{$locale} ?? $page->revision->thumbnail->{$fallbackScope['locale']})));
             return $response->withHeader('Content-Type', 'image/png');
 
             // return $response->getBody()->write($page->revision->thumbnail->{$locale});
