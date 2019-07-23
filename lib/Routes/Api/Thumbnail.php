@@ -33,6 +33,8 @@ class Thumbnail extends CoreRoute
         parent::registerReadRoutes();
 
         $this->app->get('/homepage', function(Request $req, Response $res) {
+            $scopes = Scopes::get();
+            $fallbackScope = $scopes[0];
             $homepage = '/'; // TODO: Retrieve this from the config.
             $locale = $this->language->get();
             $scopes = Scopes::get();
@@ -43,14 +45,18 @@ class Thumbnail extends CoreRoute
             }
 
             $page = Adapter::getInstance()->collection('pages.public')->findOne([
-                'definition.route.' . $locale => $homepage
+                '$or' => [
+                    ['definition.route.' . $locale => $homepage],
+                    ['definition.route.' . $fallbackScope['locale'] => $homepage]
+                ]
             ]);
 
-            if(!isset($page->revision->thumbnail->{$locale})) {
+            if(!isset($page->revision->thumbnail->{$locale}) && !isset($page->revision->thumbnail->{$fallbackScope['locale']})) {
                 return $res->withStatus(404);
             }
 
-            return $res->getBody()->write($page->revision->thumbnail->{$locale});
+            $res->write(base64_decode(str_replace('data:image/png;base64,', '', $page->revision->thumbnail->{$locale} ?? $page->revision->thumbnail->{$fallbackScope['locale']})));
+            return $res->withHeader('Content-Type', 'image/png');
         });
 
         $this->app->get('/{base64_page}', function(Request $request, Response $response) {
@@ -71,8 +77,6 @@ class Thumbnail extends CoreRoute
 
             $response->write(base64_decode(str_replace('data:image/png;base64,', '', $page->revision->thumbnail->{$locale} ?? $page->revision->thumbnail->{$fallbackScope['locale']})));
             return $response->withHeader('Content-Type', 'image/png');
-
-            // return $response->getBody()->write($page->revision->thumbnail->{$locale});
         });
     }
 
