@@ -430,10 +430,13 @@ class Pages extends CoreRoute
     {
         $uri = $request->getUri();
         $locale = $request->getQueryParam('locale') ?? 'en-GB';
-        $scopes = array_filter(Scopes::get(), function ($scope) use ($uri, $locale) {
+        $allScopes = Scopes::get();
+        $scopes = array_filter($allScopes, function ($scope) use ($uri, $locale) {
             return $scope['domain'] === $uri->getHost() && $scope['locale'] === $locale;
         });
         $scope = array_shift($scopes);
+        $index = array_search($scope, $allScopes);
+        $fallbackScope = $allScopes[0];
         $newFilter = [];
 
         if (isset($filter) && !empty($filter)) {
@@ -453,14 +456,25 @@ class Pages extends CoreRoute
                     $newFilter['$or'][] = [$key => $value];
                 }
             }
+        }
 
-            if (isset($scope->proxy_path)) {
-                // A separate filter for the route will be added next to the '$or' filter.
-                $newFilter['definition.route.' . $locale] = [
-                    '$regex' => '^' . $scope->proxy_path . '.*',
-                    '$options' => 'i'
-                ];
+        // Only add this filter if it isn't the default scope.
+        if ($scope && isset($scope['path']) && $index) {
+            // A separate filter for the route will be added next to the '$or' filter.
+            // If no $or is found add it.
+            if(!isset($newFilter['$or'])) {
+                $newFilter['$or'] = [];
             }
+
+            $newFilter['$or'][] = ['definition.route.' . $locale => [
+                '$regex' => '^' . $scope['path'] . '.*',
+                '$options' => 'i'
+            ]];
+
+            $newFilter['$or'][] = ['definition.route.' . $fallbackScope['locale'] => [
+                '$regex' => '^' . $scope['path'] . '.*',
+                '$options' => 'i'
+            ]];
         }
 
         return $newFilter;
