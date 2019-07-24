@@ -3,6 +3,7 @@
 namespace Frontender\Core\Model;
 
 use Frontender\Core\Object\AbstractObject;
+use Doctrine\Common\Inflector\Inflector;
 
 class AbstractModel extends AbstractObject implements \ArrayAccess
 {
@@ -132,5 +133,13 @@ class AbstractModel extends AbstractObject implements \ArrayAccess
         if ($this->offsetExists($offset)) {
             unset($this->data[$offset]);
         }
+    }
+
+    public function getPropertyPath() : string
+    {
+        $name = Inflector::singularize($this->getName());
+        $parts = preg_split('/(?=[A-Z])/', $name);
+
+        return strtolower(end($parts));
     }
 }
