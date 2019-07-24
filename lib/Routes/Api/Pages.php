@@ -344,7 +344,7 @@ class Pages extends CoreRoute
                 'lot' => $request->getParsedBodyParam('lot'),
                 'sort' => !empty($request->getParsedBodyParam('sort')) ? $request->getParsedBodyParam('sort') : 'definition.name',
                 'direction' => !empty($request->getParsedBodyParam('direction')) ? $request->getParsedBodyParam('direction') : 1,
-                'locale' => !empty($request->getParsedBodyParam('locale')) ? $request->getParsedBodyParam('locale') : 'en-GB',
+                'locale' => !empty($request->getQueryParam('locale')) ? $request->getQueryParam('locale') : 'en-GB',
                 'filter' => $filter,
                 'skip' => (int)$request->getParsedBodyParam('skip'),
                 'teams' => Adapter::getInstance()->collection('teams')->find([
@@ -449,6 +449,12 @@ class Pages extends CoreRoute
         $fallbackScope = $allScopes[0];
         $newFilter = [];
 
+        if($request->getMethod() == 'POST') {
+            if($request->getParsedBodyParam('applicationLocale')) {
+                $applicationLocale = $request->getParsedBodyParam('applicationLocale');
+            }
+        }
+
         if (isset($filter) && !empty($filter)) {
             if (isset($filter['$or'])) {
                 $newFilter = $filter;
@@ -456,11 +462,19 @@ class Pages extends CoreRoute
                 $newFilter = ['$or' => []];
                 foreach ($filter as $key => $value) {
                     if(strpos($key, 'states') === false) {
-                        $key = 'definition.' . $key . '.' . $locale;
-                        $value = [
-                            '$regex' => '.*' . $value . '.*',
-                            '$options' => 'i'
-                        ];
+                        if(in_array($key, ['definition.name', 'definition.description'])) {
+                            $key = 'definition.' . $key . '.' . $applicationLocale;
+                            $value = [
+                                '$regex' => '.*' . $value . '.*',
+                                '$options' => 'i'
+                            ];
+                        } else {
+                            $key = 'definition.' . $key . '.' . $locale;
+                            $value = [
+                                '$regex' => '.*' . $value . '.*',
+                                '$options' => 'i'
+                            ];
+                        }
                     }
 
                     $newFilter['$or'][] = [$key => $value];

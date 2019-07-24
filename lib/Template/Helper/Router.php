@@ -104,14 +104,18 @@ class Router extends \Twig_Extension
                 $adapter = $page->definition->template_config->model->data->adapter ?? false;
                 $id = $params['id'];
 
-                $model = $translator->translate($model, [], true);
-                $adapter = $translator->translate($adapter, [], true);
-                $id = $translator->translate($id, [], true);
+                $model = $translator->translate($model);
+                $adapter = $translator->translate($adapter);
+                $id = $translator->translate($id);
 
                 if ($model && $adapter && $id) {
                     // Check if we have a redirect.
                     $redirect = Adapter::getInstance()->collection('routes')->findOne([
-                        'resource' => implode('/', [$adapter, $model, $id]),
+                        '$or' => [
+                            ['resource.' . $currentLocale => implode('/', [$adapter, $model, $id])],
+                            ['resource.' . $fallbackLocale => implode('/', [$adapter, $model, $id])],
+                            ['resource' => implode('/', [$adapter, $model, $id])]
+                        ],
                         'type' => 'landingpage'
                     ]);
 
