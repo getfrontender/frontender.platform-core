@@ -371,6 +371,8 @@ class Pages extends CoreRoute
                 '$set' => $data
             ]);
 
+            $data['definition'] = \Frontender\Core\Controllers\Pages::sanitize($data['definition']);
+
             // Update the pages published based on lot and hash id.
             Adapter::getInstance()->collection('pages.public')->updateOne([
                 'revision.lot' => $data['revision']['lot'],
