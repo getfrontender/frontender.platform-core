@@ -1,4 +1,5 @@
 <?php
+
 /*******************************************************
  * @copyright 2017-2019 Dipity B.V., The Netherlands
  * @package Frontender
@@ -26,6 +27,7 @@ use Frontender\Core\DB\Adapter;
 use MongoDB\BSON\ObjectId;
 use Frontender\Core\Controllers\Pages;
 use Frontender\Core\Object\AbstractObject;
+use Frontender\Core\Template\Filter\Translate;
 
 class DefaultPage extends AbstractObject
 {
@@ -182,6 +184,14 @@ class DefaultPage extends AbstractObject
                         $value = $this->mapValues($value);
 
                         if (isset($value['data'])) {
+                            // Translate all the values?
+                            // That might be needed.
+                            $translator = new Translate($this->container);
+
+                            foreach ($value['data'] as $key => $data) {
+                                $value['data'][$key] =  $translator->translate($data, array(), true);
+                            }
+
                             $value['data'] = $this->mapValues($value['data']);
                         }
 
