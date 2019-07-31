@@ -504,7 +504,7 @@ class Pages extends CoreRoute
             ]];
         }
 
-        if(!count($newFilter['$or'])) {
+        if(isset($newFilter['$or']) && !count($newFilter['$or'])) {
             unset($newFilter['$or']);
         }
 
