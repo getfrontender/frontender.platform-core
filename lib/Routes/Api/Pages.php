@@ -475,9 +475,12 @@ class Pages extends CoreRoute
                                 '$options' => 'i'
                             ];
                         }
-                    }
 
-                    $newFilter['$or'][] = [$key => $value];
+                        $newFilter['$or'][] = [$key => $value];
+                    } else {
+                        // We have a state.
+                        $newFilter[$key] = $value;
+                    }
                 }
             }
         }
