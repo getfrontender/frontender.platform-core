@@ -504,6 +504,10 @@ class Pages extends CoreRoute
             ]];
         }
 
+        if(!count($newFilter['$or'])) {
+            unset($newFilter['$or']);
+        }
+
         return $newFilter;
     }
 }
