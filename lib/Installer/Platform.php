@@ -202,7 +202,7 @@ class Platform extends Base
                 'name' => 'Site',
                 'users' => array_map(function ($id) {
                     return (int)$id;
-                }, $contents->data->managers)
+                }, $contents->data->administrators)
             ]);
 
             $adapter->collection('settings')->drop();
