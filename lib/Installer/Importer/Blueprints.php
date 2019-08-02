@@ -41,7 +41,7 @@ class Blueprints extends Generic
                         'en-GB' => $thumbnail
                     ],
                     'type' => $type,
-                    'date' => date('c'),
+                    'date' => gmdate('c'),
                     'lot' => $lot->getInsertedId()->__toString()
                 ],
                 'definition' => json_decode($blueprint->getContents()),

@@ -56,7 +56,7 @@ class Pages extends Generic
                         'en-GB' => $thumbnail
                     ],
                     'lot' => $lot->getInsertedId()->__toString(),
-                    'date' => date('c'),
+                    'date' => gmdate('c'),
                     'user' => []
                 ],
                 'definition' => $page

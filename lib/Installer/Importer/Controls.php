@@ -28,7 +28,7 @@ class Controls extends Generic
             $controlsCollection->insertOne([
                 'revision' => [
                     'lot' => $lot->getInsertedId()->__toString(),
-                    'date' => date('c'),
+                    'date' => gmdate('c'),
                     'hash' => md5($control->getContents())
                 ],
                 'definition' => $definition,
