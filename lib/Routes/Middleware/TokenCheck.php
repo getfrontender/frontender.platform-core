@@ -55,7 +55,7 @@ class TokenCheck
         $query = $request->getQueryParams();
 
         if (!isset($query['token']) || $query['token'] === 'true') {
-            $token->setExpiration(time() + 1800);
+            $token->setExpiration(time() + 3600);
             return $response->withHeader($this->_headerName, Tokenize::getInstance()->build($token));
         } else {
             return $response;
