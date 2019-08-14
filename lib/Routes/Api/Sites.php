@@ -24,6 +24,7 @@ use Slim\Http\Response;
 use Frontender\Core\Routes\Middleware\TokenCheck;
 use Frontender\Core\Routes\Middleware\ApiLocale;
 use Frontender\Core\Utils\Manager;
+use Frontender\Core\Utils\Scopes;
 
 class Sites extends CoreRoute
 {
@@ -60,7 +61,7 @@ class Sites extends CoreRoute
                     '_id' => $settings->_id
                 ], [
                     '$set' => [
-                        'scopes' => $contents->data->scopes
+                        'scopes' => Scopes::filterActiveScopes($contents->data->scopes)
                     ]
                 ]);
 
@@ -82,7 +83,7 @@ class Sites extends CoreRoute
                     );
                 }
 
-                return $response->withStatus(403);
+                return $response->withStatus(422);
             }
         });
 
@@ -155,6 +156,11 @@ class Sites extends CoreRoute
                     'json' => $request->getParsedBody()
                 ]);
 
+                echo '<pre>';
+                    print_r($resp->getBody()->getContents());
+                echo '</pre>';
+                die();
+
                 $contents = json_decode($resp->getBody()->getContents());
 
                 if ($contents->status !== 'success') {
@@ -173,7 +179,7 @@ class Sites extends CoreRoute
                     '_id' => $settings->_id
                 ], [
                     '$set' => [
-                        'scopes' => $contents->data,
+                        'scopes' => Scopes::filterActiveScopes($contents->data),
                         'languages' => $request->getParsedBodyParam('languages')
                     ]
                 ]);
@@ -182,6 +188,11 @@ class Sites extends CoreRoute
             } catch (\Exception $e) {
                 if (method_exists($e, 'getResponse') && method_exists($e, 'hasResponse') && $e->hasResponse()) {
                     $resp = $e->getResponse();
+
+                    echo '<pre>';
+                        print_r($resp->getBody()->getContents());
+                    echo '</pre>';
+                    die();
 
                     return $response->withStatus(
                         $resp->getStatusCode()

@@ -62,4 +62,24 @@ class Scopes
             return array_merge($carry, $scopes);
         }, []);
     }
+
+    public static function filterActiveScopes($scopes)
+    {
+        // Clone the array.
+        $scopes = json_decode(json_encode($scopes));
+        $scopes = array_map(function($scope) {
+            foreach($scope->scopes as $index => $subScope) {
+                if(!$subScope->isActive) {
+                    unset($scope->scopes[$index]);
+                }
+            }
+
+            return $scope;
+        }, $scopes);
+        $scopes = array_filter($scopes, function($scope) {
+            return count($scope->scopes);
+        });
+
+        return $scopes;
+    }
 }
