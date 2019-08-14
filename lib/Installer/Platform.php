@@ -207,8 +207,7 @@ class Platform extends Base
 
             $adapter->collection('settings')->drop();
             $adapter->collection('settings')->insertOne([
-                'site_id' => $contents->data->site_id,
-                'scopes' => $contents->data->scopes
+                'site_id' => $contents->data->site_id
             ]);
 
             return true;
