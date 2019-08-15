@@ -253,6 +253,9 @@ class Pages extends CoreRoute
                 $page->setData($json);
                 $page->setRequest($request);
                 $page->parseData();
+                $page->setParameters([
+                    'locale' => $this->language->get()
+                ]);
 
                 $response->getBody()->write($page->render());
             } catch (\Exception $e) {
