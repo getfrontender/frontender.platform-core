@@ -1,4 +1,5 @@
 <?php
+
 /*******************************************************
  * @copyright 2017-2019 Dipity B.V., The Netherlands
  * @package Frontender
@@ -25,6 +26,7 @@ use Frontender\Core\Routes\Middleware\TokenCheck;
 use Frontender\Core\Routes\Middleware\ApiLocale;
 use Frontender\Core\Utils\Manager;
 use Frontender\Core\Utils\Scopes;
+use MongoDB\BSON\ObjectId;
 
 class Sites extends CoreRoute
 {
@@ -58,7 +60,7 @@ class Sites extends CoreRoute
                 $settings = array_shift($settings);
 
                 Adapter::getInstance()->collection('settings')->findOneAndUpdate([
-                    '_id' => $settings->_id
+                    '_id' => new ObjectId($settings->_id)
                 ], [
                     '$set' => [
                         'scopes' => Scopes::filterActiveScopes($contents->data->scopes)
@@ -183,11 +185,6 @@ class Sites extends CoreRoute
             } catch (\Exception $e) {
                 if (method_exists($e, 'getResponse') && method_exists($e, 'hasResponse') && $e->hasResponse()) {
                     $resp = $e->getResponse();
-
-                    echo '<pre>';
-                        print_r($resp->getBody()->getContents());
-                    echo '</pre>';
-                    die();
 
                     return $response->withStatus(
                         $resp->getStatusCode()
