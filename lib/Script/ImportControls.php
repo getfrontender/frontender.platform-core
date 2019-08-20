@@ -27,7 +27,7 @@ class ImportControls extends Base
             $identifier = str_replace('.' . $file->getExtension(), '', $file->getRelativePathname());
             $controls = Adapter::getInstance()->collection('controls')->find([
                 'identifier' => $identifier
-            ]);
+            ])->toArray();
 
             if(count($controls)) {
                 continue;
