@@ -1,8 +1,0 @@
-{
-    "dependencies": {
-        "dotenv": "^6.0.0",
-        "glob": "^7.1.2",
-        "mongodb": "^3.0.10",
-        "puppeteer": "^1.4.0"
-    }
-}
