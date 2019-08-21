@@ -117,15 +117,6 @@ class Site
             $localeSegment = $host['locale'];
         }
 
-        $domains = array_map(function($scope) {
-            return $scope['domain'];
-        }, $hosts);
-        $proxyScopes = array_filter($proxyScopes, function($scope) use($domains) {
-            // Check if the domain is in a proxy scope.
-            // If so we know that we need to replace the path on the inside of the system.
-            return in_array($scope['domain'], $domains);
-        });
-
         $locale = $host['locale'];
         $path = implode('/', $segments);
         $proxies = array_filter($proxyScopes, function ($scope) use ($path, $locale, $host) {
@@ -144,7 +135,7 @@ class Site
 
             return preg_match($regexString, $path, $matches) === 1;
         });
-        
+
         $proxies = array_values(array_filter($proxies));
 
         if (!empty($proxies)) {
