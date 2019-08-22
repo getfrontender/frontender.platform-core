@@ -31,6 +31,7 @@ use Frontender\Core\Template\Helper\HashedPath;
 use Frontender\Core\Template\Helper\Router;
 use Frontender\Core\Template\Filter\Asset;
 use Frontender\Core\Template\Filter\Locale;
+use Frontender\Core\Template\Filter\Path;
 use Frontender\Core\Template\Helper\Url;
 use Slim\Container;
 use Slim\Views\TwigExtension;
@@ -73,6 +74,7 @@ class TwigEngine extends AbstractObject implements EngineInterface
         $this->engine->addExtension(new Text());
         $this->engine->addExtension(new Translate($container));
         $this->engine->addExtension(new Locale());
+        $this->engine->addExtension(new Path());
 
         // Add custom extension for the engine.
         // Auto bind all helpers
