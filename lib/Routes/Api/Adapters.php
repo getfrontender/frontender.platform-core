@@ -117,10 +117,15 @@ class Adapters extends CoreRoute
             $model = new $classname($config);
             $model->setState($request->getQueryParams());
             $items = $model->fetch();
-            $data = [];
             $path = new \ReflectionClass($classname);
             $path = str_replace('.php', '.json', $path->getFileName());
             $mapping = json_decode(file_get_contents($path), true);
+            $data = [
+                'items' => [],
+                'states' => $model->getState()->getValues(),
+                'total' => $model->getTotal(),
+                'config' => $mapping
+            ];
 
             if ($items) {
                 $data['items'] = array_map(function ($entry) use ($mapping) {
@@ -138,9 +143,6 @@ class Adapters extends CoreRoute
 
                     return $newItem;
                 }, $items);
-                $data['states'] = $model->getState()->getValues();
-                $data['total'] = $model->getTotal();
-                $data['config'] = $mapping;
             }
 
             return $response->withJson($data);
