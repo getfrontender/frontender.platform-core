@@ -122,7 +122,7 @@ class Adapters extends CoreRoute
             $path = str_replace('.php', '.json', $path->getFileName());
             $mapping = json_decode(file_get_contents($path), true);
             $data = [
-                'items' = [],
+                'items' => [],
                 'states' => $model->getState()->getValues(),
                 'total' => $model->getTotal(),
                 'config' => $mapping
