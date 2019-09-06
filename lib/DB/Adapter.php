@@ -23,13 +23,26 @@ class Adapter extends \MongoDB\Client
 {
     static private $instance = null;
 
+    private $_config;
+
     public function __construct()
     {
+        $this->_config = new \Frontender\Core\Config\Config();
         parent::__construct($_ENV['MONGO_HOST']);
     }
 
     public function collection($collection)
     {
+        // We need to get the config here.
+        // We have added collection mapping so we can map certain collections to a different name.
+        if(isset($this->_config->mongodb['collections'])) {
+            $collections = $this->_config->mongodb['collections'];
+            // Check if our own collection is in the mapping.
+            if(isset($collections[$collection])) {
+                $collection = $collections[$collection];
+            }
+        }
+
         return $this->selectCollection($_ENV['MONGO_DB'], $collection);
     }
 
