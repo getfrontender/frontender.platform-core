@@ -163,7 +163,7 @@ class Router extends \Twig_Extension
         array_shift($scopesGroups);
         $proxyScopes = Scopes::parse($scopesGroups);
 
-        $scopes = array_filter($proxyScopes, function(&$scope) use($requestedLocale, $path) {
+        $scopes = array_filter($proxyScopes, function($scope) use($requestedLocale, $path) {
             if($scope['locale'] !== $requestedLocale) {
                 return false;
             }
@@ -172,13 +172,20 @@ class Router extends \Twig_Extension
                 return false;
             }
 
-            $scope['score'] = isset($scope['path']) ? strlen($scope['path']) : 0;
             return true;
         });
         $scopes = array_values($scopes);
+        $scopes = array_map(function($scope) {
+            $scope['score'] = isset($scope['path']) ? strlen($scope['path']) : 0;
+            return $scope;
+        }, $scopes);
 
         // Sort them by score, highest score first.
         usort($scopes, function($a, $b) {
+            if(!isset($a['score']) || !isset($b['score'])) {
+                return 0;
+            }
+
             return $a['score'] - $b['score'];
         });
 
