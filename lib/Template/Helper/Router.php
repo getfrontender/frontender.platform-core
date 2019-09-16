@@ -197,14 +197,16 @@ class Router extends \Twig_Extension
                 ->withHost($scope['domain'])
                 ->withPath(
                     $this->_buildPath($scope, $path)
-                );
+                )
+                ->withQuery('');
         }
 
         return $uri->withScheme($fallbackScope['protocol'])
             ->withHost($fallbackScope['domain'])
             ->withPath(
                 $this->_buildPath($fallbackScope, $path)
-            );
+            )
+            ->withQuery('');
     }
 
     private function _buildPath($scope, $path)
