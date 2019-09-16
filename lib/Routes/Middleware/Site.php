@@ -64,6 +64,7 @@ class Site
 
         $host = $request->getUri()->getHost();
         $path = $request->getUri()->getPath();
+
         $segments = array_filter(explode('/', $path));
         $segments = array_values($segments);
 
@@ -119,6 +120,7 @@ class Site
 
         $locale = $host['locale'];
         $path = implode('/', $segments);
+        
         $proxies = array_filter($proxyScopes, function ($scope) use ($path, $locale, $host) {
             if (!isset($scope['path'])) {
                 return false;
@@ -154,7 +156,7 @@ class Site
             );
         }
 
-        if (isset($host['path'])) {
+        if (isset($host['path']) && !empty(trim($host['path'], '/'))) {
             array_unshift($segments, trim($host['path'], '/'));
         }
 
