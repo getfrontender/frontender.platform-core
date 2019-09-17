@@ -160,8 +160,15 @@ class Router extends \Twig_Extension
         $fallbackScope = $useCurrentScope ? $this->container->get('scope') : $this->container->get('fallbackScope');
         $scopesGroups = Scopes::getGroups();
         // Shift off the first (default) group.
-        array_shift($scopesGroups);
+        $defaultScopes = Scopes::parse([array_shift($scopesGroups)]);
         $proxyScopes = Scopes::parse($scopesGroups);
+        $translatedDefaultScopes = array_filter($defaultScopes, function($scope) use ($requestedLocale) {
+            return $scope['locale'] === $requestedLocale;
+        });
+
+        if(count($translatedDefaultScopes)) {
+            $fallbackScope = array_shift($translatedDefaultScopes);
+        }
 
         $scopes = array_filter($proxyScopes, function($scope) use($requestedLocale, $path) {
             if($scope['locale'] !== $requestedLocale) {
@@ -174,6 +181,7 @@ class Router extends \Twig_Extension
 
             return true;
         });
+
         $scopes = array_values($scopes);
         $scopes = array_map(function($scope) {
             $scope['score'] = isset($scope['path']) ? strlen($scope['path']) : 0;
