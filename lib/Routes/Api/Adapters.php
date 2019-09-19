@@ -24,6 +24,7 @@ use Symfony\Component\Finder\Finder;
 use Frontender\Core\Routes\Middleware\TokenCheck;
 use Frontender\Core\DB\Adapter;
 use Frontender\Core\Routes\Middleware\ApiLocale;
+use Frontender\Core\Template\Filter\Translate;
 
 class Adapters extends CoreRoute
 {
@@ -35,31 +36,51 @@ class Adapters extends CoreRoute
     {
         parent::registerReadRoutes();
 
-        $config = $this->app->getContainer();
+        $container = $config = $this->app->getContainer();
         $modelPath = dirname($config->settings['project']['path']) . '/lib/Model';
 
-        $this->app->get('', function (Request $request, Response $response) use ($modelPath) {
+        $this->app->get('', function (Request $request, Response $response) use ($modelPath, $container) {
             $finder = new Finder();
-            $files = $finder->directories()->exclude('State')->in($modelPath)->depth(0);
+            $models = $finder->files()->name('*.json')->in($modelPath);
             $adapters = [];
+            $translator = new Translate($container);
 
-            foreach ($files as $file) {
+            foreach ($models as $file) {
                 // Lets get all the available models.
-                $modelFinder = new Finder();
-                $models = $modelFinder->files()->name('*.json')->in($file->getPathName());
-                $adapter = [
-                    'name' => $file->getFileName(),
-                    'models' => []
-                ];
+                // I have to get the first directory path, this is the adapter name.
+                $adapterName = explode('/', $file->getRelativePath())[0];
+                $adapterList = array_filter($adapters, function($adapter) use ($adapterName) {
+                    return $adapter['label'] === $adapterName;
+                });
+                $adapterList = array_values($adapterList);
 
-                foreach ($models as $model) {
-                    $definition = json_decode($model->getContents(), true);
-                    $definition['value'] = strtolower(str_replace('Model.json', '', $model->getFilename()));
+                if(!count($adapterList)) {
+                    $adapter = [
+                        'label' => $adapterName,
+                        'value' => $adapterName,
+                        'models' => []
+                    ];
 
-                    $adapter['models'][] = $definition;
+                    $adapters[] =& $adapter;
+                } else {
+                    $adapter =& $adapterList[0];
                 }
 
-                $adapters[] = $adapter;
+                $modelConfig = json_decode($file->getContents(), true);
+                
+                if(isset($modelConfig['has_preview']) && $modelConfig['has_preview']) {
+                    $adapter['models'][] = array_merge(
+                        $modelConfig,
+                        ['value' => str_replace([$adapterName . '/', 'Model.json', '/'], ['', '', '\\'], $file->getRelativePathname())]
+                    );
+                }
+
+                usort($adapter['models'], function($a, $b) use ($translator) {
+                    $aLabel = $translator->translate($a['label']);
+                    $bLabel = $translator->translate($b['label']);
+
+                    return strnatcmp($aLabel, $bLabel);
+                });
             }
 
             return $response->withJson($adapters);
