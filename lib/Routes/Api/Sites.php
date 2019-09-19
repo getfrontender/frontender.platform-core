@@ -177,7 +177,8 @@ class Sites extends CoreRoute
                 ], [
                     '$set' => [
                         'scopes' => Scopes::filterActiveScopes($contents->data),
-                        'languages' => $request->getParsedBodyParam('languages')
+                        'languages' => $request->getParsedBodyParam('languages'),
+                        'preview_settings' => $request->getParsedBodyParam('preview_settings')
                     ]
                 ]);
 
