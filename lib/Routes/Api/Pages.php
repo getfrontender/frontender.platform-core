@@ -425,6 +425,14 @@ class Pages extends CoreRoute
 
             return $response->withStatus(200);
         });
+
+        $this->app->delete('/revision/{revision_id}', function(Request $request, Response $response) {
+            Adapter::getInstance()->collection('pages')->deleteOne([
+                '_id' => new ObjectId($request->getAttribute('revision_id'))
+            ]);
+
+            return $response->withStatus(204);
+        });
     }
 
     public function getGroupMiddleware()
