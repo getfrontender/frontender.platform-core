@@ -189,6 +189,9 @@ class Platform extends Base
                     'import_token' => bin2hex(base64_encode($installData['token']))
                 ]
             ]);
+            $permissions = Manager::getInstance()->get('permissions');
+            $permissions = json_decode($permissions->getBody()->getContents());
+
             $contents = json_decode($response->getBody()->getContents());
             $adapter = Adapter::getInstance();
 
@@ -203,6 +206,18 @@ class Platform extends Base
                 'users' => array_map(function ($id) {
                     return (int)$id;
                 }, $contents->data->administrators)
+            ]);
+
+            // Create a new role of administrators
+            $adapter->collection('roles')->drop();
+            $adapter->collection('roles')->insertOne([
+                'name' => 'Administrators',
+                'users' => array_map(function($id) {
+                    return (int) $id;
+                }, $contents->data->administrators),
+                'permissions' => array_map(function($permission) {
+                    return str_replace('', '-', strtolower($permission['name']));
+                }, $permissions->data);
             ]);
 
             $adapter->collection('settings')->drop();
