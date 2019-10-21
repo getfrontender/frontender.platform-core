@@ -189,13 +189,11 @@ class Platform extends Base
                     'import_token' => bin2hex(base64_encode($installData['token']))
                 ]
             ]);
-            $permissions = Manager::getInstance()->get('permissions');
-            $permissions = json_decode($permissions->getBody()->getContents());
 
-            $contents = json_decode($response->getBody()->getContents());
+            $contents = json_decode($response->getBody()->getContents(), true);
             $adapter = Adapter::getInstance();
 
-            if ($contents->status !== 'success') {
+            if ($contents['status'] !== 'success') {
                 return false;
             }
 
@@ -205,7 +203,7 @@ class Platform extends Base
                 'name' => 'Site',
                 'users' => array_map(function ($id) {
                     return (int)$id;
-                }, $contents->data->administrators)
+                }, $contents['data']['administrators'] ?? [])
             ]);
 
             // Create a new role of administrators
@@ -214,15 +212,15 @@ class Platform extends Base
                 'name' => 'Administrators',
                 'users' => array_map(function($id) {
                     return (int) $id;
-                }, $contents->data->administrators),
+                }, $contents['data']['administrators'] ?? []),
                 'permissions' => array_map(function($permission) {
                     return str_replace('', '-', strtolower($permission['name']));
-                }, $permissions->data);
+                }, $contents['data']['permissions'] ?? [])
             ]);
 
             $adapter->collection('settings')->drop();
             $adapter->collection('settings')->insertOne([
-                'site_id' => $contents->data->site_id
+                'site_id' => $contents['data']['site_id']
             ]);
 
             return true;
