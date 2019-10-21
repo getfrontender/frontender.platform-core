@@ -18,9 +18,10 @@ class Manager extends Client
     public function __construct()
     {
         $config = new Config();
+        $femHost = $config->fem_host ?? 'https://manager.getfrontender.com';
 
         parent::__construct([
-            'base_uri' => sprintf('%s/api/v%s/', $config->fem_host, $this->apiVersion)
+            'base_uri' => sprintf('%s/api/v%s/', $femHost, $this->apiVersion)
         ]);
     }
 
