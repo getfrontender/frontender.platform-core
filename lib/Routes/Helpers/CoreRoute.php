@@ -61,4 +61,10 @@ class CoreRoute
     {
         return [];
     }
+
+    public function get(string $route, \Closure $closure) {
+        // $closure = $closure->bindTo($this);
+
+        return $this->app->get($route, $closure);
+    }
 }
