@@ -39,6 +39,14 @@ class Routes extends CoreRoute {
 
         $self = $this;
 
+        $this->get('', function(Request $request, Response $response) use ($self) {
+            $routes = $self->collection->find()->toArray();
+
+            return $response->withJson(
+                Adapter::getInstance()->toJSON($routes)
+            );
+        });
+
         $this->get('/redirects', function(Request $request, Response $response) use ($self) {
             $redirects = $self->collection->find([
                 'type' => ['$in' => ['simple', 'regex']]
