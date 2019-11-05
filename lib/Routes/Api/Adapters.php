@@ -88,7 +88,7 @@ class Adapters extends CoreRoute
 		            $adapters[] = $adapter;
 	            } else {
 	            	// Get the index of the current adapter in the adapters array.
-		            if($adapterKey) {
+		            if($adapterKey !== false) {
 		            	$adapters[$adapterKey] = $adapter;
 		            }
 	            }
