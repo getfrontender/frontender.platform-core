@@ -17,6 +17,8 @@
 namespace Frontender\Core\Routes\Api;
 
 use Frontender\Core\Routes\Helpers\CoreRoute;
+use Frontender\Core\Routes\Middleware\ApiLocale;
+use Frontender\Core\Routes\Middleware\TokenCheck;
 use Frontender\Core\Routes\Traits\Authorizable;
 use Slim\Http\Request;
 use Slim\Http\Response;
@@ -132,4 +134,14 @@ class Routes extends CoreRoute {
             return $response->withStatus(200);
         });
     }
+
+	public function getGroupMiddleware()
+	{
+		return [
+			new TokenCheck(
+				$this->app->getContainer()
+			),
+			new ApiLocale($this->app->getContainer())
+		];
+	}
 }
