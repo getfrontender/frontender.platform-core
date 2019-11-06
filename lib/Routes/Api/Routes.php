@@ -40,6 +40,8 @@ class Routes extends CoreRoute {
         $self = $this;
 
         $this->app->put('', function(Request $request, Response $response) use ($self) {
+        	$self->isAuthorized('manage-redirects', $request, $response);
+
             // Insert the route into the database.
             $self->collection->insertOne([
                 'resource' => $request->getParsedBodyParam('resource'),
@@ -58,6 +60,8 @@ class Routes extends CoreRoute {
         $self = $this;
 
         $this->get('', function(Request $request, Response $response) use ($self) {
+	        $self->isAuthorized('manage-redirects', $request, $response);
+
             $routes = $self->collection->find()->toArray();
 
             return $response->withJson(
@@ -66,6 +70,8 @@ class Routes extends CoreRoute {
         });
 
         $this->get('/redirects', function(Request $request, Response $response) use ($self) {
+	        $self->isAuthorized('manage-redirects', $request, $response);
+
             $redirects = $self->collection->find([
                 'type' => ['$in' => ['simple', 'regex']]
             ])->toArray();
@@ -76,6 +82,8 @@ class Routes extends CoreRoute {
         });
 
         $this->get('/landingpages', function(Request $request, Response $response) use ($self) {
+	        $self->isAuthorized('manage-redirects', $request, $response);
+
             $landingpages = $self->collection->find([
                 'type' => 'landingpage'
             ])->toArray();
@@ -92,6 +100,8 @@ class Routes extends CoreRoute {
         $self = $this;
 
         $this->app->post('/{routeID}', function(Request $request, Response $response) use ($self) {
+	        $self->isAuthorized('manage-redirects', $request, $response);
+
             $self->collection->findOneAndUpdate([
                 '_id' => new ObjectID($request->getAttribute('routeID'))
             ], [
@@ -113,6 +123,8 @@ class Routes extends CoreRoute {
         $self = $this;
 
         $this->app->delete('/{routeID}', function(Request $request, Response $response) use ($self) {
+	        $self->isAuthorized('manage-redirects', $request, $response);
+
             $self->collection->findOneAndDelete([
                 '_id' => new ObjectID($request->getAttribute('routeID'))
             ]);
