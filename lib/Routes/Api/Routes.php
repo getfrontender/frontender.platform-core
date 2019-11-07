@@ -45,14 +45,16 @@ class Routes extends CoreRoute {
         	$self->isAuthorized('manage-redirects', $request, $response);
 
             // Insert the route into the database.
-            $self->collection->insertOne([
+            $result = $self->collection->insertOne([
                 'resource' => $request->getParsedBodyParam('resource'),
                 'destination' => $request->getParsedBodyParam('destination'),
                 'type' => $request->getParsedBodyParam('type'),
                 'status' => (int) $request->getParsedBodyParam('status')
             ]);
 
-            return $response->withStatus(200);
+            return $response->withStatus(200)->withJson([
+            	'_id' => $result->getInsertedId()->__toString()
+            ]);
         });
     }
 
