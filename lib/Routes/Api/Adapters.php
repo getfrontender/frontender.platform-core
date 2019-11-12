@@ -46,41 +46,52 @@ class Adapters extends CoreRoute
             $translator = new Translate($container);
 
             foreach ($models as $file) {
-                // Lets get all the available models.
-                // I have to get the first directory path, this is the adapter name.
-                $adapterName = explode('/', $file->getRelativePath())[0];
-                $adapterList = array_filter($adapters, function($adapter) use ($adapterName) {
-                    return $adapter['label'] === $adapterName;
-                });
-                $adapterList = array_values($adapterList);
+	            // Lets get all the available models.
+	            // I have to get the first directory path, this is the adapter name.
+	            $adapterName = explode('/', $file->getRelativePath())[0];
 
-                if(!count($adapterList)) {
-                    $adapter = [
-                        'label' => $adapterName,
-                        'value' => $adapterName,
-                        'models' => []
-                    ];
+	            $adapterList = array_filter($adapters, function($adapter) use ($adapterName) {
+		            return $adapter['label'] == $adapterName;
+	            });
+	            $adapterList = array_values($adapterList);
+	            $adapterExists = count($adapterList);
+	            $adapterKey = false;
 
-                    $adapters[] =& $adapter;
-                } else {
-                    $adapter =& $adapterList[0];
-                }
+	            if(!$adapterExists) {
+		            $adapter = [
+			            'label' => $adapterName,
+			            'value' => $adapterName,
+			            'models' => []
+		            ];
+	            } else {
+	            	$adapterKey = array_search($adapterList[0], $adapters);
+		            $adapter = $adapterList[0];
+	            }
 
-                $modelConfig = json_decode($file->getContents(), true);
-                
-                if(isset($modelConfig['has_preview']) && $modelConfig['has_preview']) {
-                    $adapter['models'][] = array_merge(
-                        $modelConfig,
-                        ['value' => str_replace([$adapterName . '/', 'Model.json', '/'], ['', '', '\\'], $file->getRelativePathname())]
-                    );
-                }
+	            $modelConfig = json_decode($file->getContents(), true);
 
-                usort($adapter['models'], function($a, $b) use ($translator) {
-                    $aLabel = $translator->translate($a['label']);
-                    $bLabel = $translator->translate($b['label']);
+	            if(isset($modelConfig['has_preview']) && $modelConfig['has_preview']) {
+		            $adapter['models'][] = array_merge(
+			            $modelConfig,
+			            ['value' => str_replace([$adapterName . '/', 'Model.json', '/'], ['', '', '\\'], $file->getRelativePathname())]
+		            );
+	            }
 
-                    return strnatcmp($aLabel, $bLabel);
-                });
+	            usort($adapter['models'], function($a, $b) use ($translator) {
+		            $aLabel = $translator->translate($a['label']);
+		            $bLabel = $translator->translate($b['label']);
+
+		            return strnatcmp($aLabel, $bLabel);
+	            });
+
+	            if(!$adapterExists) {
+		            $adapters[] = $adapter;
+	            } else {
+	            	// Get the index of the current adapter in the adapters array.
+		            if($adapterKey !== false) {
+		            	$adapters[$adapterKey] = $adapter;
+		            }
+	            }
             }
 
             return $response->withJson($adapters);

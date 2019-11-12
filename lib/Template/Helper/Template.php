@@ -30,7 +30,9 @@ class Template extends \Twig_Extension
     public function getFunctions()
     {
         return [
-            new \Twig_SimpleFunction('getTemplatePath', [$this, 'getTemplatePath'])
+            new \Twig_SimpleFunction('getTemplatePath', [$this, 'getTemplatePath']),
+            new \Twig_SimpleFunction('isPreview', [$this, 'isPreview']),
+            new \Twig_SimpleFunction('isFrontender', [$this, 'isFrontender'])
         ];
     }
 
@@ -65,6 +67,27 @@ class Template extends \Twig_Extension
         }
 
         return $this->_joinPaths($templatePath, $fileName . '.' . $format . '.twig');
+    }
+
+    /**
+     * This method will check if the current request isn't from frontender desktop but is a preview url.
+     * The preview url is identified by ?preview. If this is located in the query then it is a preview link.
+     * However the fromFrontender must not be in the url else it will be assumed it is a request from frontender.
+     */
+    public function isPreview()
+    {
+        $query = $this->container->request->getQueryParams();
+        return !isset($query['fromFrontender']) && isset($query['preview']);
+    }
+
+    /**
+     * This method will check if the url is requested via frontender.
+     * A frontender preview url is identified by ?fromFrontender.
+     */
+    public function isFrontender()
+    {
+        $query = $this->container->request->getQueryParams();
+        return isset($query['fromFrontender']);
     }
 
     private function _joinPaths() : string
