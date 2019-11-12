@@ -11,7 +11,7 @@ defined('ROOT_PATH') || define('ROOT_PATH', getcwd());
 
 class Platform extends Base
 {
-    public static $core_repo_url = 'https://github.com/DipityBV/frontender.core-controls/archive/master.zip';
+    public static $core_repo_url = 'https://github.com/getfrontender/frontender.platform-core-controls/archive/master.zip';
 
     public static function install(Event $event)
     {
