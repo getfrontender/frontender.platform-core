@@ -14,35 +14,14 @@
  * permission of Dipity B.V.
  *******************************************************/
 
-namespace Frontender\Core\Template\Filter;
+namespace Frontender\Core\Object;
 
-use Slim\Container;
-use Slim\Http\Uri;
-use Doctrine\Common\Inflector\Inflector;
-
-class Markdown extends \Twig_Extension
+class AbstractObject implements HandlableInterface
 {
-    protected $parser;
+    use ServiceTrait;
 
-    public function __construct()
+    public function getHandle()
     {
-        $this->parser = new \Parsedown();
-    }
-
-    public function getFilters()
-    {
-        return [
-            new \Twig_Filter('markdown', [$this, 'parseMarkdown']),
-            new \Twig_Filter('md', [$this, 'parseMarkdown'])
-        ];
-    }
-
-    public function parseMarkdown($data)
-    {
-        if (empty($data)) {
-            return $data;
-        }
-
-        return $this->parser->text($data);
+        return spl_object_hash($this);
     }
 }

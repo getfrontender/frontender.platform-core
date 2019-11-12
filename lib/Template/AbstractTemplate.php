@@ -16,12 +16,12 @@
 
 namespace Frontender\Core\Template;
 
-use Frontender\Core\Object\Object;
 use Frontender\Core\Template\Locator\DefaultFactory as DefaultLocatorFactory;
 use Frontender\Core\Template\Engine\DefaultFactory as DefaultEngineFactory;
 use Frontender\Core\Template\Engine\EngineInterface;
+use Frontender\Core\Object\AbstractObject;
 
-abstract class AbstractTemplate extends Object
+abstract class AbstractTemplate extends AbstractObject
 {
     protected $path;
 
@@ -49,7 +49,7 @@ abstract class AbstractTemplate extends Object
             ->createLocator('file');
 
         if (!$file = $locator->locate($this->container['settings']['template']['path'] . '/' . $template)) {
-            throw new \Exception(sprintf('The template "%s" cannot be located.', $this->container['settings']['template']['path'] . '/' .$template));
+            throw new \Exception(sprintf('The template "%s" cannot be located.', $this->container['settings']['template']['path'] . '/' . $template));
         }
 
         $this->engine = (new DefaultEngineFactory($this->container))
@@ -68,8 +68,7 @@ abstract class AbstractTemplate extends Object
     {
         $data = array_merge($this->default_variables, $data);
 
-        if ($this->engine instanceof EngineInterface)
-        {
+        if ($this->engine instanceof EngineInterface) {
             $this->engine = $this->engine->render($data);
         }
 

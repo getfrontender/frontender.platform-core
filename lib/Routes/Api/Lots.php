@@ -24,6 +24,7 @@ use Symfony\Component\Finder\Finder;
 use Frontender\Core\Routes\Middleware\TokenCheck;
 use Frontender\Core\DB\Adapter;
 use MongoDB\BSON\ObjectId;
+use Frontender\Core\Routes\Middleware\ApiLocale;
 
 class Lots extends CoreRoute
 {
@@ -52,7 +53,8 @@ class Lots extends CoreRoute
         return [
             new TokenCheck(
                 $this->app->getContainer()
-            )
+            ),
+            new ApiLocale($this->app->getContainer())
         ];
     }
 }

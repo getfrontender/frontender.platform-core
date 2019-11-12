@@ -27,9 +27,9 @@ class App extends CoreRoute
     {
         parent::registerReadRoutes();
 
-        $this->app->get('/', function (Request $request, Response $response) {
-            return $response->withRedirect('/en');
-        });
+        // $this->app->get('/', function (Request $request, Response $response) {
+        //     return $response->withRedirect('/en');
+        // });
 
         $this->app->get('/{locale}', function (Request $request, Response $response) {
             // Add fallback language here.

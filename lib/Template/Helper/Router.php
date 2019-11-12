@@ -22,6 +22,7 @@ use Slim\Container;
 use Slim\Http\Uri;
 use Doctrine\Common\Inflector\Inflector;
 use Frontender\Core\Template\Filter\Translate;
+use Frontender\Core\Utils\Scopes;
 
 class Router extends \Twig_Extension
 {
@@ -49,6 +50,7 @@ class Router extends \Twig_Extension
         $params['locale'] = $params['locale'] ?? $this->container->language->get('language');
         $params['slug'] = $params['slug'] ?? '';
         $fallbackLocale = $this->container['fallbackScope']['locale'];
+        $uri = $this->container->get('request')->getUri();
 
         $path = $this->_getPath($params);
         if (is_object($path)) {
@@ -70,47 +72,8 @@ class Router extends \Twig_Extension
             }
         }
 
-        $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-        $setting = Adapter::getInstance()->toJSON(array_shift($settings), true);
-        $uri = $this->container->get('request')->getUri();
-        $domain = $uri->getHost();
-        $amount = 0;
-
-        if (isset($setting['scopes'])) {
-            $amount = array_filter($setting['scopes'], function ($scope) use ($domain) {
-                return $scope['domain'] === $domain;
-            });
-        }
-
-        if (count($amount) === 1) {
-            // If it is a proxy, add the locale anyway.
-            // We need the locale here.
-            // Use the current domain, without any locale
-            return $this->modifyProxyDomain($uri, false, $path);
-        } else {
-            // Check the scopes for the current locale, and if it has a path.
-            $scopes = array_filter($amount, function ($scope) use ($params) {
-                return $scope['locale'] === $params['locale'];
-            });
-
-            if (count($scopes) === 1) {
-                $scope = array_shift($scopes);
-                $localePartial = $scope['locale_prefix'] ?? $scope['locale'];
-                $localePartial = str_replace('/', '', $localePartial);
-
-                return $this->modifyProxyDomain(
-                    $uri,
-                    $localePartial,
-                    $path
-                );
-            }
-
-            return $this->modifyProxyDomain(
-                $uri,
-                $params['locale'],
-                $path
-            );
-        }
+        // Add domain and protocol
+        return $this->buildRoute($uri, $params['locale'], $path, isset($params['scope']) && $params['scope']);
     }
 
     private function _getPath($params = [])
@@ -136,16 +99,17 @@ class Router extends \Twig_Extension
         if (isset($params['id'])) {
             // First we will check if we can find the page.
             if ($page) {
+                $translator = new Translate($this->container);
                 $model = $page->definition->template_config->model->data->model ?? false;
                 $adapter = $page->definition->template_config->model->data->adapter ?? false;
                 $id = $params['id'];
-                $translator = new Translate($this->container);
+
+                $model = $translator->translate($model);
+                $adapter = $translator->translate($adapter);
+                $id = $translator->translate($id);
 
                 if ($model && $adapter && $id) {
                     // Check if we have a redirect.
-                    $model = $translator->translate($model);
-                    $adapter = $translator->translate($adapter);
-
                     $redirect = Adapter::getInstance()->collection('routes')->findOne([
                         '$or' => [
                             ['resource.' . $currentLocale => implode('/', [$adapter, $model, $id])],
@@ -182,84 +146,84 @@ class Router extends \Twig_Extension
         }
     }
 
-    private function modifyProxyDomain(Uri $uri, $locale, $path)
+    /**
+     * First we will get all the proxy scopes filtered on locale.
+     * 
+     * All the domains are checked on match and score (based on matched characters) and returned.
+     * If no match is found the default domain will be used.
+     * 
+     * Then the protocol and domain is added to the route, and redirected.
+     */
+    public function buildRoute(Uri $uri, $requestedLocale, $path, $useCurrentScope = false)
     {
-        if($this->container->has('scope')) {
-            $currentScope = $this->container->scope;
-            $uri = $uri->withScheme($currentScope['protocol']);
-        }
-
-        // If anything of a proxy domain is in here, we will remove that part and add the domain.
-        $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-        $settings = Adapter::getInstance()->toJson($settings, true);
-        $setting = array_shift($settings);
-
-        $domains = array_filter($setting['scopes'], function ($scope) use ($locale, $path) {
-            if (in_array('proxy_path', array_keys($scope))) {
-                $tempLocale = str_replace('/', '', $scope['locale_prefix']);
-                $tempPath = ltrim($path, '/');
-                $tempProxyPath = ltrim($scope['proxy_path'], '/');
-
-                if (!empty($tempPath)) {
-                    if (strpos($tempPath, $tempProxyPath) === 0) {
-                        // Check if the locale is the same
-                        if ($locale) {
-                            if ($locale == $tempLocale) {
-                                return true;
-                            } else {
-                                return false;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return false;
+        // If the current domain is the same locale, and has a path match it is ok to use it.
+        $fallbackScope = $useCurrentScope ? $this->container->get('scope') : $this->container->get('fallbackScope');
+        $scopesGroups = Scopes::getGroups();
+        // Shift off the first (default) group.
+        $defaultScopes = Scopes::parse([array_shift($scopesGroups)]);
+        $proxyScopes = Scopes::parse($scopesGroups);
+        $translatedDefaultScopes = array_filter($defaultScopes, function($scope) use ($requestedLocale) {
+            return $scope['locale'] === $requestedLocale;
         });
 
-        $uri = $uri->withQuery('');
+        if(count($translatedDefaultScopes)) {
+            $fallbackScope = array_shift($translatedDefaultScopes);
+        }
 
-        if (count($domains)) {
-            $domain = array_shift($domains);
-            $tempProxyPath = ltrim($domain['proxy_path'], '/');
-            $path = ltrim(preg_replace('/' . $tempProxyPath . '/', '', $path, 1), '/');
-            $uri = $uri->withHost($domain['domain'])
-                ->withScheme($domain['protocol']);
-        } else {
-            // We have to reset the host to the "default".
-            $domains = array_filter($setting['scopes'], function ($scope) use ($locale) {
-                // We have to find the same locale, and one that doesn't have a proxy_path.
-                $tempLocale = str_replace('/', '', $scope['locale_prefix'] ?? '');
-                if ($locale && $tempLocale != $locale) {
-                    return false;
-                }
-
-                if (in_array('proxy_path', array_keys($scope))) {
-                    return false;
-                }
-
-                return true;
-            });
-
-            if (count($domains)) {
-                $domain = array_shift($domains);
-
-                if (isset($domain['domain'])) {
-                    $uri = $uri->withHost($domain['domain'])
-                        ->withScheme($domain['protocol']);
-                }
+        $scopes = array_filter($proxyScopes, function($scope) use($requestedLocale, $path) {
+            if($scope['locale'] !== $requestedLocale) {
+                return false;
             }
+
+            if(strpos($path, $scope['path']) === false) {
+                return false;
+            }
+
+            return true;
+        });
+
+        $scopes = array_values($scopes);
+        $scopes = array_map(function($scope) {
+            $scope['score'] = isset($scope['path']) ? strlen($scope['path']) : 0;
+            return $scope;
+        }, $scopes);
+
+        // Sort them by score, highest score first.
+        usort($scopes, function($a, $b) {
+            if(!isset($a['score']) || !isset($b['score'])) {
+                return 0;
+            }
+
+            return $a['score'] - $b['score'];
+        });
+
+        if(count($scopes)) {
+            // Get the first.
+            $scope = $scopes[0];
+
+            return $uri->withScheme($scope['protocol'])
+                ->withHost($scope['domain'])
+                ->withPath(
+                    $this->_buildPath($scope, $path)
+                )
+                ->withQuery('');
         }
 
-        if ($locale) {
-            $path = array_map(function ($part) {
-                return trim($part, '/');
-            }, [$locale, $path]);
-            $path = array_filter($path);
-            return $uri->withPath(implode('/', $path));
-        }
+        return $uri->withScheme($fallbackScope['protocol'])
+            ->withHost($fallbackScope['domain'])
+            ->withPath(
+                $this->_buildPath($fallbackScope, $path)
+            )
+            ->withQuery('');
+    }
 
-        // We now have the locale, and the path
-        return $uri->withPath($path ?? '/');
+    private function _buildPath($scope, $path)
+    {
+        $path = isset($scope['path']) ? ltrim(preg_replace('/' . trim($scope['path'], '/') . '/', '', $path, 1), '/') : $path;
+        $path = isset($scope['locale_prefix']) ? implode('/', [$scope['locale_prefix'], $path]) : $path;
+        $path = trim($path, '/');
+        $path = !empty($path) ? $path : '/';
+
+        return $path;
     }
 }

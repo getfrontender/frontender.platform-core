@@ -23,6 +23,8 @@ use Slim\Http\Response;
 use Symfony\Component\Finder\Finder;
 use Frontender\Core\Routes\Middleware\TokenCheck;
 use Frontender\Core\DB\Adapter;
+use Frontender\Core\Routes\Middleware\ApiLocale;
+use Frontender\Core\Template\Filter\Translate;
 
 class Adapters extends CoreRoute
 {
@@ -34,38 +36,69 @@ class Adapters extends CoreRoute
     {
         parent::registerReadRoutes();
 
-        $config = $this->app->getContainer();
+        $container = $config = $this->app->getContainer();
         $modelPath = dirname($config->settings['project']['path']) . '/lib/Model';
 
-        $this->app->get('', function (Request $request, Response $response) use ($modelPath) {
+        $this->app->get('', function (Request $request, Response $response) use ($modelPath, $container) {
             $finder = new Finder();
-            $files = $finder->directories()->exclude('State')->in($modelPath)->depth(0);
+            $models = $finder->files()->name('*.json')->in($modelPath);
             $adapters = [];
+            $translator = new Translate($container);
 
-            foreach ($files as $file) {
-				// Lets get all the available models.
-                $modelFinder = new Finder();
-                $models = $modelFinder->files()->name('*.json')->in($file->getPathName());
-                $adapter = [
-                    'name' => $file->getFileName(),
-                    'models' => []
-                ];
+            foreach ($models as $file) {
+	            // Lets get all the available models.
+	            // I have to get the first directory path, this is the adapter name.
+	            $adapterName = explode('/', $file->getRelativePath())[0];
 
-                foreach ($models as $model) {
-                    $definition = json_decode($model->getContents(), true);
-                    $definition['value'] = strtolower(str_replace('Model.json', '', $model->getFilename()));
+	            $adapterList = array_filter($adapters, function($adapter) use ($adapterName) {
+		            return $adapter['label'] == $adapterName;
+	            });
+	            $adapterList = array_values($adapterList);
+	            $adapterExists = count($adapterList);
+	            $adapterKey = false;
 
-                    $adapter['models'][] = $definition;
-                }
+	            if(!$adapterExists) {
+		            $adapter = [
+			            'label' => $adapterName,
+			            'value' => $adapterName,
+			            'models' => []
+		            ];
+	            } else {
+	            	$adapterKey = array_search($adapterList[0], $adapters);
+		            $adapter = $adapterList[0];
+	            }
 
-                $adapters[] = $adapter;
+	            $modelConfig = json_decode($file->getContents(), true);
+
+	            if(isset($modelConfig['has_preview']) && $modelConfig['has_preview']) {
+		            $adapter['models'][] = array_merge(
+			            $modelConfig,
+			            ['value' => str_replace([$adapterName . '/', 'Model.json', '/'], ['', '', '\\'], $file->getRelativePathname())]
+		            );
+	            }
+
+	            usort($adapter['models'], function($a, $b) use ($translator) {
+		            $aLabel = $translator->translate($a['label']);
+		            $bLabel = $translator->translate($b['label']);
+
+		            return strnatcmp($aLabel, $bLabel);
+	            });
+
+	            if(!$adapterExists) {
+		            $adapters[] = $adapter;
+	            } else {
+	            	// Get the index of the current adapter in the adapters array.
+		            if($adapterKey !== false) {
+		            	$adapters[$adapterKey] = $adapter;
+		            }
+	            }
             }
 
             return $response->withJson($adapters);
         });
 
         $this->app->get('/models/{adapter}', function (Request $request, Response $response) use ($modelPath) {
-			// Get all the models and send them back.
+            // Get all the models and send them back.
             $finder = new Finder();
             $files = $finder->files()->name('*.php')->in($modelPath . '/' . $request->getAttribute('adapter'));
             $models = [];
@@ -105,7 +138,7 @@ class Adapters extends CoreRoute
         });
 
         $this->app->get('/content/{adapter}/{model:.*}', function (Request $request, Response $response) use ($config) {
-			// We have an autoload for it.
+            // We have an autoload for it.
             // We also have to support namespaced models.
             $modelParts = explode('/', $request->getAttribute('model'));
             $modelParts = array_map(function ($item) {
@@ -113,7 +146,7 @@ class Adapters extends CoreRoute
             }, $modelParts);
             $modelName = implode('\\', $modelParts);
 
-            $classname = '\\Prototype\\Model\\' . $request->getAttribute('adapter') . '\\' . $modelName . 'Model';
+            $classname = '\\Frontender\\Platform\\Model\\' . $request->getAttribute('adapter') . '\\' . $modelName . 'Model';
             $model = new $classname($config);
             $model->setState($request->getQueryParams());
             $items = $model->fetch();
@@ -154,7 +187,8 @@ class Adapters extends CoreRoute
         return [
             new TokenCheck(
                 $this->app->getContainer()
-            )
+            ),
+            new ApiLocale($this->app->getContainer())
         ];
     }
 }

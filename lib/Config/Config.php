@@ -26,17 +26,20 @@ class Config
             $env->overload();
         }
 
-        foreach(array_keys($_ENV) as $key) {
-        	$this->{strtolower($key)} = $_ENV[$key];
+        foreach (array_keys($_ENV) as $key) {
+            $this->{strtolower($key)} = $_ENV[$key];
         }
 
         /**
          * Load application configuration
          */
         $files = [
-            '/environment.php',
-            '/environments/' . $this->env . '.php'
+            '/environment.php'
         ];
+
+        if (isset($this->env)) {
+            $files[] = '/environments/' . $this->env . '.php';
+        }
 
         foreach ($files as $file) {
             if (file_exists(ROOT_PATH . '/config/' . $file)) {
@@ -62,6 +65,6 @@ class Config
 
     public function toArray()
     {
-        return ['settings' => (array) $this];
+        return ['settings' => (array)$this];
     }
 }

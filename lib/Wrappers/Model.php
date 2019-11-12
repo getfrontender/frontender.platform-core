@@ -1,4 +1,5 @@
 <?php
+
 /*******************************************************
  * @copyright 2017-2019 Dipity B.V., The Netherlands
  * @package Frontender
@@ -26,22 +27,20 @@ class Model extends Core implements \Countable
 
     public function __construct($model, $container)
     {
-        $translator = new Translate($container);
-
         if (is_array($model) && isset($model['data'])) {
             $modelData = $model['data'];
             unset($model['data']);
 
-            $adapter = $translator->translate($modelData['adapter'], array(), true);
-            $name = $translator->translate($modelData['model'], array(), true);
+            $adapter = $modelData['adapter'];
+            $name = $modelData['model'];
 
             if (isset($modelData['id'])) {
-                $model['id'] = $translator->translate($modelData['id'], array(), true);
+                $model['id'] = $modelData['id'];
             }
 
             // The rest are states.
             $model['language'] = $model['language'] ?? $container->language->get();
-            $model_class = 'Prototype\\Model\\' . $adapter . '\\' . ucfirst($name) . 'Model';
+            $model_class = 'Frontender\\Platform\\Model\\' . $adapter . '\\' . ucfirst($name) . 'Model';
             $instance = new $model_class($container);
 
             $instance->setState($model);

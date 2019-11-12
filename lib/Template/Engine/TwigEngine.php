@@ -17,10 +17,7 @@
 
 namespace Frontender\Core\Template\Engine;
 
-use Frontender\Core\Object\Object;
-
 use Frontender\Core\Template\Engine\Twig\Environment;
-use Frontender\Core\Template\Engine\Twig\Loader;
 use Frontender\Core\Template\Filter\Date;
 use Frontender\Core\Template\Filter\Escaping;
 use Frontender\Core\Template\Filter\Filter;
@@ -33,14 +30,16 @@ use Frontender\Core\Template\Filter\Translate;
 use Frontender\Core\Template\Helper\HashedPath;
 use Frontender\Core\Template\Helper\Router;
 use Frontender\Core\Template\Filter\Asset;
+use Frontender\Core\Template\Filter\Locale;
+use Frontender\Core\Template\Filter\Path;
 use Frontender\Core\Template\Helper\Url;
 use Slim\Container;
-use Slim\Views\Twig;
 use Slim\Views\TwigExtension;
 use Symfony\Component\Finder\Finder;
 use Frontender\Core\Template\Helper\Template;
+use Frontender\Core\Object\AbstractObject;
 
-class TwigEngine extends Object implements EngineInterface
+class TwigEngine extends AbstractObject implements EngineInterface
 {
     protected $engine;
 
@@ -63,7 +62,7 @@ class TwigEngine extends Object implements EngineInterface
 
         $this->engine->addExtension(new TwigExtension($container['router'], $container['settings']['base_path']));
 
-	    // Register the core filters
+        // Register the core filters
         $this->engine->addExtension(new Date($container));
         $this->engine->addExtension(new Escaping($container));
         $this->engine->addExtension(new Asset($container));
@@ -74,38 +73,45 @@ class TwigEngine extends Object implements EngineInterface
         $this->engine->addExtension(new Pagination());
         $this->engine->addExtension(new Text());
         $this->engine->addExtension(new Translate($container));
+        $this->engine->addExtension(new Locale());
+        $this->engine->addExtension(new Path());
 
         // Add custom extension for the engine.
-	    // Auto bind all helpers
-        $finder = new Finder();
-        $finder
-            ->ignoreUnreadableDirs()
-            ->files()
-            ->in(ROOT_PATH . '/lib/Template/Filter/')
-            ->name('*.php')
-            ->sortByName();
+        // Auto bind all helpers
+        if (file_exists(ROOT_PATH . '/lib/Template/Filter')) {
+            $finder = new Finder();
+            $finder
+                ->ignoreUnreadableDirs()
+                ->files()
+                ->in(ROOT_PATH . '/lib/Template/Filter/')
+                ->name('*.php')
+                ->sortByName();
 
-        foreach ($finder as $file) {
-            $class = 'Prototype\\Template\\Filter\\' . $file->getBasename('.' . $file->getExtension());
-            $this->engine->addExtension(new $class($container));
+            foreach ($finder as $file) {
+                $class = 'Frontender\\Platform\\Template\\Filter\\' . $file->getBasename('.' . $file->getExtension());
+                $this->engine->addExtension(new $class($container));
+            }
         }
 
-	    // Register the core helpers
+        // Register the core helpers
         $this->engine->addExtension(new Router($container));
         $this->engine->addExtension(new HashedPath($container));
         $this->engine->addExtension(new Url($container));
         $this->engine->addExtension(new Template($container));
 
-        $finder = new Finder();
-        $finder
-            ->ignoreUnreadableDirs()
-            ->files()
-            ->in(ROOT_PATH . '/lib/Template/Helper/')
-            ->name('*.php')
-            ->sortByName();
-        foreach ($finder as $file) {
-            $class = 'Prototype\\Template\\Helper\\' . $file->getBasename('.' . $file->getExtension());
-            $this->engine->addExtension(new $class($container));
+        if (file_exists(ROOT_PATH . '/lib/Template/Helper')) {
+            $finder = new Finder();
+            $finder
+                ->ignoreUnreadableDirs()
+                ->files()
+                ->in(ROOT_PATH . '/lib/Template/Helper/')
+                ->name('*.php')
+                ->sortByName();
+
+            foreach ($finder as $file) {
+                $class = 'Frontender\\Platform\\Template\\Helper\\' . $file->getBasename('.' . $file->getExtension());
+                $this->engine->addExtension(new $class($container));
+            }
         }
     }
 

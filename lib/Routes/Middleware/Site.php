@@ -25,6 +25,7 @@ use Slim\Http\Response;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 use Frontender\Core\Routes\Exceptions\NotImplemented;
+use Frontender\Core\Utils\Scopes;
 
 /**
  * The Sitable middleware is the heart of the multi-site functionality.
@@ -47,20 +48,27 @@ class Site
     public function __invoke(Request $request, Response $response, $next)
     {
         $router = $this->_container->get('router');
-        $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-        $settings = array_shift($settings);
+        $scopes = Scopes::get();
 
-        if (!$settings) {
+        if (!$scopes) {
             throw new NotFoundException($request, $response);
         }
 
-        $settings = Adapter::getInstance()->toJSON($settings, true);
+        /**
+         * Define the kind of scopes that we have.
+         * The first group by default is the default group, the rest are for the proxy scopes.
+         */
+        $scopesGroups = Scopes::getGroups();
+        $defaultScopes = Scopes::parse([array_shift($scopesGroups)]);
+        $proxyScopes = count($scopesGroups) ? Scopes::parse($scopesGroups) : [];
+
         $host = $request->getUri()->getHost();
         $path = $request->getUri()->getPath();
+
         $segments = array_filter(explode('/', $path));
         $segments = array_values($segments);
 
-        $hosts = array_filter($settings['scopes'], function ($scope) use ($host) {
+        $hosts = array_filter($scopes, function ($scope) use ($host) {
             return $scope['domain'] == $host;
         });
         $hosts = array_map(function ($host) {
@@ -73,7 +81,7 @@ class Site
         $hosts = array_values($hosts);
 
         if (strpos($request->getUri()->getPath(), '/api') === 0) {
-            $this->_container['fallbackScope'] = $settings['scopes'][0];
+            $this->_container['fallbackScope'] = $scopes[0];
             return $next($request, $response);
         }
 
@@ -112,8 +120,9 @@ class Site
 
         $locale = $host['locale'];
         $path = implode('/', $segments);
-        $proxies = array_filter($settings['scopes'], function ($scope) use ($path, $locale, $host) {
-            if (!isset($scope['proxy_path'])) {
+        
+        $proxies = array_filter($proxyScopes, function ($scope) use ($path, $locale, $host) {
+            if (!isset($scope['path'])) {
                 return false;
             }
 
@@ -121,19 +130,19 @@ class Site
                 return false;
             }
 
-            $pathPrefix = isset($host['proxy_path']) && !empty($host['proxy_path']) ? $host['proxy_path'] : '';
-            $regexString = trim($pathPrefix . $scope['proxy_path'], '/');
+            $pathPrefix = isset($host['path']) && !empty($host['path']) ? $host['path'] : '';
+            $regexString = trim($pathPrefix . $scope['path'], '/');
             $regexString = str_replace('/', '\/', $regexString);
             $regexString = '/^' . $regexString . '$|^' . $regexString . '\/.*$/i';
 
             return preg_match($regexString, $path, $matches) === 1;
         });
-        
+
         $proxies = array_values(array_filter($proxies));
 
         if (!empty($proxies)) {
             $proxy = $proxies[0];
-            $path = preg_replace('/^' . trim($proxy['proxy_path'], '/') . '/i', '', $path, 1);
+            $path = preg_replace('/^' . trim($proxy['path'], '/') . '/i', '', $path, 1);
             $path = [$proxy['locale_prefix'], $path];
             $path = array_map(function ($segment) {
                 return trim($segment, '/');
@@ -147,8 +156,8 @@ class Site
             );
         }
 
-        if (isset($host['proxy_path'])) {
-            array_unshift($segments, trim($host['proxy_path'], '/'));
+        if (isset($host['path']) && !empty(trim($host['path'], '/'))) {
+            array_unshift($segments, trim($host['path'], '/'));
         }
 
         if (isset($localeSegment)) {
@@ -163,7 +172,7 @@ class Site
         // Before we will continue through the system, we will set the current scope.
         // This is required elsewere.
         $this->_container['scope'] = $host;
-        $this->_container['fallbackScope'] = $settings['scopes'][0];
+        $this->_container['fallbackScope'] = $defaultScopes[0];
         $this->_container->language->set($locale);
 
         return $next($request, $response);

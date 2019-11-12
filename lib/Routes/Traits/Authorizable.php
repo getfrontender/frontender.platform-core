@@ -33,28 +33,19 @@ trait Authorizable
         // Get the site ID.
         $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
         $settings = array_shift($settings);
-        $site_id = $settings->site_id;
         $token = $this->app->getContainer()['token'];
+        $roles = Adapter::getInstance()->collection('roles')->find([
+            'users' => (int)$token->getClaim('sub')
+        ])->toArray();
+        $roles = Adapter::getInstance()->toJSON($roles);
+        $permissions = array_map(function ($role) {
+            return $role->permissions;
+        }, $roles);
+        $permissions = array_reduce($permissions, function ($carry, $values) {
+            return array_merge($carry, $values);
+        }, []);
+        $permissions = array_unique($permissions);
 
-        if ($token->getClaim('site_id') != $site_id) {
-            try {
-                $client = new \GuzzleHttp\Client();
-                $res = $client->get($this->app->getContainer()->config->fem_host . '/api/users/index.php?id=' . $token->getClaim('sub') . '&site=' . $site_id, [
-                    'headers' => [
-                        'X-Token' => $request->getHeader('X-Token')[0]
-                    ]
-                ]);
-
-                $token = $res->getHeader('X-Token');
-
-                if ($token) {
-                    $response = $response->withAddedHeader('X-Token', $token[0]);
-                    $token = Tokenize::getInstance()->parse($token[0]);
-                }
-            } catch (\Exception $e) { } catch (\Error $e) { }
-        }
-
-        $permissions = $token->getClaim('permissions');
         $allowed = in_array($requiredPermission, $permissions);
 
         if (!$allowed) {

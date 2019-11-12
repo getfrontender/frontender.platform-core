@@ -23,29 +23,34 @@ use MongoDB\BSON\ObjectId;
 use Slim\Http\Request;
 use Slim\Http\Response;
 use Frontender\Core\Routes\Middleware\TokenCheck;
+use Frontender\Core\Routes\Middleware\ApiLocale;
 
-class Controls extends CoreRoute {
-	protected $group = '/api/controls';
+class Controls extends CoreRoute
+{
+    protected $group = '/api/controls';
 
-	use Authorizable;
+    use Authorizable;
 
-	protected function registerReadRoutes() {
-		parent::registerReadRoutes();
+    protected function registerReadRoutes()
+    {
+        parent::registerReadRoutes();
 
-		$this->app->get('', function(Request $request, Response $response) {
-			$json = Adapter::getInstance()->toJSON(
-				\Frontender\Core\Controllers\Controls::browse()
-			);
+        $this->app->get('', function (Request $request, Response $response) {
+            $json = Adapter::getInstance()->toJSON(
+                \Frontender\Core\Controllers\Controls::browse()
+            );
 
-			return $response->withJson($json);
-		});
-	}
+            return $response->withJson($json);
+        });
+    }
 
-	public function getGroupMiddleware() {
-		return [
-			new TokenCheck(
-				$this->app->getContainer()
-			)
-		];
-	}
+    public function getGroupMiddleware()
+    {
+        return [
+            new TokenCheck(
+                $this->app->getContainer()
+            ),
+            new ApiLocale($this->app->getContainer())
+        ];
+    }
 }

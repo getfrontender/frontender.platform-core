@@ -16,33 +16,19 @@
 
 namespace Frontender\Core\Template\Filter;
 
-use Slim\Container;
-use Slim\Http\Uri;
-use Doctrine\Common\Inflector\Inflector;
-
-class Markdown extends \Twig_Extension
+class Path extends \Twig_Extension
 {
-    protected $parser;
-
-    public function __construct()
-    {
-        $this->parser = new \Parsedown();
-    }
-
     public function getFilters()
     {
         return [
-            new \Twig_Filter('markdown', [$this, 'parseMarkdown']),
-            new \Twig_Filter('md', [$this, 'parseMarkdown'])
+            new \Twig_Filter('external', [$this, 'filterPath'])
         ];
     }
 
-    public function parseMarkdown($data)
+    public function filterPath($path)
     {
-        if (empty($data)) {
-            return $data;
-        }
+        $parts = parse_url($path);
 
-        return $this->parser->text($data);
+        return isset($parts['scheme']);
     }
 }

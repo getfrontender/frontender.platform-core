@@ -19,6 +19,8 @@ use Symfony\Component\Translation\Translator;
 use Symfony\Component\Translation\MessageSelector;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Frontender\Core\DB\Adapter;
+use Symfony\Component\Finder\Finder;
+use Frontender\Core\Utils\Scopes;
 
 class Translate
 {
@@ -29,22 +31,26 @@ class Translate
     {
         $language = $container['language']->language;
         $translations_path = $container['settings']['project']['path'] . '/translations/';
-        $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-        $setting = array_shift($settings);
+        $scopes = Scopes::get();
 
         // Create the translator based on symfony.
         $this->_translator = new Translator($language, new MessageSelector());
 
         // We will always fall back to en.
         // TODO: Recheck this file.
-        $this->_translator->setFallbackLocales([$setting->scopes[0]->locale]);
+        $this->_translator->setFallbackLocales([$scopes[0]['locale']]);
 
         // Add the yaml file locator (translations files are in yml.
         $this->_translator->addLoader('yml', new YamlFileLoader());
 
         // Add the files.
-        foreach ($setting->scopes as $scope) {
-            $this->_translator->addResource('yml', $translations_path . $scope->locale . '.yml', $scope->locale);
+        foreach ($scopes as $scope) {
+            $finder = new Finder();
+            $translationFiles = $finder->files()->in($translations_path)->name($scope['locale'] . '.yml');
+
+            foreach ($translationFiles as $file) {
+                $this->_translator->addResource('yml', $file->getRealPath(), $scope['locale']);
+            }
         }
 
         $this->_language = $language;

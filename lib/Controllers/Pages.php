@@ -20,14 +20,19 @@ namespace Frontender\Core\Controllers;
 use MongoDB\BSON\ObjectId;
 use MongoDB\Driver\Query;
 use Frontender\Core\DB\Adapter;
+use Frontender\Core\Utils\Scopes;
+use Frontender\Core\Template\Filter\Translate;
 
 class Pages extends Core
 {
     public function actionBrowse($filter = [])
     {
+        $scopes = Scopes::get();
+        $fallbackScope = array_shift($scopes);
         $collection = isset($filter['collection']) ? 'pages.' . $filter['collection'] : 'pages';
         $findFilter = new \stdClass();
         $skip = 0;
+        $limit = isset($filter['limit']) ? $filter['limit'] : 8;
 
         if (isset($filter['skip'])) {
             $skip = $filter['skip'];
@@ -156,7 +161,10 @@ class Pages extends Core
                         'isRoot' => [
                             '$cond' => [
                                 'if' => [
-                                    '$eq' => ['$definition.route.' . $filter['locale'], '/']
+                                    '$or' => [
+                                        ['$in' => ['$definition.route.' . $_GET['locale'], $this->_getHomepagePaths()]],
+                                        ['$in' => ['$definition.route.' . $fallbackScope['locale'], $this->_getHomepagePaths()]]
+                                    ]
                                 ],
                                 'then' => true,
                                 'else' => false
@@ -186,8 +194,10 @@ class Pages extends Core
             'allowDiskUse' => true
         ])->toArray());
 
-        $aggrigation[] = ['$limit' => 8 + $skip];
-        $aggrigation[] = ['$skip' => $skip];
+        if ((int)$limit) {
+            $aggrigation[] = ['$limit' => $limit + $skip];
+            $aggrigation[] = ['$skip' => $skip];
+        }
         $revisions = $this->adapter->collection($collection)->aggregate($aggrigation, [
             'allowDiskUse' => true
         ])->toArray();
@@ -206,6 +216,9 @@ class Pages extends Core
 
     public function actionRead($id)
     {
+        $scopes = Scopes::get();
+        $fallbackScope = array_shift($scopes);
+
         $revisions = $this->adapter->collection('pages')->aggregate([
             [
                 '$lookup' => [
@@ -260,7 +273,10 @@ class Pages extends Core
                         'isRoot' => [
                             '$cond' => [
                                 'if' => [
-                                    '$eq' => ['$definition.route.' . $_GET['locale'], '/']
+                                    '$or' => [
+                                        ['$in' => ['$definition.route.' . $_GET['locale'], $this->_getHomepagePaths()]],
+                                        ['$in' => ['$definition.route.' . $fallbackScope['locale'], $this->_getHomepagePaths()]]
+                                    ]
                                 ],
                                 'then' => true,
                                 'else' => false
@@ -356,7 +372,7 @@ class Pages extends Core
         return $pageJson;
     }
 
-    public function actionPublish($page)
+    public function actionPublish($page, $container)
     {
         unset($page->_id);
 
@@ -403,7 +419,12 @@ class Pages extends Core
 
             if (is_array($modelId) || strpos(trim($modelId), '{') === false) {
                 // We prefer the cononical
+
+                $translator = new Translate($container);
                 $route = $page->definition['route'] ?? $page->definition['cononical'];
+                $adapterName = $translator->translate($adapterName, [], true);
+                $modelName = $translator->translate($modelName, [], true);
+                $modelId = $translator->translate($modelId, [], true);
 
                 $page_id = '';
                 try {
@@ -480,6 +501,15 @@ class Pages extends Core
         }
 
         return true;
+    }
+
+    private function _getHomepagePaths()
+    {
+        $scopes = Scopes::getGroups();
+
+        return array_map(function($scope) {
+            return $scope['path'];
+        }, $scopes);
     }
 
     private function _sanitizeConfig(&$container)

@@ -14,35 +14,32 @@
  * permission of Dipity B.V.
  *******************************************************/
 
-namespace Frontender\Core\Template\Filter;
+namespace Frontender\Core\Routes\Api;
 
-use Slim\Container;
-use Slim\Http\Uri;
-use Doctrine\Common\Inflector\Inflector;
+use Frontender\Core\Routes\Helpers\CoreRoute;
+use Slim\Http\Request;
+use Slim\Http\Response;
+use Frontender\Core\Routes\Middleware\TokenCheck;
 
-class Markdown extends \Twig_Extension
+class Keepalive extends CoreRoute
 {
-    protected $parser;
+    protected $group = '/api/keepalive';
 
-    public function __construct()
+    public function registerReadRoutes()
     {
-        $this->parser = new \Parsedown();
+        parent::registerReadRoutes();
+
+        $this->app->get('', function(Request $request, Response $response) {
+            return $response->withJson(['success' => true]);
+        });
     }
 
-    public function getFilters()
+    public function getGroupMiddleware()
     {
         return [
-            new \Twig_Filter('markdown', [$this, 'parseMarkdown']),
-            new \Twig_Filter('md', [$this, 'parseMarkdown'])
+            new TokenCheck(
+                $this->app->getContainer()
+            )
         ];
-    }
-
-    public function parseMarkdown($data)
-    {
-        if (empty($data)) {
-            return $data;
-        }
-
-        return $this->parser->text($data);
     }
 }

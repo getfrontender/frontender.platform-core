@@ -1,4 +1,5 @@
 <?php
+
 /*******************************************************
  * @copyright 2017-2019 Dipity B.V., The Netherlands
  * @package Frontender
@@ -22,6 +23,10 @@ use Frontender\Core\Routes\Traits\Authorizable;
 use Slim\Http\Request;
 use Slim\Http\Response;
 use Frontender\Core\Routes\Middleware\TokenCheck;
+use Frontender\Core\Routes\Middleware\ApiLocale;
+use Frontender\Core\Utils\Manager;
+use Frontender\Core\Utils\Scopes;
+use MongoDB\BSON\ObjectId;
 
 class Sites extends CoreRoute
 {
@@ -35,11 +40,81 @@ class Sites extends CoreRoute
 
         $self = $this;
 
-        $this->app->get('/settings', function (Request $request, Response $response) {
-            $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-            $setting = Adapter::getInstance()->toJSON(array_shift($settings));
+        $this->app->get('/settings', function (Request $request, Response $response) use ($self) {
+            $self->isAuthorized('manage-site-settings', $request, $response);
 
-            return $response->withJson($setting ?? new \stdClass());
+            try {
+                $manager = Manager::getInstance();
+                $manager->setToken($this->token);
+                $resp = $manager->get('sites/settings');
+
+                $contents = json_decode($resp->getBody()->getContents());
+
+                if ($contents->status !== 'success') {
+                    return $response->withStatus(422);
+                }
+
+                // Reset the settings, gnagnagna.
+                $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
+                $settings = Adapter::getInstance()->toJSON($settings);
+                $settings = array_shift($settings);
+
+                Adapter::getInstance()->collection('settings')->findOneAndUpdate([
+                    '_id' => new ObjectId($settings->_id)
+                ], [
+                    '$set' => [
+                        'scopes' => Scopes::filterActiveScopes($contents->data->scopes)
+                    ]
+                ]);
+
+                if (isset($settings->preview_settings)) {
+                    $contents->data->preview_settings = $settings->preview_settings;
+                }
+
+                if (isset($settings->languages)) {
+                    $contents->data->languages = $settings->languages;
+                }
+
+                return $response->withJson($contents->data);
+            } catch (\Exception $e) {
+                if (method_exists($e, 'getResponse') && method_exists($e, 'hasResponse') && $e->hasResponse()) {
+                    $resp = $e->getResponse();
+
+                    return $response->withStatus(
+                        $resp->getStatusCode()
+                    );
+                }
+
+                return $response->withStatus(422);
+            }
+        });
+
+        $this->app->get('/users', function (Request $request, Response $response) use ($self) {
+            $self->isAuthorized('manage-users', $request, $response);
+
+            try {
+                $manager = Manager::getInstance();
+                $manager->setToken($this->token);
+                $resp = $manager->get('sites/users');
+
+                $contents = json_decode($resp->getBody()->getContents());
+
+                if ($contents->status !== 'success') {
+                    return $response->withStatus(422);
+                }
+
+                return $response->withJson($contents->data);
+            } catch (\Exception $e) {
+                if (method_exists($e, 'getResponse') && method_exists($e, 'hasResponse') && $e->hasResponse()) {
+                    $resp = $e->getResponse();
+
+                    return $response->withStatus(
+                        $resp->getStatusCode()
+                    );
+                }
+
+                return $response->withStatus(403);
+            }
         });
 
         $this->app->get('/reset_settings', function (Request $request, Response $response) use ($self) {
@@ -75,16 +150,50 @@ class Sites extends CoreRoute
         $this->app->post('/settings', function (Request $request, Response $response) use ($self) {
             $response = $self->isAuthorized('manage-site-settings', $request, $response);
 
-            $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
-            $setting = array_shift($settings);
-            $data = $request->getParsedBody();
-            unset($data['_id']);
+            // First post the data to the manager.
+            // The manager will tell us what to do.
+            try {
+                Manager::getInstance()->setToken($this->token);
+                $resp = Manager::getInstance()->patch('sites/settings', [
+                    'json' => $request->getParsedBody()
+                ]);
 
-            Adapter::getInstance()->collection('settings')->findOneAndReplace([
-                '_id' => $setting->_id
-            ], $data);
+                $contents = json_decode($resp->getBody()->getContents());
 
-            return $response->withStatus(200);
+                if ($contents->status !== 'success') {
+                    return $response->withStatus(422);
+                }
+
+                // The contents will only contain the scopes that are allowed by the manager.
+                // But we will also need to save the preview settings.
+                $data = $request->getParsedBody();
+                $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
+                $settings = array_shift($settings);
+
+                unset($data['_id']);
+
+                Adapter::getInstance()->collection('settings')->findOneAndUpdate([
+                    '_id' => $settings->_id
+                ], [
+                    '$set' => [
+                        'scopes' => Scopes::filterActiveScopes($contents->data),
+                        'languages' => $request->getParsedBodyParam('languages'),
+                        'preview_settings' => $request->getParsedBodyParam('preview_settings')
+                    ]
+                ]);
+
+                return $response->withStatus(200);
+            } catch (\Exception $e) {
+                if (method_exists($e, 'getResponse') && method_exists($e, 'hasResponse') && $e->hasResponse()) {
+                    $resp = $e->getResponse();
+
+                    return $response->withStatus(
+                        $resp->getStatusCode()
+                    );
+                }
+
+                return $response->withStatus(422);
+            }
         });
     }
 
@@ -93,7 +202,8 @@ class Sites extends CoreRoute
         return [
             new TokenCheck(
                 $this->app->getContainer()
-            )
+            ),
+            new ApiLocale($this->app->getContainer())
         ];
     }
 }
