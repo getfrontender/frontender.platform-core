@@ -50,6 +50,10 @@ class AbstractModel extends AbstractObject implements \ArrayAccess
         return $this->name;
     }
 
+    public function getModelName(): string {
+    	return $this->getName();
+    }
+
     public function setState(array $values)
     {
         $this->getState()->setValues($values);
