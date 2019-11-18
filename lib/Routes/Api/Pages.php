@@ -254,7 +254,8 @@ class Pages extends CoreRoute
                 $page->setRequest($request);
                 $page->parseData();
                 $page->setParameters([
-                    'locale' => $this->language->get()
+                    'locale' => $this->language->get(),
+	                'id' => $request->getQueryParam('id') ?? null
                 ]);
 
                 $response->getBody()->write($page->render());
@@ -399,7 +400,8 @@ class Pages extends CoreRoute
                 $page->setRequest($request);
                 $page->parseData();
                 $page->setParameters([
-                    'locale' => $this->language->get()
+                    'locale' => $this->language->get(),
+                    'id' => $request->getQueryParam('id') ?? null
                 ]);
 
                 $response->getBody()->write($page->render());
