@@ -39,7 +39,13 @@ class Filter extends \Twig_Extension
             }
 
             if($matchUnequal) {
-                return array_key_exists($key, $item) && $item[$key] != $value;
+            	// If the key doesn't the value doesn't match, so we keep it.
+	            if(!isset($item[$key])) {
+	            	return true;
+	            }
+
+	            // The key exists, so we check the value.
+                return $item[$key] != $value;
             }
 
             return array_key_exists($key, $item) && $item[$key] == $value;
