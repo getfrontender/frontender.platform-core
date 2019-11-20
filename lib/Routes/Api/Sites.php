@@ -75,6 +75,8 @@ class Sites extends CoreRoute
                     $contents->data->languages = $settings->languages;
                 }
 
+                $contents->data->locales = $this->config->locales ?? new \stdClass();
+
                 return $response->withJson($contents->data);
             } catch (\Exception $e) {
                 if (method_exists($e, 'getResponse') && method_exists($e, 'hasResponse') && $e->hasResponse()) {
