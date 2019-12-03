@@ -7,6 +7,8 @@ use Doctrine\Common\Inflector\Inflector;
 
 class AbstractModel extends AbstractObject implements \ArrayAccess
 {
+	public $data;
+
     protected $adapter;
     protected $name;
     protected $links = [];
@@ -14,7 +16,7 @@ class AbstractModel extends AbstractObject implements \ArrayAccess
 
     private $state;
 
-    public function getAdapter()
+	public function getAdapter()
     {
         return $this->getAdapter();
     }
