@@ -13,7 +13,7 @@ class Platform extends Base
 {
     public static $core_repo_url = 'https://github.com/getfrontender/frontender.platform.core-controls/archive/master.zip';
 
-    public static function install(Event $event)
+    public static function setup(Event $event)
     {
         $currentPath = getcwd();
         $installFile = 'install.json';
@@ -67,33 +67,36 @@ class Platform extends Base
             self::writeLn('Site data is imported.', 'blue');
         }
 
-        self::writeLn('Downloading core controls.', 'blue');
-        $tempFile = self::getTempPath('tmp_frontender_zip');
-        $tempDir = self::getTempPath('tmp_frontender_install', true);
-        $adapter = Adapter::getInstance();
-
-        // Download zip file to temp file.
-        file_put_contents($tempFile, file_get_contents(self::$core_repo_url));
-        self::writeLn('Core controls downloaded, installing…', 'blue');
-        $zip = new \ZipArchive();
-
-        if ($zip->open($tempFile)) {
-            $zip->extractTo($tempDir);
-            $zip->close();
-        } else {
-            self::writeLn('Something went wrong when installing the core controls, please contact a developer', 'red');
-            return 0;
-        }
-
-        // We can now upload all the data to the database, the connection is ready etc.
-        // We have to check the db directory for all the imports.
-        if (!self::importMongoFiles($tempDir)) {
-            self::writeLn('Errors where encountered while importing the core information, please contact a developer!', 'red');
-            return 0;
-        }
-
-        self::writeLn('Everyhing is installed successfully, have fun using Frontender!', 'green');
+        self::writeLn('Everything is installed successfully, have fun using Frontender!', 'green');
         return 0;
+    }
+
+    public static function importCoreControls(Event $event) {
+	    self::writeLn('Downloading core controls.', 'blue');
+	    $tempFile = self::getTempPath('tmp_core_controls_zip');
+	    $tempDir = self::getTempPath('tmp_core_controls_zip', true);
+	    $adapter = Adapter::getInstance();
+
+	    // Download zip file to temp file.
+	    file_put_contents($tempFile, file_get_contents(self::$core_repo_url));
+	    self::writeLn('Core controls downloaded, installing…', 'blue');
+	    $zip = new \ZipArchive();
+
+	    if ($zip->open($tempFile)) {
+		    $zip->extractTo($tempDir);
+		    $zip->close();
+	    } else {
+		    self::writeLn('Something went wrong when installing the core controls, please contact a developer', 'red');
+		    return 0;
+	    }
+
+	    // We can now upload all the data to the database, the connection is ready etc.
+	    if (!self::importMongoFiles($tempDir)) {
+		    self::writeLn('Errors where encountered while importing the core information, please contact a developer!', 'red');
+		    return 0;
+	    }
+
+	    return 0;
     }
 
     protected static function checkInstallFile($data): bool
@@ -103,7 +106,7 @@ class Platform extends Base
         if (!isset($data['token'])) {
             $success = false;
             self::writeLn('No installation token found, please add this token.', 'red');
-            self::writeLn('This token is given after the site is registred.', 'red');
+            self::writeLn('This token is given after the site is registered.', 'red');
         }
 
         /*******************************/
@@ -131,19 +134,6 @@ class Platform extends Base
         }
 
         return $success;
-    }
-
-    private static function isInstalled()
-    {
-        $root = getcwd();
-        $lockFile = $root . '/composer.lock';
-        $dotEnvFile = $root . '/.env';
-
-        if (!file_exists($lockFile)) {
-            return false;
-        }
-
-        return file_exists($dotEnvFile);
     }
 
     protected static function writeEnvFile($data, $installPath = null): bool
@@ -230,4 +220,17 @@ class Platform extends Base
             return false;
         }
     }
+
+	private static function isInstalled()
+	{
+		$root = getcwd();
+		$lockFile = $root . '/composer.lock';
+		$dotEnvFile = $root . '/.env';
+
+		if (!file_exists($lockFile)) {
+			return false;
+		}
+
+		return file_exists($dotEnvFile);
+	}
 }

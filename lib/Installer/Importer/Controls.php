@@ -37,15 +37,19 @@ class Controls extends Generic
         }
     }
 
-    public static function importViaComposer($event) {
+    public static function importViaComposer() {
 	    defined('ROOT_PATH') || define('ROOT_PATH', getcwd());
 	    require_once getcwd() . '/vendor/autoload.php';
 
-    	$arguments = $event->getArguments();
-    	$path = $arguments[0];
-    	$collection = $arguments[1] ?? 'controls';
+	    $path = getcwd() . '/project/db/controls';
+    	// Check if folder exists
+	    if(!file_exists($path)) {
+	    	return 0;
+	    }
 
     	$instance = new Controls();
-    	$instance->import($collection, $path);
+    	$instance->import('controls', $path);
+
+    	return 0;
     }
 }

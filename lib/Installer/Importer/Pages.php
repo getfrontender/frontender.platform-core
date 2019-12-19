@@ -72,4 +72,20 @@ class Pages extends Generic
 
         return true;
     }
+
+	public static function importViaComposer() {
+		defined('ROOT_PATH') || define('ROOT_PATH', getcwd());
+		require_once getcwd() . '/vendor/autoload.php';
+
+		$path = getcwd() . '/project/db/pages';
+		// Check if folder exists
+		if(!file_exists($path)) {
+			return 0;
+		}
+
+		$instance = new Pages();
+		$instance->import('pages', $path);
+
+		return 0;
+	}
 }
