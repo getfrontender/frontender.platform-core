@@ -98,10 +98,8 @@ class Base
                 }
             }
         } catch (\Exception $e) {
-            echo $e->getMessage();
             return false;
         } catch (\Error $e) {
-            echo $e->getMessage();
             return false;
         }
 

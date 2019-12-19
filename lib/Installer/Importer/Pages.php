@@ -2,6 +2,8 @@
 
 namespace Frontender\Core\Installer\Importer;
 
+use Frontender\Core\Utils\Scopes;
+
 class Pages extends Generic
 {
     public function import($collection, $path)
@@ -10,8 +12,8 @@ class Pages extends Generic
         $settings = $this->getSettings();
         $localeList = array_map(function ($scope) {
             return $scope['locale'];
-        }, $settings['scopes']);
-        $defaultLocale = $localeList[0];
+        }, Scopes::get());
+        $defaultLocale = $localeList[0] ?? 'en-GB';
         $teams = $this->adapter->collection('teams')->find()->toArray();
         $teams = $this->adapter->toJSON($teams, true);
         $team = array_shift($teams);

@@ -19,8 +19,8 @@ class Scopes
                     ->toArray()
                 , true);
 
-            if(!$settings) {
-                return false;
+            if(!$settings || !isset($settings['scopes'])) {
+                return [];
             }
 
             $settings = array_shift($settings);
