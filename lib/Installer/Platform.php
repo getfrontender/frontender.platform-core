@@ -141,8 +141,7 @@ class Platform extends Base
         try {
             $dotEnvPath = ($installPath ?: getcwd()) . '/.env';
             $data = array_merge([
-                'ENV' => 'production',
-                'FEP_TOKEN_HEADER' => 'X-Token'
+                'ENV' => 'production'
             ], $data);
 
             // Create the file in the current directory, this depends on where the item is installed.
