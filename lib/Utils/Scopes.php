@@ -19,11 +19,16 @@ class Scopes
                     ->toArray()
                 , true);
 
-            if(!$settings || !isset($settings['scopes'])) {
+            if(!$settings) {
                 return [];
             }
 
             $settings = array_shift($settings);
+
+            if(!isset($settings['scopes'])) {
+            	return [];
+            }
+
             self::$scopes = self::parse($settings['scopes']);
         }
 
