@@ -203,7 +203,7 @@ class Platform extends Base
                     return (int) $id;
                 }, $contents['data']['administrators'] ?? []),
                 'permissions' => array_map(function($permission) {
-                    return str_replace('', '-', strtolower($permission['name']));
+                    return str_replace(' ', '-', strtolower($permission['name']));
                 }, $contents['data']['permissions'] ?? [])
             ]);
 
