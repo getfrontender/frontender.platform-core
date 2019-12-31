@@ -50,10 +50,10 @@ class Project extends Base {
 		}
 
 		self::writeLn( 'Project downloaded, installing', 'blue' );
+		self::updateComposerJson( $tempDir );
 		self::importPublicFiles( $tempDir );
 		self::importProjectFiles( $tempDir );
 		self::importLibFiles( $tempDir );
-		self::updateComposerJson( $tempDir );
 		self::importMongoFiles( getcwd() . '/project' );
 
 		self::writeLn( 'Project has been imported!', 'green' );
@@ -89,14 +89,18 @@ class Project extends Base {
 
 		$directories = $finder->directories()->in( $projectDir )->depth( 0 );
 		foreach ( $directories as $directory ) {
-			$filesFinder = new Finder();
-			$files       = $filesFinder->files()->in( $directory->getRealPath() );
+			if ( $directory->getFileName() === 'adapters' ) {
+				self::importAdapters( $directory->getRealPath() );
+			} else {
+				$filesFinder = new Finder();
+				$files       = $filesFinder->files()->in( $directory->getRealPath() );
 
-			foreach ( $files as $file ) {
-				$newFilePath = getcwd() . '/project/' . $directory->getFileName() . '/' . $file->getRelativePath();
+				foreach ( $files as $file ) {
+					$newFilePath = getcwd() . '/project/' . $directory->getFileName() . '/' . $file->getRelativePath();
 
-				@mkdir( $newFilePath, 0777, true );
-				@rename( $file->getRealPath(), $newFilePath . '/' . $file->getFileName() );
+					@mkdir( $newFilePath, 0777, true );
+					@rename( $file->getRealPath(), $newFilePath . '/' . $file->getFileName() );
+				}
 			}
 		}
 
@@ -122,6 +126,23 @@ class Project extends Base {
 				@mkdir( $newFilePath, 0777, true );
 				@rename( $file->getRealPath(), $newFilePath . '/' . $file->getFileName() );
 			}
+		}
+
+		return true;
+	}
+
+	public static function importAdapters( string $directory ): bool {
+		$filesFinder = new Finder();
+		$files       = $filesFinder->files()->in( $directory );
+
+		// Find all the composer.json files and merge them into one.
+		self::updateComposerJson( $directory );
+
+		foreach ( $files as $file ) {
+			$newFilePath = getcwd() . '/lib/Model/' . $file->getRelativePath();
+
+			@mkdir( $newFilePath, 0777, true );
+			@rename( $file->getRealPath(), $newFilePath . '/' . $file->getFileName() );
 		}
 
 		return true;
