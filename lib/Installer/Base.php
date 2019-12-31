@@ -78,14 +78,8 @@ class Base
 
                 // Check if we can find a specialized importer.
                 // Else we will use the generic.
-                try {
-                    $class = 'Frontender\\Core\\Installer\\Importer\\' . ucfirst(strtolower($name));
-                    $importer = new $class();
-                } catch (\Exception $e) {
-                    // NOOP
-                } catch (\Error $e) {
-                    // NOOP
-                }
+                $class = 'Frontender\\Core\\Installer\\Importer\\' . ucfirst(strtolower($name));
+                $importer = new $class();
 
                 try {
                     $importer->import($name, $path);
@@ -98,8 +92,11 @@ class Base
                 }
             }
         } catch (\Exception $e) {
+        	echo $e->getMessage();
+        	die('Called');
             return false;
         } catch (\Error $e) {
+	        die('Called2');
             return false;
         }
 
