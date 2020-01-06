@@ -44,12 +44,7 @@ class Pages extends Generic
                 'teams' => [$team['_id']]
             ]);
 
-            $thumbnail = '';
-            $thumbnail_path = sprintf('%s/%s.png', $pageObject->getPath(), $pageObject->getBasename('.'.$pageObject->getExtension()));
-
-            if (file_exists($thumbnail_path)) {
-                $thumbnail = 'data:image/png;base64,' . base64_encode(file_get_contents($thumbnail_path));
-            }
+            $thumbnail = $this->getThumbnail($pageObject);
 
             $newPage = [
                 'revision' => [

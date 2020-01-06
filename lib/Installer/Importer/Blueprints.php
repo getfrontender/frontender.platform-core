@@ -23,12 +23,7 @@ class Blueprints extends Generic
 	        ])->toArray();
 
 	        // Check if we have a thumbnail file.
-	        $thumbnail = '';
-	        $thumbnail_path = sprintf('%s/%s.png', $blueprint->getPath(), $blueprint->getBasename('.'.$blueprint->getExtension()));
-
-	        if (file_exists($thumbnail_path)) {
-		        $thumbnail = 'data:image/png;base64,' . base64_encode(file_get_contents($thumbnail_path));
-	        }
+	        $thumbnail = $this->getThumbnail($blueprint);
 
 	        if(count($blueprints)) {
 		        $this->adapter->collection($collection)->updateOne([
