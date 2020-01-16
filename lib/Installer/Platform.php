@@ -13,7 +13,16 @@ class Platform extends Base
 {
     public static $core_repo_url = 'https://github.com/getfrontender/frontender.platform.core-controls/archive/master.zip';
 
-    public static function setup(Event $event)
+	public static function setup(Event $event) {
+		if(!self::runSetup($event)) {
+			// Remove .env
+			unlink(getcwd() . '/.env');
+		}
+
+		return true;
+	}
+
+    public static function runSetup(Event $event)
     {
         $currentPath = getcwd();
         $installFile = 'install.json';
@@ -26,13 +35,13 @@ class Platform extends Base
 
         if (self::isInstalled()) {
             self::writeLn('Your project seems to be installed already.', 'green');
-            return 0;
+            return true;
         }
 
         // Check if we can find the file.
         if (!file_exists($installFilePath)) {
             self::writeLn('Install file isn\'t found, please create this one according to documentation', 'red');
-            return 0;
+            return false;
         } else {
             $installData = json_decode(file_get_contents($installFilePath), true);
         }
@@ -41,7 +50,7 @@ class Platform extends Base
 
         if (!self::checkInstallFile($installData)) {
             self::writeLn('Errors have occured, please consult the console for details!', 'red');
-            return 0;
+            return false;
         }
 
         self::writeLn('Install file is correct, installing all elements!', 'blue');
@@ -55,20 +64,20 @@ class Platform extends Base
 
         if (!$success) {
             self::writeLn('Errors have occured, please consult the console for details!', 'red');
-            return 0;
+            return false;
         } else {
             self::writeLn('.env file is created.', 'blue');
         }
 
         if (!self::importSiteSettings($installData)) {
             self::writeLn('Site data could not be imported, do you have the right token?', 'red');
-            return 0;
+            return false;
         } else {
             self::writeLn('Site data is imported.', 'blue');
         }
 
         self::writeLn('Everything is installed successfully, have fun using Frontender!', 'green');
-        return 0;
+        return true;
     }
 
     public static function importCoreControls(Event $event) {

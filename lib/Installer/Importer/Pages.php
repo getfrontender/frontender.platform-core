@@ -9,7 +9,6 @@ class Pages extends Generic
     public function import($collection, $path)
     {
         $pages = $this->getFiles($path);
-        $settings = $this->getSettings();
         $localeList = array_map(function ($scope) {
             return $scope['locale'];
         }, Scopes::get());
