@@ -17,6 +17,7 @@ class Platform extends Base
 		if(!self::runSetup($event)) {
 			// Remove .env
 			unlink(getcwd() . '/.env');
+			return false;
 		}
 
 		return true;
