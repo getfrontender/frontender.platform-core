@@ -163,7 +163,7 @@ class DefaultPage extends AbstractObject
          * data from the blueprint.
          */
         if (isset($array['blueprint'])) {
-            if (!isset($array['template_config']) || isset($array['template_config']) && $array['template_config'] === null) {
+            if ($array['template_config'] === null && $array['containers'] === null) {
                 // Get the blueprint.
                 $blueprint = Adapter::getInstance()->collection('blueprints')->findOne([
                     '_id' => new ObjectId($array['blueprint'])
