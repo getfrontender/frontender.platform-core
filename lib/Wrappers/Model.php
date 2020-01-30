@@ -106,4 +106,12 @@ class Model extends Core implements \Countable
 
         return count($data);
     }
+
+    public function __call( $name, $arguments ) {
+    	if(!is_callable([$this->model, $name])) {
+    		return false;
+	    }
+
+	    return call_user_func_array([$this->model, $name], $arguments);
+    }
 }

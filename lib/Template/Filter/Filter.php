@@ -18,31 +18,34 @@ namespace Frontender\Core\Template\Filter;
 
 use Slim\Container;
 
-class Filter extends \Twig_Extension
-{
-    public function getFilters()
-    {
-        return [
-            new \Twig_Filter('filterArray', [$this, 'filterArray'])
-        ];
-    }
+class Filter extends \Twig_Extension {
+	public function getFilters() {
+		return [
+			new \Twig_Filter( 'filterArray', [ $this, 'filterArray' ] )
+		];
+	}
 
-    public function filterArray($array, $key, $value = null, $matchUnequal = false)
-    {
-        if(!is_array($array)) {
-            return false;
-        }
+	public function filterArray( $array, $key, $value = null, $matchUnequal = false ) {
+		if ( ! is_array( $array ) ) {
+			return false;
+		}
 
-        return array_filter($array, function($item) use($key, $value, $matchUnequal) {
-            if(!$value) {
-                return array_key_exists($key, $item) && !empty($item[$key]);
-            }
+		return array_filter( $array, function ( $item ) use ( $key, $value, $matchUnequal ) {
+			if ( ! $value ) {
+				return isset( $item[ $key ] ) && ! empty( $item[ $key ] );
+			}
 
-            if($matchUnequal) {
-                return array_key_exists($key, $item) && $item[$key] != $value;
-            }
+			if ( $matchUnequal ) {
+				// If the key doesn't the value doesn't match, so we keep it.
+				if ( ! isset( $item[ $key ] ) ) {
+					return true;
+				}
 
-            return array_key_exists($key, $item) && $item[$key] == $value;
-        });
-    }
+				// The key exists, so we check the value.
+				return $item[ $key ] != $value;
+			}
+
+			return isset( $item[ $key ] ) && $item[ $key ] == $value;
+		} );
+	}
 }

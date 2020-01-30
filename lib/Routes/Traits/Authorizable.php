@@ -33,6 +33,11 @@ trait Authorizable
         // Get the site ID.
         $settings = Adapter::getInstance()->collection('settings')->find()->toArray();
         $settings = array_shift($settings);
+
+        if(!$this->app->getContainer()->has('token')) {
+	        throw new Unauthorized($request, $response);
+        }
+
         $token = $this->app->getContainer()['token'];
         $roles = Adapter::getInstance()->collection('roles')->find([
             'users' => (int)$token->getClaim('sub')
