@@ -30,7 +30,7 @@ class TokenCheck
     public function __construct($container, $config = [])
     {
         $this->_container = $container;
-        $this->_headerName = getenv('FEP_TOKEN_HEADER');
+        $this->_headerName = 'X-Token';
         $this->_config = $config;
     }
 

@@ -22,7 +22,8 @@
         "kevinlebrun/colors.php": "~1.0.3",
         "ext-zip": "*",
         "ext-mongodb": "*",
-        "php": "^7.1.0"
+        "php": "^7.1.0",
+        "ext-gd": "*"
     },
     "autoload": {
         "psr-4": {

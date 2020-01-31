@@ -20,10 +20,15 @@ class Scopes
                 , true);
 
             if(!$settings) {
-                return false;
+                return [];
             }
 
             $settings = array_shift($settings);
+
+            if(!isset($settings['scopes'])) {
+            	return [];
+            }
+
             self::$scopes = self::parse($settings['scopes']);
         }
 

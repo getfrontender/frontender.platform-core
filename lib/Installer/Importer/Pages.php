@@ -2,16 +2,17 @@
 
 namespace Frontender\Core\Installer\Importer;
 
+use Frontender\Core\Utils\Scopes;
+
 class Pages extends Generic
 {
     public function import($collection, $path)
     {
         $pages = $this->getFiles($path);
-        $settings = $this->getSettings();
         $localeList = array_map(function ($scope) {
             return $scope['locale'];
-        }, $settings['scopes']);
-        $defaultLocale = $localeList[0];
+        }, Scopes::get());
+        $defaultLocale = $localeList[0] ?? 'en-GB';
         $teams = $this->adapter->collection('teams')->find()->toArray();
         $teams = $this->adapter->toJSON($teams, true);
         $team = array_shift($teams);
@@ -42,12 +43,7 @@ class Pages extends Generic
                 'teams' => [$team['_id']]
             ]);
 
-            $thumbnail = '';
-            $thumbnail_path = sprintf('%s/%s.png', $pageObject->getRealPath(), $pageObject->getFileName());
-
-            if (file_exists($thumbnail_path)) {
-                $thumbnail = 'data:image/png;base64,' . base64_encode(file_get_contents($thumbnail_path));
-            }
+            $thumbnail = $this->getThumbnail($pageObject);
 
             $newPage = [
                 'revision' => [
@@ -72,4 +68,20 @@ class Pages extends Generic
 
         return true;
     }
+
+	public static function importViaComposer() {
+		defined('ROOT_PATH') || define('ROOT_PATH', getcwd());
+		require_once getcwd() . '/vendor/autoload.php';
+
+		$path = getcwd() . '/project/db/pages';
+		// Check if folder exists
+		if(!file_exists($path)) {
+			return 0;
+		}
+
+		$instance = new Pages();
+		$instance->import('pages', $path);
+
+		return 0;
+	}
 }

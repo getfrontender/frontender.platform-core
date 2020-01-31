@@ -13,7 +13,17 @@ class Platform extends Base
 {
     public static $core_repo_url = 'https://github.com/getfrontender/frontender.platform.core-controls/archive/master.zip';
 
-    public static function install(Event $event)
+	public static function setup(Event $event) {
+		if(!self::runSetup($event)) {
+			// Remove .env
+			unlink(getcwd() . '/.env');
+			return false;
+		}
+
+		return true;
+	}
+
+    public static function runSetup(Event $event)
     {
         $currentPath = getcwd();
         $installFile = 'install.json';
@@ -26,13 +36,13 @@ class Platform extends Base
 
         if (self::isInstalled()) {
             self::writeLn('Your project seems to be installed already.', 'green');
-            return 0;
+            return true;
         }
 
         // Check if we can find the file.
         if (!file_exists($installFilePath)) {
             self::writeLn('Install file isn\'t found, please create this one according to documentation', 'red');
-            return 0;
+            return false;
         } else {
             $installData = json_decode(file_get_contents($installFilePath), true);
         }
@@ -41,7 +51,7 @@ class Platform extends Base
 
         if (!self::checkInstallFile($installData)) {
             self::writeLn('Errors have occured, please consult the console for details!', 'red');
-            return 0;
+            return false;
         }
 
         self::writeLn('Install file is correct, installing all elements!', 'blue');
@@ -55,45 +65,48 @@ class Platform extends Base
 
         if (!$success) {
             self::writeLn('Errors have occured, please consult the console for details!', 'red');
-            return 0;
+            return false;
         } else {
             self::writeLn('.env file is created.', 'blue');
         }
 
         if (!self::importSiteSettings($installData)) {
             self::writeLn('Site data could not be imported, do you have the right token?', 'red');
-            return 0;
+            return false;
         } else {
             self::writeLn('Site data is imported.', 'blue');
         }
 
-        self::writeLn('Downloading core controls.', 'blue');
-        $tempFile = self::getTempPath('tmp_frontender_zip');
-        $tempDir = self::getTempPath('tmp_frontender_install', true);
-        $adapter = Adapter::getInstance();
+        self::writeLn('Everything is installed successfully, have fun using Frontender!', 'green');
+        return true;
+    }
 
-        // Download zip file to temp file.
-        file_put_contents($tempFile, file_get_contents(self::$core_repo_url));
-        self::writeLn('Core controls downloaded, installing…', 'blue');
-        $zip = new \ZipArchive();
+    public static function importCoreControls(Event $event) {
+	    self::writeLn('Downloading core controls.', 'blue');
+	    $tempFile = self::getTempPath('tmp_core_controls_zip');
+	    $tempDir = self::getTempPath('tmp_core_controls_zip', true);
+	    $adapter = Adapter::getInstance();
 
-        if ($zip->open($tempFile)) {
-            $zip->extractTo($tempDir);
-            $zip->close();
-        } else {
-            self::writeLn('Something went wrong when installing the core controls, please contact a developer', 'red');
-            return 0;
-        }
+	    // Download zip file to temp file.
+	    file_put_contents($tempFile, file_get_contents(self::$core_repo_url));
+	    self::writeLn('Core controls downloaded, installing…', 'blue');
+	    $zip = new \ZipArchive();
 
-        // We can now upload all the data to the database, the connection is ready etc.
-        // We have to check the db directory for all the imports.
-        if (!self::importMongoFiles($tempDir)) {
-            self::writeLn('Errors where encountered while importing the core information, please contact a developer!', 'red');
-            return 0;
-        }
+	    if ($zip->open($tempFile)) {
+		    $zip->extractTo($tempDir);
+		    $zip->close();
+	    } else {
+		    self::writeLn('Something went wrong when installing the core controls, please contact a developer', 'red');
+		    return 0;
+	    }
 
-        self::writeLn('Everyhing is installed successfully, have fun using Frontender!', 'green');
-        return 0;
+	    // We can now upload all the data to the database, the connection is ready etc.
+	    if (!self::importMongoFiles($tempDir)) {
+		    self::writeLn('Errors where encountered while importing the core information, please contact a developer!', 'red');
+		    return 0;
+	    }
+
+	    return 0;
     }
 
     protected static function checkInstallFile($data): bool
@@ -103,7 +116,7 @@ class Platform extends Base
         if (!isset($data['token'])) {
             $success = false;
             self::writeLn('No installation token found, please add this token.', 'red');
-            self::writeLn('This token is given after the site is registred.', 'red');
+            self::writeLn('This token is given after the site is registered.', 'red');
         }
 
         /*******************************/
@@ -133,26 +146,12 @@ class Platform extends Base
         return $success;
     }
 
-    private static function isInstalled()
-    {
-        $root = getcwd();
-        $lockFile = $root . '/composer.lock';
-        $dotEnvFile = $root . '/.env';
-
-        if (!file_exists($lockFile)) {
-            return false;
-        }
-
-        return file_exists($dotEnvFile);
-    }
-
     protected static function writeEnvFile($data, $installPath = null): bool
     {
         try {
             $dotEnvPath = ($installPath ?: getcwd()) . '/.env';
             $data = array_merge([
-                'ENV' => 'production',
-                'FEP_TOKEN_HEADER' => 'X-Token'
+                'ENV' => 'production'
             ], $data);
 
             // Create the file in the current directory, this depends on where the item is installed.
@@ -214,13 +213,14 @@ class Platform extends Base
                     return (int) $id;
                 }, $contents['data']['administrators'] ?? []),
                 'permissions' => array_map(function($permission) {
-                    return str_replace('', '-', strtolower($permission['name']));
+                    return str_replace(' ', '-', strtolower($permission['name']));
                 }, $contents['data']['permissions'] ?? [])
             ]);
 
             $adapter->collection('settings')->drop();
             $adapter->collection('settings')->insertOne([
-                'site_id' => $contents['data']['site_id']
+                'site_id' => $contents['data']['site_id'],
+	            'scopes' => $contents['data']['scopes']
             ]);
 
             return true;
@@ -230,4 +230,17 @@ class Platform extends Base
             return false;
         }
     }
+
+	private static function isInstalled()
+	{
+		$root = getcwd();
+		$lockFile = $root . '/composer.lock';
+		$dotEnvFile = $root . '/.env';
+
+		if (!file_exists($lockFile)) {
+			return false;
+		}
+
+		return file_exists($dotEnvFile);
+	}
 }
