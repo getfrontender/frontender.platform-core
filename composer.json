@@ -1,6 +1,7 @@
 {
     "name": "frontender/platform-core",
     "description": "Core of the frontender platform",
+    "license": "BSD-3-Clause",
     "require": {
         "coduo/php-humanizer": "^2.0",
         "doctrine/inflector": "^1.1",
